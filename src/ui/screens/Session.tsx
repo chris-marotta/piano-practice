@@ -3,6 +3,7 @@ import { stopAll } from '../../audio/piano'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
 import { app, currentSession, route, today, update } from '../state'
+import { useWakeLock } from '../useWakeLock'
 import { Done } from './Done'
 import { ChordStep } from './steps/ChordStep'
 import { FreeplayStep } from './steps/FreeplayStep'
@@ -42,6 +43,7 @@ function endSession(): void {
 export function Session() {
   const s = currentSession.value
   const missing = s === null
+  useWakeLock() // keep the screen on for the whole session, Done screen included
 
   // Nothing in progress (e.g. after a reload): back to Today, without a history entry.
   useEffect(() => {

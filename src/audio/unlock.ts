@@ -9,6 +9,15 @@ let watching = false
 /** Call from a user gesture (tap). Never throws; leaves audioReady false on failure. */
 export async function unlockAudio(): Promise<void> {
   try {
+    // iPad Silent Mode mutes Web Audio by default ("ambient" session). A practice app's piano,
+    // drone and metronome must play like media, so ask for "playback" (Safari 17+). Before
+    // Tone.start(), so the context starts in that session. Older browsers lack audioSession.
+    try {
+      const nav = navigator as Navigator & { audioSession?: { type: string } }
+      if (nav.audioSession) nav.audioSession.type = 'playback'
+    } catch {
+      // Not supported or refused: carry on with the default session.
+    }
     await Tone.start()
     const raw = Tone.getContext().rawContext as BaseAudioContext
     audioReady.value = raw.state === 'running'

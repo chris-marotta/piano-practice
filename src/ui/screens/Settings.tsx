@@ -11,10 +11,13 @@ import {
   MINOR_FORM_OPTIONS,
   OCTAVE_OPTIONS,
   REDO_MESSAGE,
+  SHARE_TITLE,
   TEMPO_MAX,
   TEMPO_MIN,
   TEMPO_STEP,
+  canShareFile,
   exportFilename,
+  isShareAbort,
   importSummary,
   resetPlacement,
   routeAfterImport,
@@ -111,9 +114,22 @@ export function Settings() {
     navigate('placement')
   }
 
-  const exportProgress = () => {
+  const exportProgress = async () => {
     const name = exportFilename(today())
-    const url = URL.createObjectURL(new Blob([exportState(app.value)], { type: 'application/json' }))
+    const json = exportState(app.value)
+    // Share sheet first (Save to Files): a standalone home-screen app may ignore <a download>.
+    const file = new File([json], name, { type: 'application/json' })
+    if (canShareFile(navigator, file)) {
+      try {
+        await navigator.share({ files: [file], title: SHARE_TITLE })
+        setExported(name)
+        return
+      } catch (err) {
+        if (isShareAbort(err)) return // closed the sheet: nothing saved, nothing to say
+        // Any other failure: fall through to the download.
+      }
+    }
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
     const a = document.createElement('a')
     a.href = url
     a.download = name

@@ -84,6 +84,32 @@ export function exportFilename(today: string): string {
   return `piano-practice-${today}.json`
 }
 
+export const SHARE_TITLE = 'Piano Practice backup'
+
+/** The slice of `navigator` the export needs (injected, so this stays testable in node). */
+export interface ShareTarget {
+  share?: (data: { files?: File[]; title?: string }) => Promise<void>
+  canShare?: (data: { files?: File[] }) => boolean
+}
+
+/**
+ * True when the backup should go through the Share sheet (Save to Files). The home-screen app on
+ * iPad can't reliably save an <a download>, so share wins wherever the browser can share files.
+ */
+export function canShareFile(nav: ShareTarget, file: File): boolean {
+  if (typeof nav.share !== 'function' || typeof nav.canShare !== 'function') return false
+  try {
+    return nav.canShare({ files: [file] }) === true
+  } catch {
+    return false
+  }
+}
+
+/** The person closed the Share sheet: do nothing (no download, no message). */
+export function isShareAbort(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { name?: unknown }).name === 'AbortError'
+}
+
 /** What an import will bring in, for the confirm step. `placed` is null for an unplaced backup. */
 export function importSummary(state: AppState): { placed: string | null; items: number; sessions: number } {
   return {

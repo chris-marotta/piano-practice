@@ -9,7 +9,9 @@ import {
   TEMPO_STEP,
   clampDroneDb,
   clampTempo,
+  canShareFile,
   exportFilename,
+  isShareAbort,
   importSummary,
   resetPlacement,
   routeAfterImport,
@@ -148,6 +150,30 @@ describe('resetPlacement', () => {
     expect(after.log).toEqual(before.log)
     expect(after.settings).toEqual(before.settings)
     expect(Object.keys(before.items).length).toBeGreaterThan(0) // input untouched
+  })
+})
+
+describe('export via the Share sheet', () => {
+  const file = new File(['{}'], 'piano-practice-2026-10-20.json', { type: 'application/json' })
+  const share = async () => {}
+
+  it('shares when the browser can share this file', () => {
+    expect(canShareFile({ share, canShare: (d) => d.files?.[0] === file }, file)).toBe(true)
+  })
+  it('falls back to a download without share, without canShare, or when canShare says no or throws', () => {
+    expect(canShareFile({}, file)).toBe(false)
+    expect(canShareFile({ canShare: () => true }, file)).toBe(false)
+    expect(canShareFile({ share }, file)).toBe(false)
+    expect(canShareFile({ share, canShare: () => false }, file)).toBe(false)
+    expect(
+      canShareFile({ share, canShare: () => { throw new TypeError('nope') } }, file),
+    ).toBe(false)
+  })
+  it('a cancelled share (AbortError) is recognised; other failures are not', () => {
+    expect(isShareAbort(new DOMException('cancelled', 'AbortError'))).toBe(true)
+    expect(isShareAbort(new DOMException('no gesture', 'NotAllowedError'))).toBe(false)
+    expect(isShareAbort(new Error('x'))).toBe(false)
+    expect(isShareAbort(null)).toBe(false)
   })
 })
 
