@@ -25,9 +25,11 @@ interface Props {
   onKeyTap?: (midi: number) => void
   /** Always reserve two badge sub-rows per hand ('rh': RH only) so the keyboard doesn't shift between scales. */
   reserveRows?: ReserveRows
+  /** Cap on rendered white-key width (px). Raise it where keys are tapped, so black keys reach 48px. */
+  maxKeyPx?: number
 }
 
-/** Cap on rendered white-key width so a one-octave keyboard doesn't fill the iPad. */
+/** Default cap on rendered white-key width so a one-octave keyboard doesn't fill the iPad. */
 const MAX_KEY_PX = 56
 
 type Fill = 'rh' | 'lh' | 'none' | 'split' | null
@@ -45,7 +47,7 @@ function fillFor(hands: Set<KeyMark['hand']>): Fill {
  * (both hands on one key: top half RH, bottom half LH, matching the badge rows).
  * RH finger badges sit in a row above the keys, LH below; black-key badges use the outer sub-row.
  */
-export function Keyboard({ low, high, marks, onKeyTap, reserveRows = false }: Props) {
+export function Keyboard({ low, high, marks, onKeyTap, reserveRows = false, maxKeyPx = MAX_KEY_PX }: Props) {
   const rects = keyRects(low, high)
   const whiteCount = whiteKeys(low, high).length
   const width = whiteCount * KEY.whiteW
@@ -124,7 +126,7 @@ export function Keyboard({ low, high, marks, onKeyTap, reserveRows = false }: Pr
         viewBox={`-2 0 ${viewBoxWidth} ${height}`}
         width="100%"
         preserveAspectRatio="xMidYMid meet"
-        style={{ maxWidth: `${whiteCount * MAX_KEY_PX}px`, minWidth: `${minRenderWidth(viewBoxWidth)}px` }}
+        style={{ maxWidth: `${whiteCount * maxKeyPx}px`, minWidth: `${minRenderWidth(viewBoxWidth)}px` }}
         role={interactive ? 'group' : 'img'}
         aria-label="Piano keyboard"
       >

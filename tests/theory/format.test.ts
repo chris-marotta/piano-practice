@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatNote, formatScale } from '../../src/theory/format'
+import { formatChordName, formatNote, formatScale } from '../../src/theory/format'
 
 describe('formatNote', () => {
   it('maps ASCII accidentals to music symbols', () => {
@@ -21,5 +21,22 @@ describe('formatScale', () => {
     expect(formatScale({ root: 'E', form: 'major' })).toBe('E major')
     expect(formatScale({ root: 'G#', form: 'harmonic' })).toBe('G♯ harmonic minor')
     expect(formatScale({ root: 'Eb', form: 'melodic' })).toBe('E♭ melodic minor')
+  })
+})
+
+describe('formatChordName', () => {
+  it('drops the M of a plain major triad and keeps the slash bass', () => {
+    expect(formatChordName('CM/E')).toBe('C/E')
+    expect(formatChordName('CM')).toBe('C')
+    expect(formatChordName('F#M')).toBe('F♯')
+    expect(formatChordName('CMadd9')).toBe('Cadd9')
+  })
+  it('formats accidentals in root, quality and bass', () => {
+    expect(formatChordName('Cm7b5')).toBe('Cm7♭5')
+    expect(formatChordName('Em#5')).toBe('Em♯5')
+    expect(formatChordName('A#m#5/F#')).toBe('A♯m♯5/F♯')
+    expect(formatChordName('Ebm6/C')).toBe('E♭m6/C')
+    expect(formatChordName('Cmaj7')).toBe('Cmaj7')
+    expect(formatChordName('Cdim')).toBe('Cdim')
   })
 })

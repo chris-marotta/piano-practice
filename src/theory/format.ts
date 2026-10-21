@@ -24,3 +24,19 @@ const FORM_LABEL = {
 export function formatScale(ref: ScaleRef): string {
   return `${formatNote(ref.root)} ${FORM_LABEL[ref.form]}`
 }
+
+const ACCIDENTAL_IN_QUALITY = /([#b])(?=\d)/g
+
+/**
+ * Display a tonal chord symbol: 'CM/E' -> 'C/E', 'Cm7b5' -> 'Cm7♭5', 'CMadd9' -> 'Cadd9'.
+ * A plain major triad shows as just its root, as on a lead sheet.
+ */
+export function formatChordName(name: string): string {
+  const [chord = '', bass] = name.split('/')
+  const match = /^([A-G](?:#{1,2}|b{1,2})?)(.*)$/.exec(chord)
+  if (!match) return name
+  const [, root = '', rawQuality = ''] = match
+  let quality = rawQuality === 'M' ? '' : rawQuality.replace(/^Madd/, 'add')
+  quality = quality.replace(ACCIDENTAL_IN_QUALITY, (_, acc: string) => SYMBOLS[acc] as string)
+  return `${formatNote(root)}${quality}${bass ? `/${formatNote(bass)}` : ''}`
+}

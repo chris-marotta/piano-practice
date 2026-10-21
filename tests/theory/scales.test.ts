@@ -10,6 +10,8 @@ import {
   scaleSequence,
   noteMidi,
   transpose,
+  enharmonic,
+  chroma,
 } from '../../src/theory/scales'
 
 describe('scaleNotes', () => {
@@ -103,5 +105,35 @@ describe('noteMidi', () => {
   })
   it('throws on a note without an octave', () => {
     expect(() => noteMidi('C')).toThrow()
+  })
+})
+
+describe('enharmonic (library spelling toggle)', () => {
+  it('swaps the five black-key spellings both ways', () => {
+    const pairs = [['C#', 'Db'], ['D#', 'Eb'], ['F#', 'Gb'], ['G#', 'Ab'], ['A#', 'Bb']]
+    for (const [sharp, flat] of pairs) {
+      expect(enharmonic(sharp as string)).toBe(flat)
+      expect(enharmonic(flat as string)).toBe(sharp)
+    }
+  })
+  it('leaves white keys alone (no B<->Cb, E<->Fb)', () => {
+    for (const n of ['C', 'D', 'E', 'F', 'G', 'A', 'B']) expect(enharmonic(n)).toBe(n)
+  })
+  it('respells theoretical spellings to the plain one', () => {
+    expect(enharmonic('Cb')).toBe('B')
+    expect(enharmonic('E#')).toBe('F')
+    expect(enharmonic('F##')).toBe('G')
+    expect(enharmonic('Bbb')).toBe('A')
+  })
+})
+
+describe('chroma', () => {
+  it('gives the pitch class number, spelling-agnostic', () => {
+    expect(chroma('C')).toBe(0)
+    expect(chroma('B#')).toBe(0)
+    expect(chroma('Cb')).toBe(11)
+    expect(chroma('F#')).toBe(6)
+    expect(chroma('Gb')).toBe(6)
+    expect(chroma('F##')).toBe(7)
   })
 })

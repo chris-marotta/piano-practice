@@ -1,0 +1,301 @@
+/* Library: scales, chords, chords in a key, what's this chord. Tokens live in tokens.css. */
+
+.library {
+  gap: var(--s-4);
+}
+
+.library__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+}
+
+.library__head .seg {
+  flex: 0 1 640px;
+}
+
+.lib-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.lib-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.lib-row__end {
+  display: flex;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.lib-play {
+  margin-left: auto;
+}
+
+/* ---- root picker: 12 large buttons plus the spelling toggle ---- */
+
+.roots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.roots__keys {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(56px, 1fr));
+  gap: var(--s-1);
+  flex: 1 1 760px;
+}
+
+.root {
+  min-height: 56px;
+  padding: 0;
+  font-size: 22px;
+  background: var(--surface-2);
+}
+
+/* Black-key roots sit on a darker face, like the keyboard they stand for. */
+.root--black {
+  background: var(--bg);
+}
+
+.root[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.roots__spelling {
+  flex: 0 0 176px;
+}
+
+.roots__single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---- facts ---- */
+
+.lib-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.lib-info__title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.lib-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s-2) var(--s-5);
+  margin: 0;
+  min-height: 88px; /* room for two lines, so the keyboard doesn't jump between scales */
+}
+
+.lib-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lib-fact dt {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.lib-fact dd {
+  margin: 0;
+  font-size: var(--fs-body);
+}
+
+.lib-fact--notes dd {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.lib-line {
+  display: block;
+}
+
+.lib-dir {
+  display: inline-block;
+  min-width: 3.2em;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.lib-link {
+  min-height: var(--tap);
+  padding: 0 var(--s-3);
+  font-size: var(--fs-body);
+  text-align: left;
+}
+
+/* ---- keyboards ---- */
+
+.lib-keyboard .stage {
+  padding: 0;
+}
+
+/* Both hands: 336 units tall; 340px keeps the render scale ~1.0 (finger numbers >= 18px). */
+.lib-keyboard--scale .keyboard {
+  max-height: 340px;
+}
+
+/* ---- chords ---- */
+
+.lib-types {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.lib-chord {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-5);
+}
+
+.lib-chord__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.lib-chord__symbol {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.lib-chord__name {
+  font-size: 22px;
+}
+
+.lib-chord__notes {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--rh);
+}
+
+.lib-chord__hand {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* RH only: 254 units tall; 290px keeps the scale >= 0.9 at every chord's width. */
+.lib-keyboard--chord .keyboard {
+  max-height: 290px;
+}
+
+/* ---- chords in a key ---- */
+
+.key-chords {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.key-chord {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-height: 140px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  text-align: left;
+}
+
+.key-chord:hover {
+  border-color: var(--accent);
+}
+
+.key-chord__numeral {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.key-chord__symbol {
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.key-chord__quality {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* ---- what's this chord ---- */
+
+.what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.what__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.what__name {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.what__name--quiet {
+  font-size: var(--fs-prompt);
+  color: var(--muted);
+}
+
+.what__also {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.what__notes {
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .lib-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .lib-chord {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .key-chords {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

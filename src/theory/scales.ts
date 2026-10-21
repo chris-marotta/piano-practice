@@ -99,3 +99,18 @@ export function noteMidi(note: string): number {
   if (midi === null || !/-?\d+$/.test(note)) throw new Error(`Not a note with octave: ${note}`)
   return midi
 }
+
+/**
+ * The other common spelling of a note: C# <-> Db, F# <-> Gb, ... White keys come back unchanged
+ * (no B <-> Cb); theoretical spellings come back plain (Cb -> B, E# -> F, F## -> G).
+ */
+export function enharmonic(note: string): string {
+  return Note.enharmonic(note)
+}
+
+/** Pitch class number 0-11 (C = 0), spelling-agnostic: Cb -> 11, B# -> 0. */
+export function chroma(note: string): number {
+  const c = Note.chroma(note)
+  if (c === undefined || Number.isNaN(c)) throw new Error(`Not a note: ${note}`)
+  return c
+}

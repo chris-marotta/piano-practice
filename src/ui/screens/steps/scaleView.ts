@@ -43,13 +43,22 @@ export function hasDistinctDescent(ref: ScaleRef): boolean {
   return ref.form === 'melodic'
 }
 
-/** L1: each hand's notes (with octave) and fingers, ascending ('up') or descending ('down', top tonic first). */
-export function fingerRows(ref: ScaleRef, octaves: 1 | 2, direction: Direction = 'up'): { rh: HandRow; lh: HandRow } {
+/**
+ * L1: each hand's notes (with octave) and fingers, ascending ('up') or descending ('down', top tonic first).
+ * `fingeringRef` is the session scale whose fingering to use; the Library passes the enharmonic
+ * session scale for spellings with no fingering entry of their own (G♭ major -> F♯ major).
+ */
+export function fingerRows(
+  ref: ScaleRef,
+  octaves: 1 | 2,
+  direction: Direction = 'up',
+  fingeringRef: ScaleRef = ref,
+): { rh: HandRow; lh: HandRow } {
   const row = (hand: 'rh' | 'lh', octave: number): HandRow => {
     const seq = scaleSequence(ref, octaves, octave)
     return {
       notes: direction === 'up' ? seq.ascending : seq.descending,
-      fingers: fingeringSequence(ref, octaves, hand, direction),
+      fingers: fingeringSequence(fingeringRef, octaves, hand, direction),
     }
   }
   return { rh: row('rh', RH_OCTAVE), lh: row('lh', LH_OCTAVE) }
@@ -60,8 +69,9 @@ export function scaleKeyboard(
   ref: ScaleRef,
   octaves: 1 | 2,
   direction: Direction = 'up',
+  fingeringRef: ScaleRef = ref,
 ): { low: number; high: number; marks: KeyMark[]; firstMidi: number } {
-  const rows = fingerRows(ref, octaves, direction)
+  const rows = fingerRows(ref, octaves, direction, fingeringRef)
   const marksFor = (hand: 'rh' | 'lh', row: HandRow): KeyMark[] =>
     row.notes.map((n, i) => ({ midi: noteMidi(n), hand, finger: row.fingers[i], label: formatNote(pitchClass(n)) }))
   const marks = [...marksFor('rh', rows.rh), ...marksFor('lh', rows.lh)]

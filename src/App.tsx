@@ -2,6 +2,7 @@ import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
 import { Placeholder } from './ui/screens/Placeholder'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
+import { Library } from './ui/screens/Library'
 import { Placement } from './ui/screens/Placement'
 import { Today } from './ui/screens/Today'
 import { Session } from './ui/screens/Session'
@@ -23,6 +24,7 @@ function Screen({ route: r }: { route: Route }) {
   if (r === 'placement') return <Placement />
   if (r === 'today') return <Today />
   if (r === 'session') return <Session />
+  if (r === 'library') return <Library />
   return <Placeholder title={TITLES[r]} />
 }
 

@@ -6,6 +6,7 @@ import '@fontsource/noto-music/music-400.css'
 import './ui/tokens.css'
 import './ui/app.css'
 import './ui/session.css'
+import './ui/library.css'
 import { App } from './App'
 
 render(<App />, document.getElementById('app')!)
