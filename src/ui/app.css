@@ -51,8 +51,13 @@ p {
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  padding: var(--s-5) max(var(--s-5), env(safe-area-inset-left)) var(--s-5)
+  padding: max(var(--s-5), env(safe-area-inset-top)) max(var(--s-5), env(safe-area-inset-left)) var(--s-5)
     max(var(--s-5), env(safe-area-inset-right));
+}
+
+/* The banner already clears the status bar. */
+.banner + .shell__main {
+  padding-top: var(--s-5);
 }
 
 .screen {
