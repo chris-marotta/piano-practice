@@ -87,3 +87,8 @@ export function relativeKey(ref: ScaleRef): ScaleRef {
   if (ref.form === 'major') return { root: Key.majorKey(ref.root).minorRelative, form: 'natural' }
   return { root: Key.minorKey(ref.root).relativeMajor, form: 'major' }
 }
+
+/** Transpose a note (with or without octave) by an interval such as '5P'. Thin wrapper so only src/theory imports tonal. */
+export function transpose(note: string, interval: string): string {
+  return Note.transpose(note, interval)
+}

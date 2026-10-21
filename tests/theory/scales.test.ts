@@ -8,6 +8,7 @@ import {
   relativeKey,
   scaleNotes,
   scaleSequence,
+  transpose,
 } from '../../src/theory/scales'
 
 describe('scaleNotes', () => {
@@ -79,5 +80,14 @@ describe('isBlackKey', () => {
   it('ignores octave numbers', () => {
     expect(isBlackKey('F#4')).toBe(true)
     expect(isBlackKey('E4')).toBe(false)
+  })
+})
+
+describe('transpose', () => {
+  it('stacks a perfect fifth on the drone tonic', () => {
+    expect(transpose('C2', '5P')).toBe('G2')
+    expect(transpose('F#2', '5P')).toBe('C#3')
+    expect(transpose('Db2', '5P')).toBe('Ab2')
+    expect(transpose('B2', '5P')).toBe('F#3')
   })
 })
