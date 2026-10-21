@@ -32,6 +32,8 @@ export interface CurrentSession {
   index: number
   startedAt: number
   before: Record<string, ItemState>
+  /** Set once the last step is done and the session is logged (index === steps.length). */
+  minutes?: number
 }
 
 export const currentSession = signal<CurrentSession | null>(null)

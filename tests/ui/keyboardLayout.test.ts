@@ -168,6 +168,14 @@ describe('verticalLayout', () => {
     const reserved = [none, whitesOnly, both].map((b) => verticalLayout(b, true))
     for (const r of reserved) expect(r).toEqual(verticalLayout(both))
   })
+
+  it("reserveRows 'rh' reserves only the RH rows (RH-only displays such as chords)", () => {
+    const rhOnly = [none, whitesOnly, { rhRows: 2, lhRows: 0 } as const].map((b) => verticalLayout(b, 'rh'))
+    for (const r of rhOnly) {
+      expect(r.keyTop).toBe(verticalLayout(both).keyTop)
+      expect(r.height).toBe(r.keyTop + KEY.whiteH)
+    }
+  })
 })
 
 describe('minRenderWidth', () => {

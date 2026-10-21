@@ -122,17 +122,20 @@ export const SUB_ROW = 2 * BADGE_R + 6
 
 const rowHeight = (rows: number): number => (rows === 0 ? 0 : BADGE_GAP + 2 * BADGE_R + (rows - 1) * SUB_ROW + 4)
 
+/** true: both hands; 'rh': the RH rows only, for right-hand-only displays (chords). */
+export type ReserveRows = boolean | 'rh'
+
 /**
  * Vertical positions in SVG units. With reserveRows, both hands always get two sub-rows,
  * so the keyboard keeps the same height and position from one scale to the next.
  */
 export function verticalLayout(
   rows: { rhRows: number; lhRows: number },
-  reserveRows = false,
+  reserveRows: ReserveRows = false,
 ): { keyTop: number; keyBottom: number; height: number } {
   const keyTop = rowHeight(reserveRows ? 2 : rows.rhRows)
   const keyBottom = keyTop + KEY.whiteH
-  return { keyTop, keyBottom, height: keyBottom + rowHeight(reserveRows ? 2 : rows.lhRows) }
+  return { keyTop, keyBottom, height: keyBottom + rowHeight(reserveRows === true ? 2 : rows.lhRows) }
 }
 
 // ---- render scale ----

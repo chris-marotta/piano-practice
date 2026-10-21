@@ -12,6 +12,7 @@ import {
   type BadgeSlot,
   type KeyMark,
   type KeyRect,
+  type ReserveRows,
 } from './keyboardLayout'
 
 export type { KeyMark } from './keyboardLayout'
@@ -22,8 +23,8 @@ interface Props {
   high: number
   marks: KeyMark[]
   onKeyTap?: (midi: number) => void
-  /** Always reserve two badge sub-rows per hand so the keyboard doesn't shift between scales. */
-  reserveRows?: boolean
+  /** Always reserve two badge sub-rows per hand ('rh': RH only) so the keyboard doesn't shift between scales. */
+  reserveRows?: ReserveRows
 }
 
 /** Cap on rendered white-key width so a one-octave keyboard doesn't fill the iPad. */

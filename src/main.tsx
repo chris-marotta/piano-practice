@@ -5,6 +5,7 @@ import '@fontsource/atkinson-hyperlegible/700.css'
 import '@fontsource/noto-music/music-400.css'
 import './ui/tokens.css'
 import './ui/app.css'
+import './ui/session.css'
 import { App } from './App'
 
 render(<App />, document.getElementById('app')!)

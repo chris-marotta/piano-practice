@@ -4,6 +4,7 @@ import { Placeholder } from './ui/screens/Placeholder'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
 import { Placement } from './ui/screens/Placement'
 import { Today } from './ui/screens/Today'
+import { Session } from './ui/screens/Session'
 import { devPage, route, type Route } from './ui/state'
 
 const TITLES: Record<Route, string> = {
@@ -21,6 +22,7 @@ const FULL_SCREEN: Route[] = ['placement', 'session']
 function Screen({ route: r }: { route: Route }) {
   if (r === 'placement') return <Placement />
   if (r === 'today') return <Today />
+  if (r === 'session') return <Session />
   return <Placeholder title={TITLES[r]} />
 }
 
