@@ -1,3 +1,4 @@
+import { Note } from '@tonaljs/tonal'
 import { describe, expect, it } from 'vitest'
 import {
   CHORD_TYPES,
@@ -28,13 +29,28 @@ describe('chordNotes', () => {
     expect(chordNotes('F#', 'm7b5', 0)).toEqual(['F#4', 'A4', 'C5', 'E5'])
     expect(chordNotes('Bb', 'add9', 0)).toEqual(['Bb4', 'D5', 'F5', 'C6'])
   })
+  it('places moved notes above the current top for add9 and 9', () => {
+    expect(chordNotes('C', '9', 1)).toEqual(['E4', 'G4', 'Bb4', 'D5', 'C6'])
+    expect(chordNotes('C', 'add9', 1)).toEqual(['E4', 'G4', 'D5', 'C6'])
+  })
+  it('is strictly ascending at every allowed inversion of every type', () => {
+    for (const { id } of CHORD_TYPES) {
+      for (let inv = 0; inv <= maxInversion(id); inv++) {
+        const midis = chordNotes('C', id, inv).map((n) => Note.midi(n) as number)
+        midis.slice(1).forEach((m, i) => expect(m, `${id} inv ${inv}`).toBeGreaterThan(midis[i] as number))
+      }
+    }
+  })
 })
 
 describe('maxInversion', () => {
-  it('is min(noteCount - 1, 3)', () => {
+  it('allows 3rd inversion only where there is a 7th', () => {
     expect(maxInversion('M')).toBe(2)
     expect(maxInversion('7')).toBe(3)
     expect(maxInversion('9')).toBe(3)
+    expect(maxInversion('dim7')).toBe(3)
+    expect(maxInversion('6')).toBe(2)
+    expect(maxInversion('add9')).toBe(2)
   })
 })
 
@@ -46,6 +62,7 @@ describe('chordFingering', () => {
     expect(chordFingering('m', 1, 'lh')).toEqual([5, 3, 1])
     expect(chordFingering('M', 2, 'rh')).toEqual([1, 3, 5])
     expect(chordFingering('M', 2, 'lh')).toEqual([5, 2, 1])
+    expect(chordFingering('dim', 1, 'rh')).toEqual([1, 2, 5])
   })
   it('gives seventh-chord fingerings in root position only', () => {
     expect(chordFingering('maj7', 0, 'rh')).toEqual([1, 2, 3, 5])

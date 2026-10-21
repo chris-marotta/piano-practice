@@ -25,15 +25,27 @@ function rootPositionNotes(root: string, type: ChordTypeId, octave: number): str
   return Chord.getChord(type, `${root}${octave}`).notes
 }
 
-export function maxInversion(type: ChordTypeId): number {
-  return Math.min(rootPositionNotes('C', type, 4).length - 1, 3)
+/** 3rd inversion only where there is a 7th (spec 3.3); triads, 6 and add9 stop at 2nd. */
+const MAX_INVERSION: Record<ChordTypeId, number> = {
+  M: 2, m: 2, dim: 2, aug: 2, sus2: 2, sus4: 2,
+  maj7: 3, '7': 3, m7: 3, m7b5: 3, dim7: 3, '9': 3,
+  '6': 2, add9: 2,
 }
 
-/** Inversion k moves the lowest k notes up an octave. */
+export function maxInversion(type: ChordTypeId): number {
+  return MAX_INVERSION[type]
+}
+
+/** Inversion k moves each of the lowest k notes up whole octaves until it sits above the current top note, so the result always ascends (add9/9 have a 9th already above the octave). */
 export function chordNotes(root: string, type: ChordTypeId, inversion: number, octave = 4): string[] {
-  const notes = rootPositionNotes(root, type, octave)
-  const low = notes.slice(0, inversion).map((n) => Note.transpose(n, '8P'))
-  return [...notes.slice(inversion), ...low]
+  const result = rootPositionNotes(root, type, octave)
+  for (let i = 0; i < inversion; i++) {
+    let moved = Note.transpose(result.shift() as string, '8P')
+    const top = Note.midi(result[result.length - 1] as string) as number
+    while ((Note.midi(moved) as number) < top) moved = Note.transpose(moved, '8P')
+    result.push(moved)
+  }
+  return result
 }
 
 type Hand = 'rh' | 'lh'
