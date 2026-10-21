@@ -41,18 +41,36 @@ addRow(['G#:minor'], '3412312 3412312 3', '3213214 3213214 3')
 addRow(['Eb:minor'], '3123412 3123412 3', '2143213 2143213 2')
 addRow(['Bb:minor'], '2123123 4123123 4', '2132143 2132143 2')
 
-const digits = (s: string): number[] => [...s].map(Number)
+const digits = (s: string): number[] => [...s.replace(/ /g, '')].map(Number)
+
+function freezeEntry(rh: string, lh: string): ScaleFingering {
+  return Object.freeze({ rh: Object.freeze(digits(rh)) as number[], lh: Object.freeze(digits(lh)) as number[] })
+}
 
 export const FINGERINGS: Record<string, ScaleFingering> = Object.fromEntries(
-  Object.entries(ROWS).map(([k, v]) => [k, { rh: digits(v.rh), lh: digits(v.lh) }]),
+  Object.entries(ROWS).map(([k, v]) => [k, freezeEntry(v.rh, v.lh)]),
 )
+
+/**
+ * Melodic-minor ascending overrides, added during build: the natural-minor RH fingering
+ * put the thumb on a black key (D# in F# melodic, A# in C# melodic). LH reuses the natural entry.
+ * Melodic descends as natural minor, so only the ascending form needs an override.
+ */
+const MELODIC_OVERRIDES: Record<string, ScaleFingering> = {
+  'F#:melodic': freezeEntry('2312341 2312341 2', ROWS['F#:minor']!.lh),
+  'C#:melodic': freezeEntry('2312341 2312341 2', ROWS['C#:minor']!.lh),
+}
 
 function keyOf(ref: ScaleRef): string {
   return `${ref.root}:${ref.form === 'major' ? 'major' : 'minor'}`
 }
 
-/** Harmonic and melodic minor return the natural-minor entry for the root. */
+/** Ascending fingering. Harmonic returns the natural-minor entry; melodic does too unless overridden. */
 export function fingeringFor(ref: ScaleRef): ScaleFingering {
+  if (ref.form === 'melodic') {
+    const override = MELODIC_OVERRIDES[`${ref.root}:melodic`]
+    if (override) return override
+  }
   const entry = FINGERINGS[keyOf(ref)]
   if (!entry) throw new Error(`No fingering for ${keyOf(ref)}`)
   return entry
@@ -69,7 +87,9 @@ export function fingeringSequence(
   hand: Hand,
   direction: 'up' | 'down',
 ): number[] {
-  const full = fingeringFor(ref)[hand]
+  // Melodic minor descends as natural minor, so 'down' reverses the natural ascending fingering.
+  const source = direction === 'down' && ref.form === 'melodic' ? { root: ref.root, form: 'natural' as const } : ref
+  const full = fingeringFor(source)[hand]
   const up = octaves === 1 ? oneOctave(full) : [...full]
   return direction === 'up' ? up : up.reverse()
 }
