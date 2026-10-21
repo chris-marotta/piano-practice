@@ -36,26 +36,32 @@ interface HandRow {
   fingers: number[]
 }
 
-/** L1: each hand's ascending notes (with octave) and fingers. */
-export function fingerRows(ref: ScaleRef, octaves: 1 | 2): { rh: HandRow; lh: HandRow } {
-  return {
-    rh: {
-      notes: scaleSequence(ref, octaves, RH_OCTAVE).ascending,
-      fingers: fingeringSequence(ref, octaves, 'rh', 'up'),
-    },
-    lh: {
-      notes: scaleSequence(ref, octaves, LH_OCTAVE).ascending,
-      fingers: fingeringSequence(ref, octaves, 'lh', 'up'),
-    },
-  }
+export type Direction = 'up' | 'down'
+
+/** Melodic minor descends as natural minor (spec §3.1), so only it needs a separate "coming down" display (R16). */
+export function hasDistinctDescent(ref: ScaleRef): boolean {
+  return ref.form === 'melodic'
 }
 
-/** L0: hands together on one keyboard, ascending fingering, note names on the keys. */
+/** L1: each hand's notes (with octave) and fingers, ascending ('up') or descending ('down', top tonic first). */
+export function fingerRows(ref: ScaleRef, octaves: 1 | 2, direction: Direction = 'up'): { rh: HandRow; lh: HandRow } {
+  const row = (hand: 'rh' | 'lh', octave: number): HandRow => {
+    const seq = scaleSequence(ref, octaves, octave)
+    return {
+      notes: direction === 'up' ? seq.ascending : seq.descending,
+      fingers: fingeringSequence(ref, octaves, hand, direction),
+    }
+  }
+  return { rh: row('rh', RH_OCTAVE), lh: row('lh', LH_OCTAVE) }
+}
+
+/** L0: hands together on one keyboard, fingering for the direction, note names on the keys. */
 export function scaleKeyboard(
   ref: ScaleRef,
   octaves: 1 | 2,
+  direction: Direction = 'up',
 ): { low: number; high: number; marks: KeyMark[]; firstMidi: number } {
-  const rows = fingerRows(ref, octaves)
+  const rows = fingerRows(ref, octaves, direction)
   const marksFor = (hand: 'rh' | 'lh', row: HandRow): KeyMark[] =>
     row.notes.map((n, i) => ({ midi: noteMidi(n), hand, finger: row.fingers[i], label: formatNote(pitchClass(n)) }))
   const marks = [...marksFor('rh', rows.rh), ...marksFor('lh', rows.lh)]

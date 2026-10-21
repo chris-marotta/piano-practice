@@ -10,7 +10,7 @@ import { RatingBar } from '../../components/RatingBar'
 import { Segmented } from '../../components/Segmented'
 import { chordCard, chordMarks, chordStepRange, inversionsOfTonic } from './chordView'
 import { ScrollKeyboard } from './ScrollKeyboard'
-import { useSilenceOnLeave } from './useAudio'
+import { useMounted, useSilenceOnLeave } from './useAudio'
 
 type ChordStepData = Extract<Step, { kind: 'chords' }>
 type Mode = 'block' | 'broken'
@@ -51,6 +51,7 @@ export function ChordStep({ step, onRate }: Props) {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useSilenceOnLeave()
+  const mounted = useMounted()
   const stopCadence = () => {
     timers.current.forEach(clearTimeout)
     timers.current = []
@@ -65,12 +66,14 @@ export function ChordStep({ step, onRate }: Props) {
     stopCadence()
     setSel(v)
     await unlockAudio()
+    if (!mounted.current) return // the step was left while audio was unlocking
     playChord(v.notes, mode)
   }
 
   const playCadence = async () => {
     stopCadence()
     await unlockAudio()
+    if (!mounted.current) return
     cadence.forEach((c, i) => {
       const v: Voiced = { key: `c${i}`, type: c.type, notes: c.notes, inversion: c.inversion }
       timers.current.push(

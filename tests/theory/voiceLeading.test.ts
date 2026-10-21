@@ -1,6 +1,6 @@
 import { Note } from '@tonaljs/tonal'
 import { describe, expect, it } from 'vitest'
-import { progression } from '../../src/theory/chords'
+import { chordNotes, maxInversion, progression } from '../../src/theory/chords'
 import { voiceDistance, voiceLead, voiceLedCadence } from '../../src/theory/voiceLeading'
 
 const midis = (notes: string[]): number[] => notes.map((n) => Note.midi(n) as number)
@@ -39,14 +39,37 @@ describe('voiceLead', () => {
     expect(voiceLead([{ root: 'E', type: 'M' }], 3)[0]).toEqual({ notes: ['E3', 'G#3', 'B3'], inversion: 0 })
   })
 
-  it('never picks a voicing farther than any other inversion in any nearby octave', () => {
-    const chords = progression({ root: 'F#', form: 'major' })
-    const seq = voiceLead([chords[0]!, chords[1]!, chords[0]!, chords[2]!, chords[0]!])
-    for (let i = 1; i < seq.length; i++) {
-      const prev = seq[i - 1]!.notes
-      const d = voiceDistance(prev, seq[i]!.notes)
-      expect(d).toBeLessThanOrEqual(6) // common tones held: a triad change never moves more than ~2 semitones a voice
+  it('never picks a voicing farther than any candidate inversion in a nearby octave (brute force)', () => {
+    for (const ref of [
+      { root: 'F#', form: 'major' as const },
+      { root: 'Db', form: 'major' as const },
+      { root: 'G#', form: 'harmonic' as const },
+      { root: 'D', form: 'natural' as const },
+    ]) {
+      const [I, IV, V] = progression(ref)
+      const chords = [I!, IV!, I!, V!, I!]
+      const seq = voiceLead(chords)
+      for (let i = 1; i < seq.length; i++) {
+        const prev = seq[i - 1]!.notes
+        const chosen = voiceDistance(prev, seq[i]!.notes)
+        for (const oct of [3, 4, 5])
+          for (let inv = 0; inv <= maxInversion(chords[i]!.type); inv++) {
+            const d = voiceDistance(prev, chordNotes(chords[i]!.root, chords[i]!.type, inv, oct))
+            expect(chosen, `${ref.root} ${ref.form} chord ${i} vs inv ${inv} oct ${oct}`).toBeLessThanOrEqual(d)
+          }
+      }
     }
+  })
+
+  it('breaks ties by lower octave, then lower inversion', () => {
+    const C = { root: 'C', type: 'M' as const }
+    // C→D: A3 D4 F♯4 (inv 2, octave 3) and D4 F♯4 A4 (inv 0, octave 4) both cost 6; the lower octave wins.
+    expect(voiceDistance(['C4', 'E4', 'G4'], ['A3', 'D4', 'F#4'])).toBe(6)
+    expect(voiceDistance(['C4', 'E4', 'G4'], ['D4', 'F#4', 'A4'])).toBe(6)
+    expect(voiceLead([C, { root: 'D', type: 'M' }])[1]).toEqual({ notes: ['A3', 'D4', 'F#4'], inversion: 2 })
+    // C→F♯: A♯3 C♯4 F♯4 (inv 1) and C♯4 F♯4 A♯4 (inv 2), both octave 3, both cost 6; the lower inversion wins.
+    expect(voiceDistance(['C4', 'E4', 'G4'], ['C#4', 'F#4', 'A#4'])).toBe(6)
+    expect(voiceLead([C, { root: 'F#', type: 'M' }])[1]).toEqual({ notes: ['A#3', 'C#4', 'F#4'], inversion: 1 })
   })
 
   it('returns [] for no chords', () => {

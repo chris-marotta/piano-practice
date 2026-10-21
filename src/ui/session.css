@@ -211,7 +211,6 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--muted);
-  text-align: center;
 }
 
 .support--rows {
@@ -235,8 +234,53 @@
   font-size: 72px;
 }
 
+.support__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  min-height: var(--tap);
+}
+
 .peek {
-  align-self: flex-end;
+  margin-left: auto;
+}
+
+.support__dir {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.support--rows-split {
+  gap: var(--s-2);
+}
+
+/* Compact finger rows (melodic minor L1: up and down pairs on one screen). Badges stay 36px with
+   20px numbers; the hand label moves inline and the note cells shrink. */
+.finger-row--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.finger-row--compact .finger-row__hand {
+  flex: none;
+  width: 92px;
+}
+
+.finger-row--compact .finger-row__cells {
+  gap: var(--s-1);
+}
+
+.finger-row--compact .finger-row__cell {
+  min-width: 52px;
+  gap: var(--s-1);
+  padding: var(--s-1);
+}
+
+.finger-row--compact .finger-row__note {
+  font-size: 24px;
+  line-height: 1.2;
 }
 
 .btn--quiet-line {

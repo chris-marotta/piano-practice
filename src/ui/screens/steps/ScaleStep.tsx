@@ -7,11 +7,21 @@ import type { Rating } from '../../../srs/scheduler'
 import { formatScale } from '../../../theory/format'
 import { FingerRow } from '../../components/FingerRow'
 import { RatingBar } from '../../components/RatingBar'
+import { Segmented } from '../../components/Segmented'
 import { update } from '../../state'
-import { familyLine, fingerRows, keySignatureText, scaleHeader, scaleKeyboard, SUPPORT_NAMES } from './scaleView'
+import {
+  familyLine,
+  fingerRows,
+  hasDistinctDescent,
+  keySignatureText,
+  scaleHeader,
+  scaleKeyboard,
+  SUPPORT_NAMES,
+  type Direction,
+} from './scaleView'
 import { ScrollKeyboard } from './ScrollKeyboard'
 import { Toggle } from './Toggle'
-import { useDrone, useMetronome, useSilenceOnLeave } from './useAudio'
+import { useDrone, useMetronome, useMounted, useSilenceOnLeave } from './useAudio'
 
 type ScaleStepData = Extract<Step, { kind: 'scale' }>
 
@@ -30,6 +40,11 @@ const REPS: { hand: 'rh' | 'lh' | 'both'; label: string }[] = [
   { hand: 'both', label: 'Together' },
 ]
 
+const DIRECTIONS: { value: Direction; label: string }[] = [
+  { value: 'up', label: 'Up' },
+  { value: 'down', label: 'Down' },
+]
+
 const setSetting = <K extends 'droneOn' | 'metronomeOn'>(key: K, value: boolean) =>
   update((s) => ({ ...s, settings: { ...s.settings, [key]: value } }))
 
@@ -41,19 +56,42 @@ function Check() {
   )
 }
 
-/** Support display for the item's level: L0 keyboard, L1 finger rows, L2 key signature, L3 name only. */
-function Support({ step, octaves, showKeyboard }: { step: ScaleStepData; octaves: 1 | 2; showKeyboard: boolean }) {
+interface SupportProps {
+  step: ScaleStepData
+  octaves: 1 | 2
+  showKeyboard: boolean
+  direction: Direction
+}
+
+/**
+ * Support display for the item's level: L0 keyboard, L1 finger rows, L2 key signature, L3 name only.
+ * Melodic minor descends as natural minor, so its keyboard follows `direction` and its L1 shows
+ * a "Going up" and a "Coming down" pair (R16).
+ */
+function Support({ step, octaves, showKeyboard, direction }: SupportProps) {
   if (step.support === 0 || showKeyboard) {
-    const kb = scaleKeyboard(step.ref, octaves)
-    const family = familyLine(step.ref)
+    const kb = scaleKeyboard(step.ref, octaves, direction)
     return (
       <div class="support support--keyboard">
         <ScrollKeyboard low={kb.low} high={kb.high} marks={kb.marks} firstMidi={kb.firstMidi} />
-        {family && <p class="support__family">{family}</p>}
       </div>
     )
   }
   if (step.support === 1) {
+    if (hasDistinctDescent(step.ref)) {
+      const up = fingerRows(step.ref, octaves, 'up')
+      const down = fingerRows(step.ref, octaves, 'down')
+      return (
+        <div class="support support--rows support--rows-split">
+          <h2 class="support__dir">Going up</h2>
+          <FingerRow notes={up.rh.notes} fingers={up.rh.fingers} hand="rh" compact />
+          <FingerRow notes={up.lh.notes} fingers={up.lh.fingers} hand="lh" compact />
+          <h2 class="support__dir">Coming down</h2>
+          <FingerRow notes={down.rh.notes} fingers={down.rh.fingers} hand="rh" compact />
+          <FingerRow notes={down.lh.notes} fingers={down.lh.fingers} hand="lh" compact />
+        </div>
+      )
+    }
     const rows = fingerRows(step.ref, octaves)
     return (
       <div class="support support--rows">
@@ -71,6 +109,8 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   const [peeked, setPeeked] = useState(false)
   const [showKeyboard, setShowKeyboard] = useState(false)
   const [reps, setReps] = useState<boolean[]>(() => REPS.map(() => false))
+  const [direction, setDirection] = useState<Direction>('up')
+  const mounted = useMounted()
 
   useSilenceOnLeave()
   useDrone(step.ref.root, settings.droneOn, settings.droneVolumeDb)
@@ -78,12 +118,19 @@ export function ScaleStep({ step, settings, onRate }: Props) {
 
   const play = async () => {
     await unlockAudio()
+    if (!mounted.current) return // the step was left while audio was unlocking
     playScale(step.ref, settings.octaves, step.tempo)
   }
   const peek = () => {
     setPeeked(true)
     setShowKeyboard((v) => !v)
   }
+
+  // Up/Down only where the descent differs (melodic minor) and a keyboard is showing.
+  const keyboardShown = step.support === 0 || showKeyboard
+  const showDirection = hasDistinctDescent(step.ref) && keyboardShown
+  // The family line belongs to the keyboard view; it sits in the tools row to save a line at 820px.
+  const family = keyboardShown ? familyLine(step.ref) : null
 
   return (
     <div class="step step--scale">
@@ -122,12 +169,20 @@ export function ScaleStep({ step, settings, onRate }: Props) {
       ) : (
         <>
           <div class="step__body">
-            {step.support > 0 && (
-              <button type="button" class="btn btn--quiet-line peek" aria-pressed={showKeyboard} onClick={peek}>
-                {showKeyboard ? 'Hide keyboard' : 'Peek at keyboard'}
-              </button>
+            {(showDirection || family || step.support > 0) && (
+              <div class="support__tools">
+                {showDirection && (
+                  <Segmented options={DIRECTIONS} value={direction} onChange={setDirection} label="Fingering direction" />
+                )}
+                {family && <p class="support__family">{family}</p>}
+                {step.support > 0 && (
+                  <button type="button" class="btn btn--quiet-line peek" aria-pressed={showKeyboard} onClick={peek}>
+                    {showKeyboard ? 'Hide keyboard' : 'Peek at keyboard'}
+                  </button>
+                )}
+              </div>
             )}
-            <Support step={step} octaves={settings.octaves} showKeyboard={showKeyboard} />
+            <Support step={step} octaves={settings.octaves} showKeyboard={showKeyboard} direction={direction} />
           </div>
           <div class="step__foot">
             <div class="reps" role="group" aria-label="Reps">

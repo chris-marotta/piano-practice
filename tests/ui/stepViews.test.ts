@@ -4,6 +4,7 @@ import { progression } from '../../src/theory/chords'
 import { noteMidi } from '../../src/theory/scales'
 import {
   fingerRows,
+  hasDistinctDescent,
   keySignatureText,
   scaleHeader,
   scaleKeyboard,
@@ -77,6 +78,49 @@ describe('fingerRows (L1)', () => {
     expect(rows.lh.notes[0]).toBe('E3')
     expect(rows.rh.fingers).toEqual(fingeringSequence(E, 2, 'rh', 'up'))
     expect(rows.lh.fingers).toEqual(fingeringSequence(E, 2, 'lh', 'up'))
+  })
+})
+
+describe('melodic minor descent (R16)', () => {
+  const A = { root: 'A', form: 'melodic' as const }
+  const names = (notes: string[]) => notes.map((n) => n.replace(/-?\d+$/, ''))
+
+  it('only melodic minor has a distinct descent', () => {
+    expect(hasDistinctDescent(A)).toBe(true)
+    for (const form of ['major', 'natural', 'harmonic'] as const) expect(hasDistinctDescent({ root: 'A', form })).toBe(false)
+  })
+
+  it('L1 rows: going up has F♯ G♯, coming down has F G with the down fingering', () => {
+    const up = fingerRows(A, 1, 'up')
+    const down = fingerRows(A, 1, 'down')
+    expect(names(up.rh.notes)).toEqual(['A', 'B', 'C', 'D', 'E', 'F#', 'G#', 'A'])
+    expect(names(down.rh.notes)).toEqual(['A', 'G', 'F', 'E', 'D', 'C', 'B', 'A'])
+    expect(names(down.lh.notes)).toEqual(['A', 'G', 'F', 'E', 'D', 'C', 'B', 'A'])
+    expect(down.rh.notes[0]).toBe('A5')
+    expect(down.lh.notes[0]).toBe('A4')
+    expect(down.rh.fingers).toEqual(fingeringSequence(A, 1, 'rh', 'down'))
+    expect(down.lh.fingers).toEqual(fingeringSequence(A, 1, 'lh', 'down'))
+    expect(fingerRows(A, 2, 'down').rh.fingers).toEqual(fingeringSequence(A, 2, 'rh', 'down'))
+  })
+
+  it('fingerRows defaults to going up', () => {
+    expect(fingerRows(A, 2)).toEqual(fingerRows(A, 2, 'up'))
+  })
+
+  it('the down keyboard marks F and G, not F♯ or G♯', () => {
+    const labels = new Set(scaleKeyboard(A, 2, 'down').marks.map((m) => m.label))
+    expect(labels.has('F') && labels.has('G')).toBe(true)
+    expect(labels.has('F♯') || labels.has('G♯')).toBe(false)
+    const upLabels = new Set(scaleKeyboard(A, 2, 'up').marks.map((m) => m.label))
+    expect(upLabels.has('F♯') && upLabels.has('G♯')).toBe(true)
+  })
+
+  it('down keyboard badges carry the down fingering, note for note', () => {
+    const kb = scaleKeyboard(A, 1, 'down')
+    const rh = kb.marks.filter((m) => m.hand === 'rh')
+    expect(rh.map((m) => m.finger)).toEqual(fingeringSequence(A, 1, 'rh', 'down'))
+    expect(rh[0]!.midi).toBe(noteMidi('A5'))
+    expect(kb).toMatchObject({ low: noteMidi('C3'), high: noteMidi('B5') })
   })
 })
 

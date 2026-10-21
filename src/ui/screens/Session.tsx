@@ -48,6 +48,15 @@ export function Session() {
     if (missing) route.value = 'today'
   }, [missing])
 
+  // Left by browser back (or any route change other than End session / Back to Today): drop the
+  // session so it can't be resumed half-way. Ratings are already saved; step unmounts stop audio.
+  useEffect(
+    () => () => {
+      if (route.peek() !== 'session') currentSession.value = null
+    },
+    [],
+  )
+
   if (!s) return null
   if (s.index >= s.steps.length) return <Done session={s} />
 
