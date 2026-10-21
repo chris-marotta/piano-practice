@@ -49,6 +49,12 @@ describe('applyRating', () => {
       { date: '2026-10-19', rating: 'lost' }, { date: T, rating: 'nailed' },
     ])
   })
+  it('a scale with no stored tempo starts from opts.startTempo (else 60)', () => {
+    const { tempo: _t, ...noTempo } = base
+    expect(applyRating(noTempo, 'nailed', T, { startTempo: 72 }).tempo).toBe(80)
+    expect(applyRating(noTempo, 'nailed', T).tempo).toBe(68)
+    expect(applyRating(base, 'nailed', T, { startTempo: 72 }).tempo).toBe(68) // stored tempo wins
+  })
   it('non-scale items leave support/levelStreak/tempo untouched', () => {
     const card: ItemState = { ...base, id: 'recall:keysig:E:major', tempo: undefined }
     const n = applyRating(card, 'nailed', T)

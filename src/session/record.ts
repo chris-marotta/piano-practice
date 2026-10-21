@@ -16,7 +16,10 @@ export function rateItem(
   opts?: { peeked?: boolean },
 ): AppState {
   const prior = stateFor(id, state.items, today, state.settings)
-  const items = { ...state.items, [id]: applyRating(prior, rating, today, opts) }
+  const items = {
+    ...state.items,
+    [id]: applyRating(prior, rating, today, { ...opts, startTempo: state.settings.startTempo }),
+  }
   const parsed = parseId(id)
   if (parsed.kind === 'scale' && !prior.introduced) {
     for (const sibling of idsForScale(parsed.ref)) {

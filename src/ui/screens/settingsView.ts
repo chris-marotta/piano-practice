@@ -46,12 +46,23 @@ export function clampDroneDb(db: number): number {
 
 export type SettingsPatch = Partial<Omit<Settings, 'minorForms'>>
 
-/** New state with the patch applied to a copy of settings (tempo and drone volume clamped). */
+/**
+ * New state with the patch applied to a copy of settings (tempo and drone volume clamped).
+ * A start tempo change also resets the tempo of every scale never practiced (empty history):
+ * placement stores a tempo in each scale, so without this the setting would reach nothing.
+ */
 export function withSettings(state: AppState, patch: SettingsPatch): AppState {
   const settings: Settings = { ...state.settings, ...patch, minorForms: { ...state.settings.minorForms } }
   if (patch.startTempo !== undefined) settings.startTempo = clampTempo(patch.startTempo)
   if (patch.droneVolumeDb !== undefined) settings.droneVolumeDb = clampDroneDb(patch.droneVolumeDb)
-  return { ...state, settings }
+  if (patch.startTempo === undefined) return { ...state, settings }
+  const items = { ...state.items }
+  for (const [id, item] of Object.entries(items)) {
+    if (id.startsWith('scale:') && item.history.length === 0 && item.tempo !== settings.startTempo) {
+      items[id] = { ...item, tempo: settings.startTempo }
+    }
+  }
+  return { ...state, settings, items }
 }
 
 /** Turn one minor form on or off. Any combination is allowed, including none (majors only). */

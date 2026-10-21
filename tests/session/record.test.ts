@@ -81,6 +81,13 @@ describe('rateItem', () => {
     for (const id of idsForScale(D)) expect(item(next, id)).toBe(item(s, id))
   })
 
+  it("a stored scale without a tempo starts from the settings' start tempo", () => {
+    const s = placed({ [scaleId(E)]: 'solid' })
+    const { tempo: _t, ...noTempo } = item(s, scaleId(E))
+    const state: AppState = { ...s, settings: { ...s.settings, startTempo: 72 }, items: { ...s.items, [scaleId(E)]: noTempo } }
+    expect(item(rateItem(state, scaleId(E), 'nailed', TODAY), scaleId(E)).tempo).toBe(80)
+  })
+
   it('rating a recall or chords item introduces only that item', () => {
     const s = placed({ [scaleId(E)]: 'unknown' })
     const next = rateItem(s, chordsId(E), 'shaky', TODAY)

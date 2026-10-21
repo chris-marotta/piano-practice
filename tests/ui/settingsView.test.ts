@@ -93,6 +93,30 @@ describe('withSettings', () => {
     expect(after.log).toBe(before.log)
     expect(after.placedAt).toBe(TODAY)
   })
+  it('a start tempo change rewrites the tempo of every never-practiced scale, and only those', () => {
+    const before = placed()
+    const practiced = 'scale:G:major'
+    before.items[practiced] = {
+      ...(before.items[practiced] as NonNullable<AppState['items'][string]>),
+      tempo: 76,
+      history: [{ date: TODAY, rating: 'nailed' }],
+    }
+    const after = withSettings(before, { startTempo: 72 })
+    expect(after.settings.startTempo).toBe(72)
+    expect(after.items['scale:C:major']?.tempo).toBe(72)
+    expect(after.items['scale:A:natural']?.tempo).toBe(72)
+    expect(after.items[practiced]?.tempo).toBe(76)
+    expect(after.items['recall:keysig:C:major']?.tempo).toBeUndefined()
+    expect(after.items['chords:C:major']?.tempo).toBeUndefined()
+    expect(before.items['scale:C:major']?.tempo).toBe(60) // input untouched
+    const steps = buildSession(after.items, after.settings, TODAY)
+    const first = steps.find((st) => st.kind === 'scale')
+    expect(first).toMatchObject({ itemId: 'scale:C:major', tempo: 72 })
+  })
+  it('the rewrite uses the clamped tempo', () => {
+    const after = withSettings(placed(), { startTempo: 131 })
+    expect(after.items['scale:C:major']?.tempo).toBe(120)
+  })
 })
 
 describe('withMinorForm', () => {

@@ -195,7 +195,7 @@ export function Settings() {
               label="Octaves"
             />
           </Row>
-          <Row label="Start tempo" hint="For scales not practiced yet. Each scale then keeps its own tempo.">
+          <Row label="Start tempo" hint="Applies to scales you haven't practiced yet. Each scale then keeps its own tempo.">
             <div class="stepper">
               <button
                 type="button"

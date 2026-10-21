@@ -32,7 +32,7 @@ export function applyRating(
   s: ItemState,
   rating: Rating,
   today: string,
-  opts?: { peeked?: boolean },
+  opts?: { peeked?: boolean; startTempo?: number },
 ): ItemState {
   const eff: Rating = opts?.peeked && rating === 'nailed' ? 'shaky' : rating
 
@@ -71,7 +71,8 @@ export function applyRating(
       next.support = clampSupport(s.support - 1)
       next.levelStreak = 0
     }
-    next.tempo = nextTempo(s.tempo ?? TEMPO_START, eff)
+    // A scale with no stored tempo (e.g. an imported item) starts from the start-tempo setting.
+    next.tempo = nextTempo(s.tempo ?? opts?.startTempo ?? TEMPO_START, eff)
   }
 
   return next
