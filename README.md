@@ -1,18 +1,33 @@
 # Piano Practice
 
-A static web app for daily piano scale practice. Spaced repetition decides which
-scales and chords come up each day; a short guided session walks through them with
-fingerings, a keyboard, a drone, and a metronome. iPad-first (landscape 1180 x 820),
-no backend, no accounts. Progress is stored in `localStorage`.
+A static web app for daily piano scale and chord practice. Spaced repetition (Leitner
+boxes) picks which scales, chords, and theory recall cards come up each day, and a short
+guided session walks through them with fingerings, an on-screen keyboard, a drone, and a
+metronome. iPad-first (landscape 1180 x 820), laptop second; no backend, no accounts.
+Progress is stored in the browser's `localStorage`.
 
-Built with Preact, TypeScript, Vite, and Tone.js.
+## Features
+
+- Placement: mark each of the 24 scales Solid, Shaky, or Don't know to seed the schedule.
+- Today: a 5, 10, 15, or 20 minute session built from what is due, with a time estimate.
+- Guided session: theory recall cards (key signature, spelling, relative key, thumb notes),
+  scale steps (recall gate, four support levels from full keyboard to name only, Peek,
+  rep checklist, Play, Nailed / Shaky / Lost), and chord steps (block or broken, inversions,
+  voice-led cadence at higher levels).
+- Progress: mastery grid (box and support level per scale), streak, minutes, 8-week calendar.
+- Library: scales with fingering, chords, chords in a key, and a "What's this chord?" detector.
+- Settings: minor forms (natural, harmonic, melodic), octaves, start tempo, drone and
+  metronome, JSON export and import, redo placement.
+- Installable PWA that works offline once cached (piano samples included).
+
+Built with Preact, TypeScript, Vite, Tone.js, and tonal.
 
 ## Commands
 
 ```
 npm i
 npm run dev     # http://localhost:5230
-npm test        # vitest
+npm test        # vitest (pure modules: theory, data, srs, session, store)
 npm run build   # typecheck + production build to dist/
 ```
 
