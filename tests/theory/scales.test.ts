@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   MAJOR_ROOTS,
   MINOR_ROOTS,
+  isBlackKey,
   keySignature,
   relativeKey,
   scaleNotes,
@@ -67,5 +68,16 @@ describe('relativeKey', () => {
   it('returns true relative spellings at the enharmonic pair', () => {
     expect(relativeKey({ root: 'Eb', form: 'natural' })).toEqual({ root: 'Gb', form: 'major' })
     expect(relativeKey({ root: 'F#', form: 'major' })).toEqual({ root: 'D#', form: 'natural' })
+  })
+})
+
+describe('isBlackKey', () => {
+  it('classifies by pitch class, so enharmonic white keys count as white', () => {
+    for (const n of ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'Cb', 'E#', 'B#', 'Fb']) expect(isBlackKey(n)).toBe(false)
+    for (const n of ['C#', 'Db', 'D#', 'Eb', 'F#', 'Gb', 'G#', 'Ab', 'A#', 'Bb']) expect(isBlackKey(n)).toBe(true)
+  })
+  it('ignores octave numbers', () => {
+    expect(isBlackKey('F#4')).toBe(true)
+    expect(isBlackKey('E4')).toBe(false)
   })
 })

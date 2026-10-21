@@ -27,6 +27,11 @@ export function scaleNotes(ref: ScaleRef): string[] {
   return Scale.get(`${ref.root} ${TONAL_NAME[ref.form]}`).notes
 }
 
+/** True for the five black keys, by pitch class: Cb, E#, B# and Fb are white keys. */
+export function isBlackKey(note: string): boolean {
+  return [1, 3, 6, 8, 10].includes(Note.chroma(note) as number)
+}
+
 /** Attach octave numbers to ascending pitch classes: the octave rises each time the letter wraps past B. */
 function withOctaves(pitchClasses: string[], startOctave: number): string[] {
   let octave = startOctave
