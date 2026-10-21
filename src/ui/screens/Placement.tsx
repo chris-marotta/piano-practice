@@ -42,7 +42,7 @@ export function Placement() {
             <strong>Shaky:</strong> full help, back every day until it settles.
           </li>
           <li>
-            <strong>Don't know:</strong> full help, introduced one new scale per session.
+            <strong>Don't know:</strong> full help, introduced one at a time, one per session of 10 minutes or more.
           </li>
         </ul>
       </header>

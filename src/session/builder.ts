@@ -67,26 +67,38 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     }
   }
 
-  // 3. Due = introduced and due on or before today; most overdue, then lowest box, then catalog.
+  // 3. Due = introduced and due on or before today. Weakest first (ruling R19): lowest box,
+  //    then most overdue, then catalog, so a Lost scale (box 1, due tomorrow) is back the next
+  //    day ahead of stronger scales that have waited longer. The not-yet-due fill stays
+  //    next-soonest (due date, then box, then catalog).
   const isDue = (c: Candidate): boolean => c.state.introduced && c.state.due <= today
   const notYetDue = (c: Candidate): boolean => c.state.introduced && c.state.due > today
   const byDue = (a: Candidate, b: Candidate): number =>
+    a.state.box - b.state.box || (a.state.due < b.state.due ? -1 : a.state.due > b.state.due ? 1 : a.order - b.order)
+  const bySoonest = (a: Candidate, b: Candidate): number =>
     a.state.due < b.state.due ? -1 : a.state.due > b.state.due ? 1 : a.state.box - b.state.box || a.order - b.order
 
-  // 4. Scales: due with distinct roots → at most one new scale → next-soonest introduced.
+  // 4. Scales, distinct roots throughout, at most one new scale (ruling R20):
+  //    with 2+ slots and a new scale waiting, one slot is held for it and due scales fill the
+  //    rest; with 1 slot the new scale comes only when nothing is due. A held slot no new scale
+  //    can take (shared root) goes back to due scales, then to the next-soonest introduced.
   const chosen: Candidate[] = []
   const roots = new Set<string>()
-  const pick = (c: Candidate): void => {
-    if (chosen.length >= size.scales || roots.has(c.ref.root)) return
+  const pick = (limit: number) => (c: Candidate): void => {
+    if (chosen.length >= limit || roots.has(c.ref.root)) return
     chosen.push(c)
     roots.add(c.ref.root)
   }
-  scalePool.filter(isDue).sort(byDue).forEach(pick)
+  const dueScales = scalePool.filter(isDue).sort(byDue)
+  const hasNew = scalePool.some((c) => !c.state.introduced)
+  const dueLimit = hasNew && size.scales >= 2 ? size.scales - 1 : size.scales
+  dueScales.forEach(pick(dueLimit))
   if (chosen.length < size.scales) {
     const newScale = scalePool.find((c) => !c.state.introduced && !roots.has(c.ref.root))
-    if (newScale) pick(newScale)
+    if (newScale) pick(size.scales)(newScale)
   }
-  if (chosen.length < size.scales) scalePool.filter(notYetDue).sort(byDue).forEach(pick)
+  dueScales.forEach(pick(size.scales))
+  scalePool.filter(notYetDue).sort(bySoonest).forEach(pick(size.scales))
   if (chosen.length === 0) return []
 
   // 5. Chord sets: chosen scales' chord items, scale order, due ones first; take M.
@@ -98,7 +110,7 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
   // 6. Recall (ruling R12), take K:
   //    (1) today's scales (exact root+form): due introduced cards (byDue), then never-introduced cards (catalog);
   //    (2) other due introduced cards (byDue);
-  //    (3) next-soonest introduced cards (byDue).
+  //    (3) next-soonest introduced cards (bySoonest).
   //    Never-introduced cards enter only through (1), so a scale's cards get introduced the
   //    next time that scale is practised, and cards of scales not in today's session stay out.
   const todayKeys = new Set(chosen.map((s) => refKey(s.ref)))
@@ -108,7 +120,7 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     ...dueRecall.filter(isToday),
     ...recallPool.filter((c) => isToday(c) && !c.state.introduced),
     ...dueRecall.filter((c) => !isToday(c)),
-    ...recallPool.filter(notYetDue).sort(byDue),
+    ...recallPool.filter(notYetDue).sort(bySoonest),
   ].slice(0, size.cards)
 
   // 7. Order: recall → each scale followed by its chord set → free play.

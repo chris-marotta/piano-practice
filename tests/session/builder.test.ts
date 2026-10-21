@@ -13,6 +13,9 @@ import {
 import type { Placement, Settings } from '../../src/srs/items'
 import { addDays } from '../../src/srs/dates'
 import { applyRating } from '../../src/srs/scheduler'
+import { rateItem } from '../../src/session/record'
+import { emptyState } from '../../src/store/storage'
+import type { AppState } from '../../src/store/storage'
 import type { ItemState } from '../../src/srs/scheduler'
 import { progression } from '../../src/theory/chords'
 import { recallCard } from '../../src/theory/recall'
@@ -108,6 +111,38 @@ describe('buildSession: due ordering (rule 1)', () => {
     set(items, scaleId({ root: 'E', form: 'major' }), { box: 2 })
     const steps = buildSession(items, withMinutes(15), TODAY)
     expect(scaleRefs(steps)).toEqual([{ root: 'B', form: 'major' }, { root: 'E', form: 'major' }, C])
+  })
+})
+
+describe('buildSession: weakest first (ruling R19)', () => {
+  const F: ScaleRef = { root: 'F', form: 'major' }
+
+  it('lowest box beats more overdue', () => {
+    const items = allSolid()
+    set(items, scaleId(C), { box: 3, due: '2026-09-01' })
+    set(items, scaleId(F), { box: 1, due: TODAY })
+    expect(scaleRefs(buildSession(items, withMinutes(10), TODAY))).toEqual([F, C])
+  })
+
+  it('a Lost scale comes back the next day ahead of box-2 scales overdue by 10 days', () => {
+    const items = allSolid()
+    for (const ref of enabledScales(DEFAULT_SETTINGS)) set(items, scaleId(ref), { box: 2, due: '2026-10-10' })
+    const yesterday = addDays(TODAY, -1)
+    items[scaleId(F)] = applyRating(items[scaleId(F)] as ItemState, 'lost', yesterday)
+    expect(items[scaleId(F)]).toMatchObject({ box: 1, due: TODAY })
+    expect(scaleRefs(buildSession(items, withMinutes(5), TODAY))).toEqual([F])
+    expect(scaleRefs(buildSession(items, withMinutes(10), TODAY))).toEqual([F, C])
+  })
+
+  it('due recall cards also rank lowest box first', () => {
+    const items = allSolid()
+    // C's own cards were done today, so the other-due pool decides the last two slots.
+    for (const t of ['keysig', 'spell', 'relative', 'thumb'] as const)
+      items[recallId(t, C)] = applyRating(items[recallId(t, C)] as ItemState, 'nailed', TODAY)
+    set(items, recallId('keysig', G), { box: 3, due: '2026-09-01' })
+    set(items, recallId('spell', F), { box: 1, due: TODAY })
+    const recalls = ofKind(buildSession(items, withMinutes(5), TODAY), 'recall').map((s) => s.itemId)
+    expect(recalls.slice(0, 2)).toEqual([recallId('spell', F), recallId('keysig', G)])
   })
 })
 
@@ -264,29 +299,28 @@ describe('buildSession: non-introduced cards of today\'s scales (R12)', () => {
   })
 
   it('daily sessions, nailing every step after alternating solid/unknown placement → no recall card is orphaned', () => {
-    // At day 30, 4 'unknown' scales are still waiting on the one-new-scale-per-session cap
-    // (a throughput limit, not orphaning), so the day-30 check covers introduced scales only;
-    // by day 45 every scale, and so every card, has been introduced.
+    // Rated through rateItem, the app's write path: a new scale's first rating introduces its
+    // cards (rating with applyRating alone leaves an introduced scale with never-introduced
+    // cards, a state the app never reaches). With a slot held for a new scale (R20), all 12
+    // 'unknown' scales are introduced by day 12, and by day 30 every card has been rated.
     const settings = DEFAULT_SETTINGS
     const refs = enabledScales(settings)
     const choices: Record<string, Placement> = Object.fromEntries(
       refs.map((r, i) => [scaleId(r), (i % 2 === 0 ? 'solid' : 'unknown') as Placement]),
     )
-    const items = placeItems(choices, settings, PLACED)
+    let state: AppState = { ...emptyState(), settings, placedAt: PLACED, items: placeItems(choices, settings, PLACED) }
     const neverRated = (rs: ScaleRef[]): string[] =>
-      rs.flatMap(freshCards).filter((id) => (items[id]?.history.length ?? 0) === 0)
+      rs.flatMap(freshCards).filter((id) => (state.items[id]?.history.length ?? 0) === 0)
+    const introduced = (): ScaleRef[] => refs.filter((r) => state.items[scaleId(r)]?.introduced)
     let day = PLACED
     for (let d = 1; d <= 45; d++) {
-      for (const step of buildSession(items, settings, day)) {
+      for (const step of buildSession(state.items, settings, day)) {
         if (step.kind === 'freeplay') continue
-        items[step.itemId] = applyRating(stateFor(step.itemId, items, day, settings), 'nailed', day)
+        state = rateItem(state, step.itemId, 'nailed', day)
       }
       day = addDays(day, 1)
-      if (d === 30) {
-        const introduced = refs.filter((r) => items[scaleId(r)]?.introduced)
-        expect(introduced.length).toBeGreaterThanOrEqual(20)
-        expect(neverRated(introduced)).toEqual([])
-      }
+      if (d === 12) expect(introduced()).toHaveLength(24)
+      if (d === 30) expect(neverRated(refs)).toEqual([])
     }
     expect(refs.flatMap(freshCards)).toHaveLength(96)
     expect(neverRated(refs)).toEqual([])
@@ -318,11 +352,41 @@ describe('buildSession: new items (rule 4 cap)', () => {
     expect(itemIds(steps).every((id) => id.endsWith(':C:major'))).toBe(true)
   })
 
-  it('no new scale while due scales fill every slot', () => {
+  it('5 min (one scale slot): no new scale while a due scale fills it', () => {
     const items = allSolid()
     set(items, scaleId(G), { introduced: false })
+    expect(scaleRefs(buildSession(items, withMinutes(5), TODAY))).toEqual([C])
+  })
+
+  it('10 min with unknowns: one slot reserved for a new scale → 1 due + 1 new (R20)', () => {
+    const items = allSolid()
+    const F: ScaleRef = { root: 'F', form: 'major' }
+    set(items, scaleId(F), { introduced: false })
     const steps = buildSession(items, withMinutes(10), TODAY)
-    expect(scaleRefs(steps)).toEqual([C, D])
+    expect(scaleRefs(steps)).toEqual([C, F])
+    expect(ofKind(steps, 'scale')[1]?.itemId).toBe(scaleId(F))
+  })
+
+  it('still at most one new scale per session, at every length (R20)', () => {
+    const refs = enabledScales(DEFAULT_SETTINGS)
+    const choices: Record<string, Placement> = Object.fromEntries(
+      refs.map((r, i) => [scaleId(r), (i % 2 === 0 ? 'solid' : 'unknown') as Placement]),
+    )
+    const items = placeItems(choices, DEFAULT_SETTINGS, PLACED)
+    for (const min of [10, 15, 20] as const) {
+      const steps = ofKind(buildSession(items, withMinutes(min), TODAY), 'scale')
+      expect(steps).toHaveLength(SESSION_SIZES[min].scales)
+      expect(steps.filter((s) => !items[s.itemId]?.introduced)).toHaveLength(1)
+    }
+  })
+
+  it('a reserved slot no new scale can take (shared root) goes back to due scales (R20)', () => {
+    const settings: Settings = { ...withMinutes(10), minorForms: { natural: true, harmonic: true, melodic: false } }
+    const items = allSolid(settings)
+    const Ah: ScaleRef = { root: 'A', form: 'harmonic' }
+    set(items, scaleId(Ah), { introduced: false })
+    set(items, scaleId(A), { box: 1 }) // A major leads, so A harmonic can't join it
+    expect(scaleRefs(buildSession(items, settings, TODAY))).toEqual([A, C])
   })
 
   it('the new scale also respects distinct roots', () => {
