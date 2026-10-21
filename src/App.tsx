@@ -2,6 +2,8 @@ import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
 import { Placeholder } from './ui/screens/Placeholder'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
+import { Placement } from './ui/screens/Placement'
+import { Today } from './ui/screens/Today'
 import { devPage, route, type Route } from './ui/state'
 
 const TITLES: Record<Route, string> = {
@@ -16,6 +18,12 @@ const TITLES: Record<Route, string> = {
 /** Focus screens hide the tab bar so a stray tap mid-practice can't leave the session. */
 const FULL_SCREEN: Route[] = ['placement', 'session']
 
+function Screen({ route: r }: { route: Route }) {
+  if (r === 'placement') return <Placement />
+  if (r === 'today') return <Today />
+  return <Placeholder title={TITLES[r]} />
+}
+
 export function App() {
   const r = route.value
   // `import.meta.env.DEV &&` is a literal false in production, so the dev page is tree-shaken out.
@@ -25,7 +33,7 @@ export function App() {
     <div class={`shell${showTabs ? ' shell--tabs' : ''}`}>
       <Banner />
       <main class="shell__main">
-        {devKeyboard ? <DevKeyboard /> : <Placeholder title={TITLES[r]} />}
+        {devKeyboard ? <DevKeyboard /> : <Screen route={r} />}
       </main>
       {showTabs && <TabBar />}
     </div>

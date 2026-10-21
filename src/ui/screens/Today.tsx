@@ -1,0 +1,97 @@
+import { useState } from 'preact/hooks'
+import { loadPiano } from '../../audio/piano'
+import { unlockAudio } from '../../audio/unlock'
+import { buildSession } from '../../session/builder'
+import type { Settings } from '../../srs/items'
+import { Segmented } from '../components/Segmented'
+import { app, currentSession, navigate, notice, today, update } from '../state'
+import { todaySummary } from './todayView'
+
+const LENGTHS: { value: Settings['sessionMinutes']; label: string }[] = [
+  { value: 5, label: '5 min' },
+  { value: 10, label: '10 min' },
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+]
+
+const PIANO_FAILED = "Piano sound didn't load. The session works without it."
+
+const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
+
+export function Today() {
+  const { items, settings, log } = app.value
+  // Derived on every render from app state; never cached.
+  const s = todaySummary(items, settings, today(), log)
+  const [starting, setStarting] = useState(false)
+
+  const start = async () => {
+    if (starting) return
+    setStarting(true)
+    await unlockAudio() // first thing in the tap: the iOS audio unlock needs the user gesture
+    if (!(await loadPiano())) notice.value = PIANO_FAILED
+    const state = app.value
+    const steps = buildSession(state.items, state.settings, today())
+    if (steps.length === 0) {
+      setStarting(false) // the day's work finished in the meantime; the screen now shows Done
+      return
+    }
+    currentSession.value = { steps, index: 0, startedAt: Date.now(), before: structuredClone(state.items) }
+    navigate('session')
+  }
+
+  const setLength = (m: Settings['sessionMinutes']) =>
+    update((st) => ({ ...st, settings: { ...st.settings, sessionMinutes: m } }))
+
+  const streakClass = `today__streak${s.streak > 0 ? ' today__streak--on' : ''}`
+
+  if (s.done) {
+    return (
+      <section class="screen today today--done">
+        <p class={streakClass}>{s.streakLabel}</p>
+        <h1 class="today__title">Done for today</h1>
+        <p class="today__lede">Everything's practiced for today. Come back tomorrow.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section class="screen today">
+      <div class="today__main">
+        <p class={streakClass}>{s.streakLabel}</p>
+        <h1 class="today__title">About {plural(s.minutes, 'minute', 'minutes')}</h1>
+        <div class="today__length">
+          <span class="today__label">Session length</span>
+          <Segmented
+            options={LENGTHS}
+            value={settings.sessionMinutes}
+            onChange={setLength}
+            label="Session length"
+            size="lg"
+            disabled={starting}
+          />
+        </div>
+        <button type="button" class="btn btn--primary btn--start" onClick={start} disabled={starting}>
+          {starting ? 'Loading piano…' : 'Start'}
+        </button>
+      </div>
+
+      <div class="today__plan">
+        <h2 class="today__label">Today's scales</h2>
+        <ul class="today__scales">
+          {s.scales.map((sc) => (
+            <li key={sc.label} class="today__scale">
+              <span class="today__scale-name">{sc.label}</span>
+              {sc.isNew && <span class="tag">First time</span>}
+              {sc.withChords && <span class="today__scale-extra">with chords</span>}
+            </li>
+          ))}
+        </ul>
+        <ul class="today__extras">
+          {s.recallCards > 0 && <li>Warm-up: {plural(s.recallCards, 'recall card', 'recall cards')}</li>}
+          {s.chordSets > 0 && <li>Chords: {plural(s.chordSets, 'set', 'sets')}</li>}
+          {s.freeplayMinutes > 0 && <li>Free play: {s.freeplayMinutes} min over the drone</li>}
+        </ul>
+      </div>
+    </section>
+  )
+}

@@ -2,6 +2,8 @@
 import { effect, signal } from '@preact/signals'
 import { loadState, saveState, type AppState } from '../store/storage'
 import { localDate } from '../srs/dates'
+import type { ItemState } from '../srs/scheduler'
+import type { Step } from '../session/builder'
 import { parseHash, resolveRoute, type Route } from './route'
 
 export type { Route } from './route'
@@ -20,6 +22,19 @@ export const app = signal<AppState>(loaded.state)
 export const persistent = signal<boolean>(loaded.persistent)
 /** One-off message for the banner (storage problems at load). Null when dismissed. */
 export const notice = signal<string | null>(loaded.notice)
+
+/**
+ * The session in progress (in memory only, never persisted). `before` is the item store as it was
+ * when the session started, so the Done screen can show what moved.
+ */
+export interface CurrentSession {
+  steps: Step[]
+  index: number
+  startedAt: number
+  before: Record<string, ItemState>
+}
+
+export const currentSession = signal<CurrentSession | null>(null)
 
 /** Replace the state and save it. A failed save flips `persistent` off; the app keeps running in memory. */
 export function update(fn: (s: AppState) => AppState): void {
