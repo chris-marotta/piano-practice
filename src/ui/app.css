@@ -445,6 +445,12 @@ p {
   color: var(--ink);
 }
 
+.btn--danger {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--ink);
+}
+
 .btn--lg {
   min-height: var(--tap-lg);
   padding: 0 var(--s-6);
@@ -744,4 +750,49 @@ p {
   .today {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* ---- confirm dialog (components/ConfirmDialog) ---- */
+
+.confirm {
+  width: calc(100% - 2 * var(--s-5));
+  max-width: 560px;
+  padding: var(--s-6);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: var(--fs-body);
+}
+
+.confirm::backdrop {
+  background: rgb(6 8 11 / 0.72);
+}
+
+.confirm__title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.confirm__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: var(--s-4) 0 var(--s-6);
+  color: var(--text);
+}
+
+.confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s-3);
+}
+
+.confirm__actions .btn {
+  min-height: 56px;
+}
+
+.confirm a {
+  color: var(--accent);
 }

@@ -47,7 +47,7 @@ export function Progress() {
           ))}
         </div>
 
-        <div class="legend" aria-label="Key">
+        <div class="legend" role="group" aria-label="Key">
           <div class="legend__ramp">
             <span class="legend__swatch mcell--0" aria-hidden="true" />
             <span class="legend__text">Not started</span>

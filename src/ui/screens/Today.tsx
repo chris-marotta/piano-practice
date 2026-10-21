@@ -8,7 +8,6 @@ import { app, currentSession, navigate, notice, route, today, update } from '../
 import { LENGTH_OPTIONS } from './settingsView'
 import { todaySummary } from './todayView'
 
-
 const PIANO_FAILED = "Piano sound didn't load. The session works without it."
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`

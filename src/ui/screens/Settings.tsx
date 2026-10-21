@@ -99,6 +99,9 @@ export function Settings() {
   const [importError, setImportError] = useState<string | null>(null)
   const [exported, setExported] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // Openers of the two confirms, so focus can return to them (Safari doesn't focus clicked buttons).
+  const importBtnRef = useRef<HTMLButtonElement>(null)
+  const redoBtnRef = useRef<HTMLButtonElement>(null)
 
   const redo = () => {
     setPending(null)
@@ -261,7 +264,7 @@ export function Settings() {
               <button type="button" class="btn" onClick={exportProgress}>
                 Export
               </button>
-              <button type="button" class="btn" onClick={chooseFile}>
+              <button ref={importBtnRef} type="button" class="btn" onClick={chooseFile}>
                 Import…
               </button>
               <input
@@ -286,7 +289,12 @@ export function Settings() {
             </p>
           )}
           <Row label="Redo placement" hint="Mark every scale Solid, Shaky or Don't know again.">
-            <button type="button" class="btn btn--danger-quiet" onClick={() => setPending({ kind: 'redo' })}>
+            <button
+              ref={redoBtnRef}
+              type="button"
+              class="btn btn--danger-quiet"
+              onClick={() => setPending({ kind: 'redo' })}
+            >
               Redo placement…
             </button>
           </Row>
@@ -317,6 +325,7 @@ export function Settings() {
           title="Redo placement?"
           confirmLabel="Reset and redo"
           danger
+          returnFocus={redoBtnRef}
           onConfirm={redo}
           onCancel={() => setPending(null)}
         >
@@ -328,6 +337,7 @@ export function Settings() {
           title="Replace your progress?"
           confirmLabel="Replace progress"
           danger
+          returnFocus={importBtnRef}
           onConfirm={() => applyImport(pending.state)}
           onCancel={() => setPending(null)}
         >

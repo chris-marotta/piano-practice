@@ -1,4 +1,4 @@
-import type { ComponentChildren } from 'preact'
+import type { ComponentChildren, RefObject } from 'preact'
 import { useEffect, useId, useRef } from 'preact/hooks'
 
 interface Props {
@@ -10,12 +10,17 @@ interface Props {
   danger?: boolean
   onConfirm: () => void
   onCancel: () => void
+  /**
+   * Where focus goes back to on close. Pass the button that opened the dialog: Safari doesn't focus
+   * buttons on click, so document.activeElement (the fallback) is often just <body>.
+   */
+  returnFocus?: RefObject<HTMLElement | null>
 }
 
 /**
  * In-page confirm (window.confirm is blocked in some embedded contexts and looks out of place on
  * iPad). A native modal <dialog>: the page behind is inert, focus starts on Cancel (the safe choice)
- * and returns to the opener on close, Escape cancels. Mount it to open, unmount to close.
+ * and returns to the opener (`returnFocus`) on close, Escape cancels. Mount it to open, unmount to close.
  */
 export function ConfirmDialog({
   title,
@@ -25,6 +30,7 @@ export function ConfirmDialog({
   danger = false,
   onConfirm,
   onCancel,
+  returnFocus,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
@@ -32,7 +38,8 @@ export function ConfirmDialog({
 
   useEffect(() => {
     const dialog = ref.current
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const opener = returnFocus?.current ?? active
     if (dialog && !dialog.open) {
       if (typeof dialog.showModal === 'function') dialog.showModal()
       else dialog.setAttribute('open', '')

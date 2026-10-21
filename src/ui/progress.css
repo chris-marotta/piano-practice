@@ -59,13 +59,14 @@
 .mcell__support {
   font-size: 15px;
   font-weight: 700;
-  opacity: 0.85;
 }
 
-/* Box shade: 5 steps from the surface to the full mastery colour. Box 0 = never introduced. */
+/* Box shade: 5 steps from the surface to the full mastery colour. Box 0 = never introduced.
+   Text flips from light to dark ink at box 3 so every step stays >= 4.5:1 (tests/ui/contrast.test.ts
+   reads these rules): box 1 9.5, box 2 5.7, box 3 5.0, box 4 7.5, box 5 10.5; outline 3.5. */
 .mcell--0 {
   background: transparent;
-  border-color: color-mix(in srgb, var(--muted) 55%, var(--bg));
+  border-color: color-mix(in srgb, var(--muted) 70%, var(--bg));
   color: var(--muted);
 }
 
@@ -74,15 +75,16 @@
 }
 
 .mcell--2 {
-  background: color-mix(in srgb, var(--mastery) 34%, var(--surface));
+  background: color-mix(in srgb, var(--mastery) 36%, var(--surface));
 }
 
 .mcell--3 {
-  background: color-mix(in srgb, var(--mastery) 54%, var(--surface));
+  background: color-mix(in srgb, var(--mastery) 62%, var(--surface));
+  color: var(--ink);
 }
 
 .mcell--4 {
-  background: color-mix(in srgb, var(--mastery) 76%, var(--surface));
+  background: color-mix(in srgb, var(--mastery) 82%, var(--surface));
   color: var(--ink);
 }
 
@@ -112,7 +114,7 @@
 }
 
 .legend__swatch.mcell--0 {
-  border-color: color-mix(in srgb, var(--muted) 55%, var(--bg));
+  border-color: color-mix(in srgb, var(--muted) 70%, var(--bg));
 }
 
 .legend__swatch + .legend__text {
