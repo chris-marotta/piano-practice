@@ -8,8 +8,10 @@ import {
   placeItems,
   recallId,
   scaleId,
+  stateFor,
 } from '../../src/srs/items'
 import type { Placement, Settings } from '../../src/srs/items'
+import { addDays } from '../../src/srs/dates'
 import { applyRating } from '../../src/srs/scheduler'
 import type { ItemState } from '../../src/srs/scheduler'
 import { progression } from '../../src/theory/chords'
@@ -234,6 +236,63 @@ describe('buildSession: recall cards (rule 6)', () => {
   })
 })
 
+describe('buildSession: non-introduced cards of today\'s scales (R12)', () => {
+  const freshCards = (ref: ScaleRef) => (['keysig', 'spell', 'relative', 'thumb'] as const).map((t) => recallId(t, ref))
+
+  it("an introduced scale's never-introduced cards are used, even with plenty of other due cards", () => {
+    const items = allSolid()
+    for (const id of freshCards(C)) set(items, id, { introduced: false })
+    const steps = buildSession(items, withMinutes(5), TODAY)
+    expect(scaleRefs(steps)).toEqual([C])
+    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual(freshCards(C))
+  })
+
+  it("today's due introduced cards come before today's non-introduced cards", () => {
+    const items = allSolid()
+    for (const id of freshCards(C)) set(items, id, { introduced: false })
+    const steps = buildSession(items, withMinutes(10), TODAY)
+    expect(scaleRefs(steps)).toEqual([C, G])
+    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual([...freshCards(G), recallId('keysig', C), recallId('spell', C)])
+  })
+
+  it("non-introduced cards of scales NOT in today's session stay out", () => {
+    const items = allSolid()
+    const F: ScaleRef = { root: 'F', form: 'major' }
+    for (const id of freshCards(F)) set(items, id, { introduced: false })
+    const steps = buildSession(items, withMinutes(20), TODAY)
+    for (const id of freshCards(F)) expect(itemIds(steps)).not.toContain(id)
+  })
+
+  it('daily sessions, nailing every step after alternating solid/unknown placement → no recall card is orphaned', () => {
+    // At day 30, 4 'unknown' scales are still waiting on the one-new-scale-per-session cap
+    // (a throughput limit, not orphaning), so the day-30 check covers introduced scales only;
+    // by day 45 every scale, and so every card, has been introduced.
+    const settings = DEFAULT_SETTINGS
+    const refs = enabledScales(settings)
+    const choices: Record<string, Placement> = Object.fromEntries(
+      refs.map((r, i) => [scaleId(r), (i % 2 === 0 ? 'solid' : 'unknown') as Placement]),
+    )
+    const items = placeItems(choices, settings, PLACED)
+    const neverRated = (rs: ScaleRef[]): string[] =>
+      rs.flatMap(freshCards).filter((id) => (items[id]?.history.length ?? 0) === 0)
+    let day = PLACED
+    for (let d = 1; d <= 45; d++) {
+      for (const step of buildSession(items, settings, day)) {
+        if (step.kind === 'freeplay') continue
+        items[step.itemId] = applyRating(stateFor(step.itemId, items, day, settings), 'nailed', day)
+      }
+      day = addDays(day, 1)
+      if (d === 30) {
+        const introduced = refs.filter((r) => items[scaleId(r)]?.introduced)
+        expect(introduced.length).toBeGreaterThanOrEqual(20)
+        expect(neverRated(introduced)).toEqual([])
+      }
+    }
+    expect(refs.flatMap(freshCards)).toHaveLength(96)
+    expect(neverRated(refs)).toEqual([])
+  })
+})
+
 describe('buildSession: new items (rule 4 cap)', () => {
   it("all 'unknown' placement → exactly 1 scale step, with support 0", () => {
     const items = placeItems({}, DEFAULT_SETTINGS, PLACED)
@@ -318,6 +377,14 @@ describe('buildSession: rated today (Review Focus 3)', () => {
     expect(scaleRefs(steps)[0]).toEqual(C) // the scale itself was not rated today
     for (const id of ratedToday) expect(itemIds(steps)).not.toContain(id)
     expect(ofKind(steps, 'recall')).toHaveLength(10)
+  })
+
+  it('every enabled scale rated today → empty session, even though recall cards are still due (R11)', () => {
+    const items = allSolid()
+    for (const ref of enabledScales(DEFAULT_SETTINGS)) {
+      items[scaleId(ref)] = applyRating(items[scaleId(ref)] as ItemState, 'nailed', TODAY)
+    }
+    for (const min of [5, 10, 15, 20] as const) expect(buildSession(items, withMinutes(min), TODAY)).toEqual([])
   })
 
   it('history from an earlier day does not exclude', () => {

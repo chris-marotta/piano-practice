@@ -27,12 +27,14 @@ const CHORDS_SECONDS = 90
 
 interface Candidate {
   id: string
-  kind: 'scale' | 'recall' | 'chords'
   ref: ScaleRef
-  recallType?: RecallType
   state: ItemState
   /** Catalog position: the tie-breaker everywhere. */
   order: number
+}
+
+interface RecallCandidate extends Candidate {
+  recallType: RecallType
 }
 
 const refKey = (ref: ScaleRef): string => `${ref.root}:${ref.form}`
@@ -41,18 +43,27 @@ const refKey = (ref: ScaleRef): string => `${ref.root}:${ref.form}`
  * Today's practice steps. Pure and deterministic: candidates come only from the
  * enabled catalog (stored keys are never iterated or parsed), anything rated
  * today is excluded from every pool, and ties break by catalog order.
+ *
+ * Returns [] exactly when every enabled scale has been rated today (a scale not
+ * rated today is always pickable). Recall cards alone never make a session.
  */
 export function buildSession(items: Record<string, ItemState>, settings: Settings, today: string): Step[] {
   const size = SESSION_SIZES[settings.sessionMinutes]
 
   // 1–2. Candidates from enabled scales only, minus anything rated today.
-  const candidates: Candidate[] = []
+  const scalePool: Candidate[] = []
+  const recallPool: RecallCandidate[] = []
+  const chordPool: Candidate[] = []
+  let order = 0
   for (const ref of enabledScales(settings)) {
     for (const id of idsForScale(ref)) {
       const state = stateFor(id, items, today, settings)
+      const c: Candidate = { id, ref, state, order: order++ }
       if (state.history[state.history.length - 1]?.date === today) continue
-      const { kind, recallType } = parseId(id) // our own generated id, never a stored key
-      candidates.push({ id, kind, ref, recallType, state, order: candidates.length })
+      const parsed = parseId(id) // our own generated id, never a stored key
+      if (parsed.kind === 'scale') scalePool.push(c)
+      else if (parsed.kind === 'chords') chordPool.push(c)
+      else if (parsed.recallType) recallPool.push({ ...c, recallType: parsed.recallType })
     }
   }
 
@@ -61,10 +72,8 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
   const notYetDue = (c: Candidate): boolean => c.state.introduced && c.state.due > today
   const byDue = (a: Candidate, b: Candidate): number =>
     a.state.due < b.state.due ? -1 : a.state.due > b.state.due ? 1 : a.state.box - b.state.box || a.order - b.order
-  const ofKind = (kind: Candidate['kind']): Candidate[] => candidates.filter((c) => c.kind === kind)
 
   // 4. Scales: due with distinct roots → at most one new scale → next-soonest introduced.
-  const scalePool = ofKind('scale')
   const chosen: Candidate[] = []
   const roots = new Set<string>()
   const pick = (c: Candidate): void => {
@@ -73,28 +82,32 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     roots.add(c.ref.root)
   }
   scalePool.filter(isDue).sort(byDue).forEach(pick)
-  let newScale: Candidate | undefined
   if (chosen.length < size.scales) {
-    newScale = scalePool.find((c) => !c.state.introduced && !roots.has(c.ref.root))
+    const newScale = scalePool.find((c) => !c.state.introduced && !roots.has(c.ref.root))
     if (newScale) pick(newScale)
   }
   if (chosen.length < size.scales) scalePool.filter(notYetDue).sort(byDue).forEach(pick)
+  if (chosen.length === 0) return []
 
   // 5. Chord sets: chosen scales' chord items, scale order, due ones first; take M.
-  const chordFor = new Map(ofKind('chords').map((c) => [refKey(c.ref), c]))
-  const chordPool = chosen.flatMap((s) => chordFor.get(refKey(s.ref)) ?? [])
-  const chordPicks = [...chordPool.filter(isDue), ...chordPool.filter((c) => !isDue(c))].slice(0, size.chordSets)
+  const chordFor = new Map(chordPool.map((c) => [refKey(c.ref), c]))
+  const todayChords = chosen.flatMap((s) => chordFor.get(refKey(s.ref)) ?? [])
+  const chordPicks = [...todayChords.filter(isDue), ...todayChords.filter((c) => !isDue(c))].slice(0, size.chordSets)
   const chosenChords = new Map(chordPicks.map((c) => [refKey(c.ref), c]))
 
-  // 6. Recall: due on today's scales → other due → the new scale's cards → next-soonest; take K.
-  const recallPool = ofKind('recall')
+  // 6. Recall (ruling R12), take K:
+  //    (1) today's scales (exact root+form): due introduced cards (byDue), then never-introduced cards (catalog);
+  //    (2) other due introduced cards (byDue);
+  //    (3) next-soonest introduced cards (byDue).
+  //    Never-introduced cards enter only through (1), so a scale's cards get introduced the
+  //    next time that scale is practised, and cards of scales not in today's session stay out.
   const todayKeys = new Set(chosen.map((s) => refKey(s.ref)))
+  const isToday = (c: Candidate): boolean => todayKeys.has(refKey(c.ref))
   const dueRecall = recallPool.filter(isDue).sort(byDue)
-  const newKey = newScale ? refKey(newScale.ref) : undefined
   const recallPicks = [
-    ...dueRecall.filter((c) => todayKeys.has(refKey(c.ref))),
-    ...dueRecall.filter((c) => !todayKeys.has(refKey(c.ref))),
-    ...recallPool.filter((c) => !c.state.introduced && refKey(c.ref) === newKey),
+    ...dueRecall.filter(isToday),
+    ...recallPool.filter((c) => isToday(c) && !c.state.introduced),
+    ...dueRecall.filter((c) => !isToday(c)),
     ...recallPool.filter(notYetDue).sort(byDue),
   ].slice(0, size.cards)
 
@@ -102,7 +115,7 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
   const steps: Step[] = recallPicks.map((c) => ({
     kind: 'recall',
     itemId: c.id,
-    card: recallCard(c.recallType as RecallType, c.ref),
+    card: recallCard(c.recallType, c.ref),
   }))
   for (const s of chosen) {
     steps.push({
