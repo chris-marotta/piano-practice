@@ -6,9 +6,9 @@ import {
   CHORD_TYPES,
   chordFingering,
   chordNotes,
-  detectChord,
   diatonicChords,
   maxInversion,
+  nameChord,
   type ChordTypeId,
   type DiatonicChord,
 } from '../../../theory/chords'
@@ -265,37 +265,50 @@ export function keyChords(ref: ScaleRef): KeyChord[] {
 /** Two octaves, C3..B4: as few keys as possible, so each is big enough to tap. */
 export const WHAT_RANGE = { low: 48, high: 71 } as const
 
-/** Black keys spelled as in the major session roots. */
+/** Fallback spelling (no chord detected yet): black keys as in the major session roots. */
 const SPELL = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
 const spell = (midi: number): string => `${SPELL[midi % 12]}${Math.floor(midi / 12) - 1}`
 
-/** Tonal qualities of the app's own chord types: these names rank ahead of exotic readings (Em♯5). */
-const COMMON = new Set(['M', 'm', 'dim', 'aug', 'sus2', 'sus4', 'maj7', '7', 'm7', 'm7b5', 'dim7', '6', 'Madd9', '9'])
-const qualityOf = (name: string): string => (name.split('/')[0] as string).replace(/^[A-G](#{1,2}|b{1,2})?/, '')
+/** At most this many "Also:" readings. */
+const MAX_ALSO = 3
 
 export function toggleMidi(midis: number[], midi: number): number[] {
   return midis.includes(midi) ? midis.filter((m) => m !== midi) : [...midis, midi].sort((a, b) => a - b)
 }
 
-export function whatMarks(midis: number[]): KeyMark[] {
-  return midis.map((midi) => ({ midi, hand: 'none', label: formatNote(pitchClass(spell(midi))) }))
+/** Note names with octave for playback (spelling doesn't matter to the sampler). */
+export function playNotes(midis: number[]): string[] {
+  return midis.map(spell)
 }
 
 export interface Detection {
-  status: 'empty' | 'match' | 'none'
+  /** 'one': a single key, too few to name. */
+  status: 'empty' | 'one' | 'match' | 'none'
+  /** Primary name first, then up to 3 alternatives, display glyphs. */
   names: string[]
-  /** Tapped notes low to high, display glyphs. */
+  /** Tapped keys low to high, and their names spelled from the primary chord (display glyphs). */
+  midis: number[]
   notes: string[]
 }
 
 export function detection(midis: number[]): Detection {
-  if (midis.length === 0) return { status: 'empty', names: [], notes: [] }
   const sorted = [...new Set(midis)].sort((a, b) => a - b)
-  const raw = detectChord(sorted.map(spell))
-  const ranked = [...raw.filter((n) => COMMON.has(qualityOf(n))), ...raw.filter((n) => !COMMON.has(qualityOf(n)))]
-  return {
-    status: ranked.length > 0 ? 'match' : 'none',
-    names: ranked.map(formatChordName),
-    notes: sorted.map((m) => formatNote(pitchClass(spell(m)))),
-  }
+  const fallback = sorted.map((m) => formatNote(pitchClass(spell(m))))
+  if (sorted.length === 0) return { status: 'empty', names: [], midis: [], notes: [] }
+  if (sorted.length === 1) return { status: 'one', names: [], midis: sorted, notes: fallback }
+  const named = nameChord(sorted)
+  if (!named) return { status: 'none', names: [], midis: sorted, notes: fallback }
+  const { primary, alternatives } = named
+  // Name every key from the chord's own spelling (R17), matched by pitch class.
+  const notes = sorted.map((m, i) => {
+    const own = primary.notes.find((n) => chroma(n) === m % 12)
+    return own ? formatNote(own) : (fallback[i] as string)
+  })
+  const names = [primary, ...alternatives.slice(0, MAX_ALSO)].map((r) => formatChordName(r.name))
+  return { status: 'match', names: [...new Set(names)], midis: sorted, notes }
+}
+
+/** Tapped keys with a neutral highlight, labelled as in the detection. */
+export function whatMarks(d: Detection): KeyMark[] {
+  return d.midis.map((midi, i) => ({ midi, hand: 'none', label: d.notes[i] }))
 }

@@ -1,5 +1,5 @@
 import { Chord, Note } from '@tonaljs/tonal'
-import { type ScaleRef, scaleNotes } from './scales'
+import { MAJOR_ROOTS, MINOR_ROOTS, type ScaleRef, scaleNotes } from './scales'
 
 export type ChordTypeId = 'M' | 'm' | 'dim' | 'aug' | 'sus2' | 'sus4' | 'maj7' | '7' | 'm7' | 'm7b5' | 'dim7' | '6' | 'add9' | '9'
 
@@ -117,4 +117,106 @@ export function detectChord(notes: string[]): string[] {
     .sort((a, b) => (Note.midi(a) as number) - (Note.midi(b) as number))
     .map((n) => Note.pitchClass(n))
   return Chord.detect(pitchClasses)
+}
+
+/**
+ * Pitch classes spelled from a chord name: 'C#m' -> C# E G#, 'Dbm' -> Db Fb Ab. Slash chords put the
+ * bass first ('CM/E' -> E C G); tonal's Chord.get leaves slash names empty, so the bass is split off here.
+ */
+export function chordNoteNames(name: string): string[] {
+  const [chord = '', bass] = name.split('/')
+  const notes = Chord.get(chord).notes
+  if (!bass) return notes
+  return [bass, ...notes.filter((n) => Note.chroma(n) !== Note.chroma(bass))]
+}
+
+export interface ChordReading {
+  /** tonal symbol, e.g. 'C#m', 'CM/E'. */
+  name: string
+  /** Its pitch classes spelled from the name. */
+  notes: string[]
+}
+
+const SHARP_SET = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const FLAT_SET = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+const spellIn = (set: string[], midi: number): string => `${set[midi % 12]}${Math.floor(midi / 12) - 1}`
+
+/** tonal qualities of the app's own chord types: these readings rank ahead of exotic ones (Em#5). */
+const COMMON_QUALITIES = new Set(['M', 'm', 'dim', 'aug', 'sus2', 'sus4', 'maj7', '7', 'm7', 'm7b5', 'dim7', '6', 'Madd9', '9'])
+
+function parseChordName(name: string): { root: string; quality: string; bass: string } {
+  const [chord = '', bass = ''] = name.split('/')
+  const root = /^[A-G](?:#{1,2}|b{1,2})?/.exec(chord)?.[0] ?? ''
+  return { root, quality: chord.slice(root.length), bass }
+}
+
+const doubles = (notes: string[]): number => notes.filter((n) => /##|bb/.test(n)).length
+const accidentals = (notes: string[]): number => notes.reduce((sum, n) => sum + n.replace(/[^#b]/g, '').length, 0)
+const UNUSUAL = new Set(['Cb', 'Fb', 'E#', 'B#'])
+/** Every note natural or a plain black-key spelling (no doubles, no Cb/Fb/E#/B#). */
+const isPlain = (notes: string[]): boolean => notes.every((n) => /^[A-G][#b]?$/.test(n) && !UNUSUAL.has(n))
+
+interface Candidate extends ChordReading {
+  /** 0 = sharp set, 1 = flat set. */
+  set: number
+}
+
+/** Session root for the chord's quality family: minor qualities use MINOR_ROOTS, the rest MAJOR_ROOTS. */
+function sessionRank(c: Candidate): number {
+  const { root, quality } = parseChordName(c.name)
+  const roots = /^m(?!aj)/.test(quality) ? MINOR_ROOTS : MAJOR_ROOTS
+  return roots.includes(root) ? 0 : 1
+}
+
+/** Best spelling first: no double accidentals, fewest accidentals, session root, then the sharp set. */
+function bySpelling(a: Candidate, b: Candidate): number {
+  return (
+    doubles(a.notes) - doubles(b.notes) ||
+    accidentals(a.notes) - accidentals(b.notes) ||
+    sessionRank(a) - sessionRank(b) ||
+    a.set - b.set
+  )
+}
+
+/**
+ * Name the chord on these keys (R17). Black keys are detected twice, as sharps and as flats, and
+ * readings of the same chord (root, quality, bass) are merged. Readings keep tonal's ranking (common
+ * chord types first); each reading is spelled the best way, and its notes come from the name itself,
+ * so the name and the notes always agree. `alternatives`: the primary's enharmonic when it's a plain
+ * spelling, then the other readings (spelled to agree with the primary where they can). Null when nothing matches.
+ */
+export function nameChord(midis: number[]): { primary: ChordReading; alternatives: ChordReading[] } | null {
+  const sorted = [...new Set(midis)].sort((a, b) => a - b)
+  const groups = new Map<string, { rank: [number, number]; candidates: Candidate[] }>()
+  ;[SHARP_SET, FLAT_SET].forEach((set, setIndex) => {
+    const input = sorted.map((m) => spellIn(set, m))
+    detectChord(input).forEach((name, i) => {
+      const { root, quality, bass } = parseChordName(name)
+      const id = `${Note.chroma(root)}|${quality}|${bass ? Note.chroma(bass) : ''}`
+      let group = groups.get(id)
+      if (!group) {
+        group = { rank: [COMMON_QUALITIES.has(quality) ? 0 : 1, i], candidates: [] }
+        groups.set(id, group)
+      }
+      group.rank[1] = Math.min(group.rank[1], i)
+      if (group.candidates.some((c) => c.name === name)) return
+      const own = chordNoteNames(name)
+      const notes = own.length > 0 ? own : input.map((n) => Note.pitchClass(n))
+      group.candidates.push({ name, notes, set: setIndex })
+    })
+  })
+  const readings = [...groups.values()]
+    .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1])
+    .map((g) => g.candidates.sort(bySpelling))
+  const first = readings[0]
+  if (!first) return null
+  const strip = ({ name, notes }: Candidate): ChordReading => ({ name, notes })
+  const [primary, ...enharmonics] = first as [Candidate, ...Candidate[]]
+  // Other readings: the spelling that agrees most with the primary's notes, so B reads "Also: D#m#5/B", not Ebm#5/B.
+  const mismatches = (c: Candidate): number => c.notes.filter((n) => !primary.notes.includes(n)).length
+  const others = readings.slice(1).map((r) => [...r].sort((a, b) => mismatches(a) - mismatches(b) || bySpelling(a, b))[0] as Candidate)
+  return {
+    primary: strip(primary),
+    alternatives: [...enharmonics.filter((c) => isPlain(c.notes)), ...others].map(strip),
+  }
 }

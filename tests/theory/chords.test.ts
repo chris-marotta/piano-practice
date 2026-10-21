@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   CHORD_TYPES,
   chordFingering,
+  chordNoteNames,
   chordNotes,
   detectChord,
+  nameChord,
   diatonicChords,
   maxInversion,
   progression,
@@ -111,5 +113,56 @@ describe('detectChord', () => {
   })
   it('does not depend on input order', () => {
     expect(detectChord(['C5', 'E4', 'G4'])).toContain('CM/E')
+  })
+})
+
+describe('chordNoteNames', () => {
+  it('spells the chord from its own name', () => {
+    expect(chordNoteNames('C#m')).toEqual(['C#', 'E', 'G#'])
+    expect(chordNoteNames('Dbm')).toEqual(['Db', 'Fb', 'Ab'])
+    expect(chordNoteNames('EbM')).toEqual(['Eb', 'G', 'Bb'])
+  })
+  it('handles slash chords (bass first), which tonal itself leaves empty', () => {
+    expect(chordNoteNames('CM/E')).toEqual(['E', 'C', 'G'])
+    expect(chordNoteNames('BMaddb9/C')[0]).toBe('C')
+  })
+})
+
+describe('nameChord (R17: detect with sharp and flat black keys, spell from the chord)', () => {
+  const C3 = 48
+  const names = (midis: number[]) => {
+    const r = nameChord(midis.map((m) => m + C3))
+    return r && { primary: r.primary.name, notes: r.primary.notes, alts: r.alternatives.map((a) => a.name) }
+  }
+  it('picks the spelling with no double accidentals and the fewest accidentals', () => {
+    expect(names([9, 13, 16])).toMatchObject({ primary: 'AM', notes: ['A', 'C#', 'E'] })
+    expect(names([4, 8, 11])).toMatchObject({ primary: 'EM', notes: ['E', 'G#', 'B'] })
+    expect(names([11, 15, 18])).toMatchObject({ primary: 'BM', notes: ['B', 'D#', 'F#'] })
+    expect(names([1, 4, 8])).toMatchObject({ primary: 'C#m', notes: ['C#', 'E', 'G#'] })
+    expect(names([8, 11, 15])).toMatchObject({ primary: 'G#m', notes: ['G#', 'B', 'D#'] })
+    expect(names([1, 5, 8])).toMatchObject({ primary: 'DbM', notes: ['Db', 'F', 'Ab'] })
+    expect(names([3, 7, 10])).toMatchObject({ primary: 'EbM', notes: ['Eb', 'G', 'Bb'] })
+  })
+  it("keeps tonal's ranking first: root position before slash and #5 readings", () => {
+    expect(names([0, 4, 7])?.primary).toBe('CM')
+    expect(names([4, 7, 12])?.primary).toBe('CM/E')
+    expect(names([4, 7, 12])?.alts).toContain('Em#5')
+  })
+  it('ties go to the session spelling: F# major (not Gb), Eb minor (not D#)', () => {
+    expect(names([6, 10, 13])).toMatchObject({ primary: 'F#M', notes: ['F#', 'A#', 'C#'] })
+    expect(names([6, 10, 13])?.alts[0]).toBe('GbM')
+    expect(names([3, 6, 10])).toMatchObject({ primary: 'Ebm', notes: ['Eb', 'Gb', 'Bb'] })
+    expect(names([3, 6, 10])?.alts[0]).toBe('D#m')
+  })
+  it('offers the enharmonic only when it is a plain spelling (no Fb, E#, doubles)', () => {
+    expect(names([1, 4, 8])?.alts).not.toContain('Dbm')
+    expect(names([1, 5, 8])?.alts).not.toContain('C#M')
+  })
+  it("other readings are spelled consistently with the primary's notes", () => {
+    expect(names([11, 15, 18])?.alts).toEqual(['D#m#5/B'])
+    expect(names([6, 10, 13])?.alts).toEqual(['GbM', 'A#m#5/F#'])
+  })
+  it('null when nothing matches', () => {
+    expect(nameChord([60, 64])).toBeNull()
   })
 })

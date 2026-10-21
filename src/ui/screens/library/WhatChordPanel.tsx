@@ -1,21 +1,17 @@
 import { playChord } from '../../../audio/piano'
 import { ScrollKeyboard } from '../steps/ScrollKeyboard'
-import { detection, toggleMidi, WHAT_RANGE, whatMarks } from './libraryView'
+import { detection, playNotes, toggleMidi, WHAT_RANGE, whatMarks } from './libraryView'
 import { whatSel } from './libraryState'
 import { usePiano } from './usePiano'
 
 /** Two octaves fill the width: white keys ~80px, black keys ~48px wide at 1180. */
 const WHAT_MAX_KEY_PX = 96
 
-/** Note names with octave for playback, from MIDI (sharps are fine: playback ignores spelling). */
-const PLAY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-const playName = (midi: number): string => `${PLAY_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`
-
 export function WhatChordPanel() {
   const midis = whatSel.value
   const d = detection(midis)
   const withPiano = usePiano()
-  const play = () => withPiano(() => playChord(midis.map(playName), 'block'))
+  const play = () => withPiano(() => playChord(playNotes(d.midis), 'block'))
 
   return (
     <div class="lib-panel">
@@ -27,16 +23,18 @@ export function WhatChordPanel() {
         <ScrollKeyboard
           low={WHAT_RANGE.low}
           high={WHAT_RANGE.high}
-          marks={whatMarks(midis)}
+          marks={whatMarks(d)}
           firstMidi={WHAT_RANGE.low}
           reserveRows={false}
           onKeyTap={(m) => (whatSel.value = toggleMidi(midis, m))}
           maxKeyPx={WHAT_MAX_KEY_PX}
+          toggle
         />
       </div>
-      <div class="what" aria-live="polite">
-        <div class="what__result">
+      <div class="what">
+        <div class="what__result" aria-live="polite">
           {d.status === 'empty' && <p class="what__name what__name--quiet">No keys yet</p>}
+          {d.status === 'one' && <p class="what__name what__name--quiet">Tap at least two more keys</p>}
           {d.status === 'none' && <p class="what__name what__name--quiet">No match</p>}
           {d.status === 'match' && (
             <>

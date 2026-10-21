@@ -40,3 +40,13 @@ describe('formatChordName', () => {
     expect(formatChordName('Cdim')).toBe('Cdim')
   })
 })
+
+describe('formatChordName rewrites (lead-sheet spellings)', () => {
+  it('M7 -> maj7, Mb5 -> (♭5), oM7 -> dim(maj7)', () => {
+    expect(formatChordName('CM7')).toBe('Cmaj7')
+    expect(formatChordName('CM7b5')).toBe('Cmaj7♭5')
+    expect(formatChordName('CMb5')).toBe('C(♭5)')
+    expect(formatChordName('CoM7')).toBe('Cdim(maj7)')
+    expect(formatChordName('CoM7/E')).toBe('Cdim(maj7)/E')
+  })
+})

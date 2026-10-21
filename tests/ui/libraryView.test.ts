@@ -8,6 +8,7 @@ import {
   inversionOptions,
   keyChords,
   libraryTempo,
+  playNotes,
   pickerKeys,
   respellForForm,
   scaleKeyboardFor,
@@ -233,31 +234,52 @@ describe('keyChords (chords in a key)', () => {
 })
 
 describe("detection (what's this chord?)", () => {
-  const E3 = 52
-  const G3 = 55
-  const C4 = 60
+  const C3 = 48
+  const at = (...pcs: number[]) => detection(pcs.map((p) => p + C3))
+  const read = (...pcs: number[]) => {
+    const d = at(...pcs)
+    return { primary: d.names[0], notes: d.notes }
+  }
   it('E-G-C reads C/E first, with the alternatives after', () => {
-    const d = detection([C4, E3, G3])
+    const d = at(4, 7, 12)
     expect(d.status).toBe('match')
     expect(d.names[0]).toBe('C/E')
     expect(d.names).toContain('Em♯5')
     expect(d.notes).toEqual(['E', 'G', 'C'])
   })
-  it('empty and no-match states', () => {
-    expect(detection([])).toEqual({ status: 'empty', names: [], notes: [] })
-    expect(detection([60, 64])).toMatchObject({ status: 'none', names: [] })
+  it('spells the notes from the detected chord itself (R17)', () => {
+    expect(read(9, 13, 16)).toEqual({ primary: 'A', notes: ['A', 'C♯', 'E'] })
+    expect(read(4, 8, 11)).toEqual({ primary: 'E', notes: ['E', 'G♯', 'B'] })
+    expect(read(11, 15, 18)).toEqual({ primary: 'B', notes: ['B', 'D♯', 'F♯'] })
+    expect(read(1, 4, 8)).toEqual({ primary: 'C♯m', notes: ['C♯', 'E', 'G♯'] })
+    expect(read(8, 11, 15)).toEqual({ primary: 'G♯m', notes: ['G♯', 'B', 'D♯'] })
+    expect(read(1, 5, 8)).toEqual({ primary: 'D♭', notes: ['D♭', 'F', 'A♭'] })
+    expect(read(3, 7, 10)).toEqual({ primary: 'E♭', notes: ['E♭', 'G', 'B♭'] })
+    expect(read(0, 4, 7)).toEqual({ primary: 'C', notes: ['C', 'E', 'G'] })
   })
-  it('spells black keys the session way (D♭, E♭, F♯, A♭, B♭)', () => {
-    expect(detection([61, 65, 68]).names[0]).toBe('D♭')
-    expect(detection([66, 70, 73]).names[0]).toBe('F♯')
+  it('caps the alternatives at 3', () => {
+    expect(at(0, 3, 6, 9).names.length).toBeLessThanOrEqual(4)
+  })
+  it('empty, one key, and no-match states', () => {
+    expect(detection([])).toMatchObject({ status: 'empty', names: [], notes: [] })
+    expect(detection([61])).toMatchObject({ status: 'one', names: [], notes: ['D♭'] })
+    expect(detection([60, 64])).toMatchObject({ status: 'none', names: [] })
   })
   it('toggles keys on and off', () => {
     expect(toggleMidi([60], 64)).toEqual([60, 64])
     expect(toggleMidi([60, 64], 60)).toEqual([64])
   })
-  it('marks toggled keys with a neutral highlight and their names', () => {
-    expect(whatMarks([61])).toEqual([{ midi: 61, hand: 'none', label: 'D♭' }])
+  it("key labels follow the detected chord's spelling", () => {
+    expect(whatMarks(at(9, 13, 16))).toEqual([
+      { midi: 57, hand: 'none', label: 'A' },
+      { midi: 61, hand: 'none', label: 'C♯' },
+      { midi: 64, hand: 'none', label: 'E' },
+    ])
+    expect(whatMarks(detection([61]))).toEqual([{ midi: 61, hand: 'none', label: 'D♭' }])
     expect(WHAT_RANGE).toEqual({ low: noteMidi('C3'), high: noteMidi('B4') })
+  })
+  it('playback names for the tapped keys', () => {
+    expect(playNotes([52, 55, 60])).toEqual(['E3', 'G3', 'C4'])
   })
 })
 

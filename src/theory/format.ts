@@ -29,7 +29,7 @@ const ACCIDENTAL_IN_QUALITY = /([#b])(?=\d)/g
 
 /**
  * Display a tonal chord symbol: 'CM/E' -> 'C/E', 'Cm7b5' -> 'Cm7♭5', 'CMadd9' -> 'Cadd9'.
- * A plain major triad shows as just its root, as on a lead sheet.
+ * A plain major triad shows as just its root, as on a lead sheet; M7 -> maj7, Mb5 -> (♭5), oM7 -> dim(maj7).
  */
 export function formatChordName(name: string): string {
   const [chord = '', bass] = name.split('/')
@@ -37,6 +37,7 @@ export function formatChordName(name: string): string {
   if (!match) return name
   const [, root = '', rawQuality = ''] = match
   let quality = rawQuality === 'M' ? '' : rawQuality.replace(/^Madd/, 'add')
+  quality = quality.replace(/^oM7/, 'dim(maj7)').replace(/^M(7|9|13)/, 'maj$1').replace(/^Mb5$/, '(b5)')
   quality = quality.replace(ACCIDENTAL_IN_QUALITY, (_, acc: string) => SYMBOLS[acc] as string)
   return `${formatNote(root)}${quality}${bass ? `/${formatNote(bass)}` : ''}`
 }
