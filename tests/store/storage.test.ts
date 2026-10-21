@@ -244,3 +244,77 @@ describe('export / import', () => {
     if (r.ok) expect(r.state.settings).toEqual({ ...DEFAULT_SETTINGS, droneOn: false })
   })
 })
+
+describe('validation hardening', () => {
+  const badSettings = { sessionMinutes: 7, octaves: '2', startTempo: 'fast', minorForms: { harmonic: 'yes' }, bogus: 1 }
+  const expectDefaults = (settings: AppState['settings']) => {
+    expect(settings).toEqual(DEFAULT_SETTINGS)
+    expect('bogus' in settings).toBe(false)
+  }
+
+  it('loadState: wrong-typed settings fall back per field and unknown keys are dropped', () => {
+    const s = fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings: badSettings }) })
+    const r = loadState(s)
+    expect(r.notice).toBeNull()
+    expectDefaults(r.state.settings)
+  })
+
+  it('parseImport: same per-field fallback', () => {
+    const r = parseImport(JSON.stringify({ ...populated(), settings: badSettings }))
+    expect(r.ok).toBe(true)
+    if (r.ok) expectDefaults(r.state.settings)
+  })
+
+  it('keeps valid settings fields and clamps startTempo to 40-120', () => {
+    const mk = (settings: object) => {
+      const r = parseImport(JSON.stringify({ ...populated(), settings }))
+      if (!r.ok) throw new Error('import failed')
+      return r.state.settings
+    }
+    const ok = mk({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(mk({ startTempo: 10 }).startTempo).toBe(40)
+    expect(mk({ startTempo: 500 }).startTempo).toBe(120)
+    expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)
+  })
+
+  it('rejects impossible calendar dates', () => {
+    for (const due of ['2026-99-99', '2026-02-30', '2026-13-01', '2026-00-10']) {
+      const st = populated()
+      st.items['scale:C:major'] = { ...st.items['scale:C:major']!, due }
+      expect(parseImport(JSON.stringify(st)), due).toMatchObject({ ok: false })
+    }
+    expect(parseImport(JSON.stringify({ ...populated(), log: [{ date: '2026-02-30', minutes: 5, completed: true }] }))).toMatchObject({ ok: false })
+    const leap = populated()
+    leap.log = [{ date: '2028-02-29', minutes: 5, completed: true }]
+    expect(parseImport(JSON.stringify(leap))).toMatchObject({ ok: true })
+  })
+
+  it('levelStreak must be a non-negative integer', () => {
+    for (const levelStreak of [-1, 1.5]) {
+      const st = populated()
+      st.items['scale:C:major'] = { ...st.items['scale:C:major']!, levelStreak }
+      expect(parseImport(JSON.stringify(st)), String(levelStreak)).toMatchObject({ ok: false })
+    }
+    const st = populated()
+    st.items['scale:C:major'] = { ...st.items['scale:C:major']!, levelStreak: 0 }
+    expect(parseImport(JSON.stringify(st))).toMatchObject({ ok: true })
+  })
+
+  it('log minutes must be a finite number >= 0', () => {
+    for (const minutes of [-1, null]) {
+      const bad = { ...populated(), log: [{ date: '2026-10-20', minutes, completed: true }] }
+      expect(parseImport(JSON.stringify(bad)), String(minutes)).toMatchObject({ ok: false })
+    }
+    const zero = { ...populated(), log: [{ date: '2026-10-20', minutes: 0, completed: false }] }
+    expect(parseImport(JSON.stringify(zero))).toMatchObject({ ok: true })
+  })
+
+  it('does not overwrite an existing backup on a corrupt load', () => {
+    const s = fakeStorage({ [STORAGE_KEY]: '{second', [BACKUP_KEY]: '{first' })
+    const r = loadState(s)
+    expect(r.notice).toBeTruthy()
+    expect(s.getItem(BACKUP_KEY)).toBe('{first')
+  })
+})
+
