@@ -29,8 +29,12 @@ The app is a static site; `.github/workflows/deploy.yml` tests, builds, and publ
    (Actions tab, "Deploy to GitHub Pages", Run workflow) if the first push ran before
    Pages was enabled.
 4. On the iPad, open the Pages URL in Safari, then Share, Add to Home Screen. Launch it
-   once while online so the service worker can cache the app and piano samples; after
-   that it works offline in landscape as a standalone app.
+   once from the home-screen icon while online so the service worker can cache the app
+   and piano samples; after that it works offline in landscape as a standalone app.
+   Do placement and all practice in the home-screen app, not in the Safari tab:
+   anything done in Safari stays in Safari.
+5. After a deploy, close the app (swipe it away in the app switcher) and reopen it to
+   get the update.
 
 Progress is stored per device (browser `localStorage`). The home-screen app and Safari
 do not share it, and a new device starts empty. Use Settings, Your progress (Back up)
