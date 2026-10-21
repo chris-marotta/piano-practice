@@ -11,8 +11,12 @@ export function parseHash(hash: string): string {
   return hash.replace(/^#\/?/, '').replace(/\/+$/, '')
 }
 
-/** Until placement is done every path resolves to 'placement'; afterwards unknown paths go to 'today'. */
+/**
+ * Until placement is done every path resolves to 'placement'. Afterwards 'placement' and unknown
+ * paths go to 'today' (R14: a typed #/placement must not reach the grid and wipe progress;
+ * Settings' redo clears placedAt first).
+ */
 export function resolveRoute(path: string, placed: boolean): Route {
   if (!placed) return 'placement'
-  return isRoute(path) ? path : 'today'
+  return isRoute(path) && path !== 'placement' ? path : 'today'
 }

@@ -37,7 +37,8 @@
   --key-label-on-black: #c9d1db;
 
   /* Type */
-  --font: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Noto Music right after Atkinson: used only for glyphs Atkinson lacks (♯ ♭ 𝄪 𝄫). */
+  --font: 'Atkinson Hyperlegible', 'Noto Music', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --fs-small: 16px;
   --fs-body: 20px;
   --fs-title: 28px;

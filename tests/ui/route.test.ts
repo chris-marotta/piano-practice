@@ -16,8 +16,11 @@ describe('resolveRoute', () => {
       expect(resolveRoute(p, false)).toBe('placement')
   })
   it('passes known routes through once placed', () => {
-    for (const p of ['today', 'session', 'library', 'progress', 'settings', 'placement'] as const)
+    for (const p of ['today', 'session', 'library', 'progress', 'settings'] as const)
       expect(resolveRoute(p, true)).toBe(p)
+  })
+  it('sends placement to today once placed, so a typed #/placement cannot wipe progress (R14)', () => {
+    expect(resolveRoute('placement', true)).toBe('today')
   })
   it('falls back to today for empty or unknown paths', () => {
     expect(resolveRoute('', true)).toBe('today')

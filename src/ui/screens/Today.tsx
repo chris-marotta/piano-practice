@@ -1,10 +1,10 @@
-import { useState } from 'preact/hooks'
+import { useRef, useState } from 'preact/hooks'
 import { loadPiano } from '../../audio/piano'
 import { unlockAudio } from '../../audio/unlock'
 import { buildSession } from '../../session/builder'
 import type { Settings } from '../../srs/items'
 import { Segmented } from '../components/Segmented'
-import { app, currentSession, navigate, notice, today, update } from '../state'
+import { app, currentSession, navigate, notice, route, today, update } from '../state'
 import { todaySummary } from './todayView'
 
 const LENGTHS: { value: Settings['sessionMinutes']; label: string }[] = [
@@ -24,19 +24,27 @@ export function Today() {
   const s = todaySummary(items, settings, today(), log)
   const [starting, setStarting] = useState(false)
 
+  // Synchronous guard: a second tap in the same frame sees it before `starting` re-renders.
+  const busy = useRef(false)
+
   const start = async () => {
-    if (starting) return
+    if (busy.current) return
+    busy.current = true
     setStarting(true)
-    await unlockAudio() // first thing in the tap: the iOS audio unlock needs the user gesture
-    if (!(await loadPiano())) notice.value = PIANO_FAILED
-    const state = app.value
-    const steps = buildSession(state.items, state.settings, today())
-    if (steps.length === 0) {
-      setStarting(false) // the day's work finished in the meantime; the screen now shows Done
-      return
+    try {
+      await unlockAudio() // first thing in the tap: the iOS audio unlock needs the user gesture
+      if (!(await loadPiano())) notice.value = PIANO_FAILED
+      // Chris may have switched tabs during "Loading piano…": don't yank him into a session.
+      if (route.peek() !== 'today') return
+      const state = app.value
+      const steps = buildSession(state.items, state.settings, today())
+      if (steps.length === 0) return // the day's work finished in the meantime; the screen now shows Done
+      currentSession.value = { steps, index: 0, startedAt: Date.now(), before: structuredClone(state.items) }
+      navigate('session')
+    } finally {
+      busy.current = false
+      setStarting(false) // harmless if already unmounted
     }
-    currentSession.value = { steps, index: 0, startedAt: Date.now(), before: structuredClone(state.items) }
-    navigate('session')
   }
 
   const setLength = (m: Settings['sessionMinutes']) =>
