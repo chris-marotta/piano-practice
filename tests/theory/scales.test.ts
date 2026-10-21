@@ -8,6 +8,7 @@ import {
   relativeKey,
   scaleNotes,
   scaleSequence,
+  noteMidi,
   transpose,
 } from '../../src/theory/scales'
 
@@ -89,5 +90,18 @@ describe('transpose', () => {
     expect(transpose('F#2', '5P')).toBe('C#3')
     expect(transpose('Db2', '5P')).toBe('Ab2')
     expect(transpose('B2', '5P')).toBe('F#3')
+  })
+})
+
+describe('noteMidi', () => {
+  it('converts scientific pitch to MIDI, spelling-agnostic', () => {
+    expect(noteMidi('C4')).toBe(60)
+    expect(noteMidi('F#4')).toBe(66)
+    expect(noteMidi('Gb4')).toBe(66)
+    expect(noteMidi('F##4')).toBe(67)
+    expect(noteMidi('Cb5')).toBe(71)
+  })
+  it('throws on a note without an octave', () => {
+    expect(() => noteMidi('C')).toThrow()
   })
 })

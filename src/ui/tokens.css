@@ -1,0 +1,61 @@
+/* Design tokens: "practice room at night". Dark only; the on-screen keyboard is the brightest thing. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #12161c;
+  --surface: #1b212a;
+  --surface-2: #242c37;
+  --line: #2e3744;
+
+  /* Text */
+  --text: #e8ecf1;
+  --muted: #8a94a3;
+  --ink: #12161c; /* dark text on hand-coloured fills */
+
+  /* Hands */
+  --rh: #f2a541;
+  --rh-deep: #c98329; /* RH fill on a black key */
+  --lh: #3fb8af;
+  --lh-deep: #2a8f88; /* LH fill on a black key */
+  --mark-none: #b7c4d4; /* neutral highlight (hand: 'none') */
+  --mark-none-deep: #5d6c7e;
+
+  /* Status */
+  --success: #8cc86a;
+  --warn: #e8735a;
+
+  /* Chrome accent: active tab, focus. Cool and pale so it never reads as a hand colour. */
+  --accent: #a9c7ee;
+
+  /* Piano keys */
+  --key-white: #f4f1ea;
+  --key-white-edge: #d9d4c9;
+  --key-black: #1d2128;
+  --key-black-top: #2b313a;
+  --key-label: #4b5462;
+  --key-label-on-black: #c9d1db;
+
+  /* Type */
+  --font: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-small: 16px;
+  --fs-body: 20px;
+  --fs-title: 28px;
+  --fs-prompt: 36px; /* step prompts, >= 32px */
+  --fs-finger: 20px; /* finger numbers, >= 18px */
+
+  /* Space (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --radius: 8px;
+  --tap: 48px; /* minimum touch target */
+  --tap-lg: 72px; /* rep and rating buttons */
+  --tabbar-h: 76px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}

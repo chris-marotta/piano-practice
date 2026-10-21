@@ -92,3 +92,10 @@ export function relativeKey(ref: ScaleRef): ScaleRef {
 export function transpose(note: string, interval: string): string {
   return Note.transpose(note, interval)
 }
+
+/** MIDI number of a note with octave ('F#4' -> 66). Thin wrapper so UI code never imports tonal. Throws without an octave. */
+export function noteMidi(note: string): number {
+  const midi = Note.midi(note)
+  if (midi === null || !/-?\d+$/.test(note)) throw new Error(`Not a note with octave: ${note}`)
+  return midi
+}
