@@ -4,7 +4,7 @@ import { unlockAudio } from '../../audio/unlock'
 import { buildSession } from '../../session/builder'
 import type { Settings } from '../../srs/items'
 import { Segmented } from '../components/Segmented'
-import { app, currentSession, navigate, notice, route, today, update } from '../state'
+import { app, currentSession, navigate, notice, resumed, route, today, update } from '../state'
 import { LENGTH_OPTIONS } from './settingsView'
 import { todaySummary } from './todayView'
 
@@ -14,6 +14,7 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 
 export function Today() {
   const { items, settings, log } = app.value
+  void resumed.value // re-derive when the app returns to the foreground (the date may have changed)
   // Derived on every render from app state; never cached.
   const s = todaySummary(items, settings, today(), log)
   const [starting, setStarting] = useState(false)
@@ -60,7 +61,14 @@ export function Today() {
     <section class="screen today">
       <div class="today__main">
         <p class={streakClass}>{s.streakLabel}</p>
-        <h1 class="today__title">About {plural(s.minutes, 'minute', 'minutes')}</h1>
+        {s.doneToday ? (
+          <>
+            <h1 class="today__title">Today's practice is done</h1>
+            <p class="today__lede">Want more? About {plural(s.minutes, 'minute', 'minutes')}.</p>
+          </>
+        ) : (
+          <h1 class="today__title">About {plural(s.minutes, 'minute', 'minutes')}</h1>
+        )}
         <div class="today__length">
           <span class="today__label">Session length</span>
           <Segmented
@@ -72,13 +80,18 @@ export function Today() {
             disabled={starting}
           />
         </div>
-        <button type="button" class="btn btn--primary btn--start" onClick={start} disabled={starting}>
-          {starting ? 'Loading piano…' : 'Start'}
+        <button
+          type="button"
+          class={`btn btn--start${s.doneToday ? '' : ' btn--primary'}`}
+          onClick={start}
+          disabled={starting}
+        >
+          {starting ? 'Loading piano…' : s.doneToday ? 'Practice more' : 'Start'}
         </button>
       </div>
 
       <div class="today__plan">
-        <h2 class="today__label">Today's scales</h2>
+        <h2 class="today__label">{s.doneToday ? 'Next up' : "Today's scales"}</h2>
         <ul class="today__scales">
           {s.scales.map((sc) => (
             <li key={sc.label} class="today__scale">

@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks'
 import { stopAll } from '../../audio/piano'
-import { logCompletedSession, rateItem, sessionMinutes } from '../../session/record'
+import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
 import { app, currentSession, route, today, update } from '../state'
 import { Done } from './Done'
@@ -20,7 +20,7 @@ function advance(from: number): void {
     return
   }
   const minutes = sessionMinutes(s.startedAt, Date.now())
-  update((st) => logCompletedSession(st, minutes, today()))
+  update((st) => logCompletedSession(st, minutes, sessionDate(s.startedAt)))
   currentSession.value = { ...s, index: next, minutes }
 }
 

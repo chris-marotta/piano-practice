@@ -20,6 +20,8 @@ export interface TodaySummary {
   steps: Step[]
   /** Every enabled scale has already been rated today: nothing to start. */
   done: boolean
+  /** A session was completed today; more practice is still on offer while `done` is false. */
+  doneToday: boolean
   streak: number
   streakLabel: string
   minutes: number
@@ -58,6 +60,7 @@ export function todaySummary(
   return {
     steps,
     done: steps.length === 0,
+    doneToday: log.some((e) => e.completed && e.date === today),
     streak: days,
     streakLabel: streakLabel(days),
     minutes: Math.ceil(estimateSeconds(steps) / 60),

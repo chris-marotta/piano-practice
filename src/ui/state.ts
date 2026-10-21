@@ -50,6 +50,16 @@ export function today(): string {
   return localDate(new Date())
 }
 
+/**
+ * Bumped each time the app comes back to the foreground. Screens that show "today" read it, so
+ * an app left open overnight re-derives (and today() re-reads the date) when it is next looked at.
+ */
+export const resumed = signal(0)
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') resumed.value++
+})
+
 // ---- routing (hash based: the app is served from a relative base on GitHub Pages) ----
 
 const placed = (): boolean => app.value.placedAt !== null

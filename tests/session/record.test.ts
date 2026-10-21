@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { logCompletedSession, rateItem, sessionMinutes } from '../../src/session/record'
+import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../src/session/record'
 import { chordsId, idsForScale, placeItems, recallId, scaleId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 import { emptyState, type AppState } from '../../src/store/storage'
@@ -113,5 +113,13 @@ describe('logCompletedSession', () => {
     expect(next.log).toEqual([{ date: TODAY, minutes: 7, completed: true }])
     expect(streak(next.log, TODAY)).toBe(1)
     expect(s.log).toEqual([])
+  })
+})
+
+describe('sessionDate', () => {
+  it('is the local date the session started, so one finished after midnight logs the day it began', () => {
+    const startedAt = new Date(2026, 9, 20, 23, 55).getTime()
+    expect(sessionDate(startedAt)).toBe('2026-10-20')
+    expect(sessionDate(new Date(2026, 9, 21, 0, 5).getTime())).toBe('2026-10-21')
   })
 })

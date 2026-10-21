@@ -1,9 +1,10 @@
-import { app, today } from '../state'
+import { app, resumed, today } from '../state'
 import { MASTERY_LEGEND, calendarWeeks, masteryColumns, masteryRows, progressStats } from './progressView'
 
 /** Mastery grid (box shade + support mark per scale), streak, minutes, and the last 8 weeks. */
 export function Progress() {
   const { items, settings, log } = app.value
+  void resumed.value // re-derive when the app returns to the foreground (the date may have changed)
   const date = today()
   const columns = masteryColumns(settings)
   const rows = masteryRows(items, settings, date)

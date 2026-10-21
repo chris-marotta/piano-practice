@@ -106,6 +106,24 @@ describe('todaySummary', () => {
     expect(s.streak).toBe(1)
   })
 
+  it("doneToday once a session was completed today; Start still works (steps remain)", () => {
+    const items = placeAll('shaky')
+    const s = todaySummary(items, DEFAULT_SETTINGS, TODAY, [{ date: TODAY, minutes: 6, completed: true }])
+    expect(s.doneToday).toBe(true)
+    expect(s.done).toBe(false)
+    expect(s.steps.length).toBeGreaterThan(0)
+    expect(s.streak).toBe(1)
+  })
+
+  it('not doneToday with only an earlier day or an incomplete entry today', () => {
+    const items = placeAll('shaky')
+    const earlier: SessionLog[] = [{ date: '2026-10-19', minutes: 10, completed: true }]
+    const partial: SessionLog[] = [{ date: TODAY, minutes: 3, completed: false }]
+    expect(todaySummary(items, DEFAULT_SETTINGS, TODAY, earlier).doneToday).toBe(false)
+    expect(todaySummary(items, DEFAULT_SETTINGS, TODAY, partial).doneToday).toBe(false)
+    expect(todaySummary(items, DEFAULT_SETTINGS, TODAY, []).doneToday).toBe(false)
+  })
+
   it('handles an empty item store (e.g. a newly enabled form) without crashing', () => {
     const s = todaySummary({}, DEFAULT_SETTINGS, TODAY, [])
     expect(s.done).toBe(false)

@@ -1,4 +1,5 @@
 // Writing session results into app state. Pure: callers pass the state in and save what comes back.
+import { localDate } from '../srs/dates'
 import { idsForScale, parseId, stateFor } from '../srs/items'
 import { applyRating, type Rating } from '../srs/scheduler'
 import type { AppState } from '../store/storage'
@@ -34,6 +35,11 @@ export function rateItem(
 /** Whole minutes between start and finish, at least 1. */
 export function sessionMinutes(startedAt: number, now: number): number {
   return Math.max(1, Math.round((now - startedAt) / 60000))
+}
+
+/** The local date a session started: a session finished after midnight logs the day it began. */
+export function sessionDate(startedAt: number): string {
+  return localDate(new Date(startedAt))
 }
 
 /** Append a completed session to the log (this is what counts the day for the streak). */
