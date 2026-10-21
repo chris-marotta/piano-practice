@@ -47,7 +47,10 @@ function readDevPage(path: string): string | null {
 const initialPath = parseHash(window.location.hash)
 devPage.value = readDevPage(initialPath)
 
-/** Current screen. Assign to navigate; the hash follows. Unplaced users are always sent to 'placement'. */
+/**
+ * Current screen. Assigning it directly rewrites the hash with replaceState (no history entry);
+ * use navigate() to push a history entry. Unplaced users are always sent to 'placement'.
+ */
 export const route = signal<Route>(resolveRoute(initialPath, placed()))
 
 /** Programmatic navigation; adds a history entry like a tab tap does. */

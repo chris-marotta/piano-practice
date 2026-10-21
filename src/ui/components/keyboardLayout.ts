@@ -112,3 +112,49 @@ export function badgeSlots(marks: KeyMark[], low: number): BadgeLayout {
   const lh = build('lh')
   return { rh, lh, rhRows: rows(rh), lhRows: rows(lh) }
 }
+
+// ---- vertical layout ----
+
+/** Gap between a badge row and the keyboard edge. */
+export const BADGE_GAP = 8
+/** Pitch between stacked sub-rows of one hand. */
+export const SUB_ROW = 2 * BADGE_R + 6
+
+const rowHeight = (rows: number): number => (rows === 0 ? 0 : BADGE_GAP + 2 * BADGE_R + (rows - 1) * SUB_ROW + 4)
+
+/**
+ * Vertical positions in SVG units. With reserveRows, both hands always get two sub-rows,
+ * so the keyboard keeps the same height and position from one scale to the next.
+ */
+export function verticalLayout(
+  rows: { rhRows: number; lhRows: number },
+  reserveRows = false,
+): { keyTop: number; keyBottom: number; height: number } {
+  const keyTop = rowHeight(reserveRows ? 2 : rows.rhRows)
+  const keyBottom = keyTop + KEY.whiteH
+  return { keyTop, keyBottom, height: keyBottom + rowHeight(reserveRows ? 2 : rows.lhRows) }
+}
+
+// ---- render scale ----
+
+/** Lowest render scale (px per SVG unit). Finger numbers are 20 units, so 20 x 0.9 = 18px. */
+export const MIN_SCALE = 0.9
+
+/**
+ * CSS min-width (px) for an SVG of this viewBox width; narrower containers scroll horizontally instead.
+ * Rounded up to a whole pixel so layout's sub-pixel rounding can't land the scale a hair under MIN_SCALE.
+ */
+export function minRenderWidth(viewBoxWidth: number): number {
+  return Math.ceil(viewBoxWidth * MIN_SCALE)
+}
+
+// ---- accessibility ----
+
+const SHARP_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+
+/** 'E4'; when a label differs from the plain pitch name it is appended: 'D♯4, E♭'. */
+export function keyAriaLabel(midi: number, label?: string): string {
+  const name = SHARP_NAMES[pc(midi)] as string
+  const full = `${name}${Math.floor(midi / 12) - 1}`
+  return label === undefined || label === name || label === full ? full : `${full}, ${label}`
+}

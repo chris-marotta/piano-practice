@@ -198,6 +198,14 @@ p {
   padding: var(--s-4) 0;
 }
 
+.keyboard-scroll {
+  width: 100%;
+  min-width: 0; /* as a flex child, don't grow to the SVG's min-width */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 .keyboard {
   display: block;
   height: auto;

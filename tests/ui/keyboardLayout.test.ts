@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   BADGE_R,
   KEY,
+  MIN_SCALE,
   badgeSlots,
   isBlack,
+  keyAriaLabel,
+  minRenderWidth,
+  verticalLayout,
   keyRects,
   keyboardRange,
   whiteKeys,
@@ -143,5 +147,51 @@ describe('badgeSlots', () => {
           }
       }
     }
+  })
+})
+
+describe('verticalLayout', () => {
+  const none = { rhRows: 0, lhRows: 0 } as const
+  const both = { rhRows: 2, lhRows: 2 } as const
+  const whitesOnly = { rhRows: 1, lhRows: 0 } as const
+
+  it('sizes each badge row to the sub-rows a hand needs', () => {
+    expect(verticalLayout(none)).toEqual({ keyTop: 0, keyBottom: KEY.whiteH, height: KEY.whiteH })
+    const one = verticalLayout(whitesOnly)
+    const two = verticalLayout(both)
+    expect(one.keyTop).toBeGreaterThan(2 * BADGE_R)
+    expect(two.keyTop).toBeGreaterThan(one.keyTop)
+    expect(two.height).toBe(two.keyTop * 2 + KEY.whiteH)
+  })
+
+  it('reserveRows keeps the same height and key position whatever the badges', () => {
+    const reserved = [none, whitesOnly, both].map((b) => verticalLayout(b, true))
+    for (const r of reserved) expect(r).toEqual(verticalLayout(both))
+  })
+})
+
+describe('minRenderWidth', () => {
+  it('keeps the render scale at or above MIN_SCALE so 20-unit finger numbers stay >= 18px', () => {
+    expect(MIN_SCALE).toBeGreaterThanOrEqual(0.9)
+    expect(20 * MIN_SCALE).toBeGreaterThanOrEqual(18)
+    const viewBoxWidth = 28 * KEY.whiteW + 4
+    expect(minRenderWidth(viewBoxWidth)).toBeGreaterThanOrEqual(viewBoxWidth * MIN_SCALE)
+    expect(minRenderWidth(viewBoxWidth)).toBeLessThan(viewBoxWidth * MIN_SCALE + 1)
+    expect(Number.isInteger(minRenderWidth(viewBoxWidth))).toBe(true)
+  })
+  it('fits an iPad landscape content column (1132px) for the widest range, C3..B6', () => {
+    expect(minRenderWidth(28 * KEY.whiteW + 4)).toBeLessThan(1132)
+  })
+})
+
+describe('keyAriaLabel', () => {
+  it('names the key with its octave', () => {
+    expect(keyAriaLabel(64)).toBe('E4')
+    expect(keyAriaLabel(61)).toBe('C♯4')
+    expect(keyAriaLabel(48)).toBe('C3')
+  })
+  it('adds the label when it differs from the plain name', () => {
+    expect(keyAriaLabel(64, 'E')).toBe('E4')
+    expect(keyAriaLabel(63, 'E♭')).toBe('D♯4, E♭')
   })
 })
