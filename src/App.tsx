@@ -1,21 +1,13 @@
 import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
-import { Placeholder } from './ui/screens/Placeholder'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
 import { Library } from './ui/screens/Library'
 import { Placement } from './ui/screens/Placement'
 import { Today } from './ui/screens/Today'
 import { Session } from './ui/screens/Session'
+import { Progress } from './ui/screens/Progress'
+import { Settings } from './ui/screens/Settings'
 import { devPage, route, type Route } from './ui/state'
-
-const TITLES: Record<Route, string> = {
-  today: 'Today',
-  session: 'Session',
-  library: 'Library',
-  progress: 'Progress',
-  settings: 'Settings',
-  placement: 'Placement',
-}
 
 /** Focus screens hide the tab bar so a stray tap mid-practice can't leave the session. */
 const FULL_SCREEN: Route[] = ['placement', 'session']
@@ -25,7 +17,8 @@ function Screen({ route: r }: { route: Route }) {
   if (r === 'today') return <Today />
   if (r === 'session') return <Session />
   if (r === 'library') return <Library />
-  return <Placeholder title={TITLES[r]} />
+  if (r === 'progress') return <Progress />
+  return <Settings />
 }
 
 export function App() {

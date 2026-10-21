@@ -5,14 +5,9 @@ import { buildSession } from '../../session/builder'
 import type { Settings } from '../../srs/items'
 import { Segmented } from '../components/Segmented'
 import { app, currentSession, navigate, notice, route, today, update } from '../state'
+import { LENGTH_OPTIONS } from './settingsView'
 import { todaySummary } from './todayView'
 
-const LENGTHS: { value: Settings['sessionMinutes']; label: string }[] = [
-  { value: 5, label: '5 min' },
-  { value: 10, label: '10 min' },
-  { value: 15, label: '15 min' },
-  { value: 20, label: '20 min' },
-]
 
 const PIANO_FAILED = "Piano sound didn't load. The session works without it."
 
@@ -70,7 +65,7 @@ export function Today() {
         <div class="today__length">
           <span class="today__label">Session length</span>
           <Segmented
-            options={LENGTHS}
+            options={LENGTH_OPTIONS}
             value={settings.sessionMinutes}
             onChange={setLength}
             label="Session length"

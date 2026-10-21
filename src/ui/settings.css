@@ -1,0 +1,218 @@
+/* ---- settings ---- */
+
+.settings {
+  gap: var(--s-5);
+}
+
+.settings__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--s-5) var(--s-7);
+}
+
+.settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.settings__heading {
+  font-size: 22px;
+  font-weight: 700;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.settings__group .settings__heading:not(:first-child) {
+  margin-top: var(--s-4);
+}
+
+.srow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.srow__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.srow__label {
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.srow__hint {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.srow__control {
+  display: flex;
+  min-width: 0;
+}
+
+.srow__control > .seg {
+  flex: 1;
+  max-width: 480px;
+}
+
+.settings__forms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.settings__forms .toggle {
+  flex: 1 1 0;
+  justify-content: space-between;
+  min-height: var(--tap);
+  max-width: 180px;
+  padding: 0 var(--s-4);
+  font-size: 18px;
+}
+
+/* Range inputs: a 48px-tall hit area, the value beside it. */
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: 1;
+  min-width: 0;
+  max-width: 480px;
+}
+
+.slider__input {
+  flex: 1;
+  min-width: 0;
+  height: var(--tap);
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.slider__value {
+  flex: none;
+  min-width: 4.6em;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: 1;
+  max-width: 480px;
+}
+
+.stepper__btn {
+  flex: none;
+  width: 56px;
+  padding: 0;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.settings__file {
+  display: none;
+}
+
+.settings__note {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.settings__error {
+  padding: var(--s-2) var(--s-3);
+  border-left: 4px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 18px;
+}
+
+.btn--danger {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--ink);
+}
+
+.btn--danger-quiet {
+  border-color: color-mix(in srgb, var(--warn) 70%, var(--line));
+  color: var(--warn);
+}
+
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: 18px;
+}
+
+.about .settings__heading {
+  margin-bottom: var(--s-1);
+}
+
+.about a,
+.confirm a {
+  color: var(--accent);
+}
+
+@media (max-width: 860px) {
+  .settings__cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- confirm dialog ---- */
+
+.confirm {
+  width: calc(100% - 2 * var(--s-5));
+  max-width: 560px;
+  padding: var(--s-6);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: var(--fs-body);
+}
+
+.confirm::backdrop {
+  background: rgb(6 8 11 / 0.72);
+}
+
+.confirm__title {
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.confirm__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: var(--s-4) 0 var(--s-6);
+  color: var(--text);
+}
+
+.confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s-3);
+}
+
+.confirm__actions .btn {
+  min-height: 56px;
+}

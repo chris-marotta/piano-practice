@@ -27,6 +27,9 @@
 
   /* Chrome accent: active tab, focus. Cool and pale so it never reads as a hand colour. */
   --accent: #a9c7ee;
+  /* Mastery ramp (Progress grid): surface -> this, by Leitner box. The pale chrome blue, so a
+     well-known scale reads as "bright" without looking like either hand. */
+  --mastery: var(--accent);
 
   /* Piano keys */
   --key-white: #f4f1ea;

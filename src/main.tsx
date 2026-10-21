@@ -7,6 +7,8 @@ import './ui/tokens.css'
 import './ui/app.css'
 import './ui/session.css'
 import './ui/library.css'
+import './ui/progress.css'
+import './ui/settings.css'
 import { App } from './App'
 
 render(<App />, document.getElementById('app')!)

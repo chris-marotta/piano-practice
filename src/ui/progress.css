@@ -1,0 +1,256 @@
+/* ---- progress ---- */
+
+.progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  align-items: start;
+  gap: var(--s-5) var(--s-7);
+}
+
+.progress__scales,
+.progress__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+/* Mastery grid: same rows and columns as placement, but read-only and compact. */
+.mastery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-width: calc(var(--cols) * 150px);
+}
+
+.mastery__row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--s-1);
+}
+
+.mastery__head {
+  padding: 0 var(--s-2) var(--s-1);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  height: 38px;
+  padding: 0 var(--s-3);
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+}
+
+.mcell__root {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.mcell__support {
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* Box shade: 5 steps from the surface to the full mastery colour. Box 0 = never introduced. */
+.mcell--0 {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--muted) 55%, var(--bg));
+  color: var(--muted);
+}
+
+.mcell--1 {
+  background: color-mix(in srgb, var(--mastery) 16%, var(--surface));
+}
+
+.mcell--2 {
+  background: color-mix(in srgb, var(--mastery) 34%, var(--surface));
+}
+
+.mcell--3 {
+  background: color-mix(in srgb, var(--mastery) 54%, var(--surface));
+}
+
+.mcell--4 {
+  background: color-mix(in srgb, var(--mastery) 76%, var(--surface));
+  color: var(--ink);
+}
+
+.mcell--5 {
+  background: var(--mastery);
+  color: var(--ink);
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.legend__ramp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.legend__swatch {
+  width: 28px;
+  height: 20px;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+}
+
+.legend__swatch.mcell--0 {
+  border-color: color-mix(in srgb, var(--muted) 55%, var(--bg));
+}
+
+.legend__swatch + .legend__text {
+  margin-right: var(--s-3);
+}
+
+.legend__text {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* Stats */
+.stats {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--s-2) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 var(--s-4);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.stat:last-child {
+  border-bottom: 0;
+}
+
+.stat__label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.stat__value {
+  margin: 0;
+  justify-self: end;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.stat__value--on {
+  color: var(--success);
+}
+
+.stat__note {
+  grid-column: 2;
+  justify-self: end;
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* Calendar: 8 rows of 7 days, oldest top-left, today bottom-right. */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.calendar__title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.calendar__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calendar__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 52px));
+  gap: 6px;
+}
+
+.calendar__weekday {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.cday {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.cday--on {
+  background: var(--success);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.cday--today {
+  box-shadow: inset 0 0 0 2px var(--text);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.cday--on.cday--today {
+  color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--text), inset 0 0 0 4px var(--ink);
+}
+
+.calendar__key {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.cday--key {
+  width: 28px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.calendar__key .cday--today {
+  margin-left: var(--s-3);
+}
+
+@media (max-width: 960px) {
+  .progress {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
