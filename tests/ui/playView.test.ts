@@ -48,7 +48,8 @@ function marks(opts: {
 }
 
 const at = (ms: KeyMark[], midi: number) => ms.filter((m) => m.midi === midi)
-const stateAt = (ms: KeyMark[], midi: number) => at(ms, midi).find((m) => m.state && m.state !== 'target')?.state
+const GLOWS = new Set(['target', 'played'])
+const stateAt = (ms: KeyMark[], midi: number) => at(ms, midi).find((m) => m.state && !GLOWS.has(m.state))?.state
 
 describe('playMarks: priority (spec §4.3)', () => {
   it('pressed + in target is good, pressed + not in target is bad (by pitch class)', () => {
@@ -74,7 +75,7 @@ describe('playMarks: priority (spec §4.3)', () => {
   })
   it('a pressed key never carries two states', () => {
     const ms = marks({ held: [67], mode: 'guided', next: { rh: { midi: 67, finger: 1 } } })
-    expect(at(ms, 67).filter((m) => m.state && m.state !== 'target')).toHaveLength(1)
+    expect(at(ms, 67).filter((m) => m.state && !GLOWS.has(m.state))).toHaveLength(1)
   })
 })
 
@@ -144,9 +145,9 @@ describe('playMarks: guided next note', () => {
   })
 })
 
-describe('playMarks: target highlight', () => {
+describe('playMarks: target highlight (Free)', () => {
   const outlined = (ms: KeyMark[]) => ms.filter((m) => m.state === 'target').map((m) => m.midi)
-  it('outlines every target note in the window when highlight is on', () => {
+  it('glows every target note in the window when highlight is on', () => {
     const o = outlined(marks({}))
     expect(o).toContain(67)
     expect(o).toContain(42)
@@ -162,6 +163,90 @@ describe('playMarks: target highlight', () => {
   })
   it('is absent with no target', () => {
     expect(outlined(marks({ target: NONE }))).toEqual([])
+  })
+})
+
+describe('playMarks: guided scale glows its own run, one leg at a time', () => {
+  type Hand = 'rh' | 'lh' | 'together'
+  const guideAt = (target: Extract<PlayTarget, { kind: 'scale' }>, hand: Hand, index: number, offset: number | null): GuideState => ({
+    ...createGuide({ kind: 'scale', ref: target.ref, octaves: target.octaves, hand }),
+    index,
+    offset,
+  })
+  const glows = (target: Extract<PlayTarget, { kind: 'scale' }>, guide: GuideState, toggles: Partial<PlayToggles> = {}) => {
+    const ms = playMarks({
+      mode: 'guided',
+      target,
+      toggles: { ...DEFAULT_TOGGLES, ...toggles },
+      held: new Set(),
+      next: null,
+      window: DEFAULT_WINDOW,
+      guide,
+    })
+    const of = (state: 'target' | 'played') =>
+      ms
+        .filter((m) => m.state === state)
+        .map((m) => m.midi)
+        .sort((a, b) => a - b)
+    return { target: of('target'), played: of('played') }
+  }
+  const G1 = G_MAJOR as Extract<PlayTarget, { kind: 'scale' }>
+
+  it('going up: notes before the next one dim, the rest of the way up glows; no other octave glows', () => {
+    // G4 A4 B4 | next C5 | D5 E5 F#5 G5
+    expect(glows(G1, guideAt(G1, 'rh', 3, 0))).toEqual({ target: [74, 76, 78, 79], played: [67, 69, 71] })
+  })
+  it('before the octave lock: the whole way up glows at the home octave, nothing dims', () => {
+    expect(glows(G1, guideAt(G1, 'rh', 0, null))).toEqual({ target: [69, 71, 72, 74, 76, 78, 79], played: [] })
+  })
+  it('coming down: only the down leg shows; the top and the notes played on the way down dim, the keys below glow', () => {
+    // run: ... G5 (7) F#5 E5 | next D5 (10) | C5 B4 A4 G4
+    expect(glows(G1, guideAt(G1, 'rh', 10, 0))).toEqual({ target: [67, 69, 71, 72], played: [76, 78, 79] })
+  })
+  it('follows the locked octave', () => {
+    expect(glows(G1, guideAt(G1, 'rh', 3, -12))).toEqual({ target: [62, 64, 66, 67], played: [55, 57, 59] })
+  })
+  it('a finished run: the whole down leg is dim', () => {
+    expect(glows(G1, guideAt(G1, 'rh', 15, 0))).toEqual({ target: [], played: [67, 69, 71, 72, 74, 76, 78, 79] })
+  })
+  it('Together: both hands, an octave apart', () => {
+    const g = glows(G1, guideAt(G1, 'together', 2, 0))
+    expect(g.played).toEqual([55, 57, 67, 69])
+    expect(g.target).toEqual([60, 62, 64, 66, 67, 72, 74, 76, 78, 79])
+  })
+  it('melodic minor: the way down glows the natural-minor notes, not F♯ / G♯', () => {
+    const A_MEL: Extract<PlayTarget, { kind: 'scale' }> = { kind: 'scale', ref: { root: 'A', form: 'melodic' }, octaves: 1 }
+    // down: A5 (7) G5 | next F5 (9) | E5 D5 C5 B4 A4
+    expect(glows(A_MEL, guideAt(A_MEL, 'rh', 9, 0))).toEqual({ target: [69, 71, 72, 74, 76], played: [79, 81] })
+  })
+  it('two octaves: the leg turns at index 14', () => {
+    const G2: Extract<PlayTarget, { kind: 'scale' }> = { ...G1, octaves: 2 }
+    const up = glows(G2, guideAt(G2, 'rh', 14, 0))
+    expect(up.played).toHaveLength(14)
+    expect(up.target).toEqual([])
+    const down = glows(G2, guideAt(G2, 'rh', 15, 0))
+    expect(down.played).toEqual([91])
+    expect(down.target).toHaveLength(13)
+  })
+  it('highlight off hides both the glow and the dim', () => {
+    expect(glows(G1, guideAt(G1, 'rh', 3, 0), { highlight: false })).toEqual({ target: [], played: [] })
+  })
+  it('a guided chord keeps the pitch-class glow and never dims', () => {
+    const next: GuideNext = { chord: { pcs: [0, 4, 7], bassPc: 0, inversion: 0 } }
+    const ms = playMarks({
+      mode: 'guided',
+      target: C_CHORD,
+      toggles: DEFAULT_TOGGLES,
+      held: new Set(),
+      next,
+      window: DEFAULT_WINDOW,
+      guide: createGuide({ kind: 'chord', root: 'C', type: 'M' }),
+    })
+    expect(ms.filter((m) => m.state === 'played')).toEqual([])
+    expect(ms.filter((m) => m.state === 'target').map((m) => m.midi)).toContain(36)
+  })
+  it('Free keeps glowing every scale pitch class in the window', () => {
+    expect(marks({}).filter((m) => m.state === 'target')).toHaveLength(29)
   })
 })
 

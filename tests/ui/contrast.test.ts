@@ -134,13 +134,44 @@ describe('key state marks contrast (shipped CSS)', () => {
     expect(contrastRatio(label, fill(state))).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the target outline is --good, 3 units wide, at least 3:1 on white and black keys', () => {
-    const r = rule('.key-target', appCss)
-    expect(r.stroke).toBe('var(--good)')
-    expect(r['stroke-width']).toBe('3')
+  const glow = (tone: 'white' | 'black', state: 'target' | 'played'): RGB =>
+    colour(rule(`.key--${tone}.key--${state}`, appCss).fill as string)
+
+  it('target and played glows are tints of --good, from tokens (no outline rule left)', () => {
+    expect(rule('.key--white.key--target', appCss).fill).toBe('var(--target-glow)')
+    expect(rule('.key--white.key--played', appCss).fill).toBe('var(--target-dim)')
+    expect(rule('.key--black.key--target', appCss).fill).toBe('var(--target-glow-deep)')
+    expect(rule('.key--black.key--played', appCss).fill).toBe('var(--target-dim-deep)')
+    expect(appCss).not.toMatch(/\.key-target\b/)
+  })
+
+  it.each(['target', 'played'] as const)('a note label is at least 4.5:1 on the %s glow (white and black keys)', (state) => {
+    const onWhite = colour(rule('.key-label--white', appCss).fill as string)
+    const onBlack = colour(rule('.key-label--black', appCss).fill as string)
+    expect(contrastRatio(onWhite, glow('white', state))).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(onBlack, glow('black', state))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the target glow reads against the bare key, and clearly apart from the solid good press', () => {
+    expect(contrastRatio(glow('white', 'target'), white)).toBeGreaterThanOrEqual(1.4)
+    expect(contrastRatio(glow('black', 'target'), black)).toBeGreaterThanOrEqual(2)
+    expect(contrastRatio(glow('white', 'target'), fill('good'))).toBeGreaterThanOrEqual(2)
+    expect(contrastRatio(glow('black', 'target'), fill('good'))).toBeGreaterThanOrEqual(1.8)
+  })
+
+  it('played is dimmer than target: closer to the bare key, still apart from it', () => {
+    for (const [tone, bare] of [['white', white], ['black', black]] as const) {
+      expect(contrastRatio(glow(tone, 'played'), bare)).toBeLessThan(contrastRatio(glow(tone, 'target'), bare))
+      expect(contrastRatio(glow(tone, 'played'), glow(tone, 'target'))).toBeGreaterThanOrEqual(1.2)
+      expect(contrastRatio(glow(tone, 'played'), bare)).toBeGreaterThan(1.1)
+    }
+  })
+
+  it('a black target key has a light rim (the glow) at least 3:1 on its tint', () => {
+    const r = rule('.key-rim', appCss)
+    expect(r.stroke).toBe('var(--target-rim)')
     expect(r.fill).toBe('none')
-    expect(contrastRatio(colour(r.stroke as string), white)).toBeGreaterThanOrEqual(3)
-    expect(contrastRatio(colour(r.stroke as string), black)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(colour(r.stroke as string), glow('black', 'target'))).toBeGreaterThanOrEqual(3)
   })
 })
 

@@ -44,7 +44,7 @@ interface Props {
 /** Default cap on rendered white-key width so a one-octave keyboard doesn't fill the iPad. */
 const MAX_KEY_PX = 56
 
-const NO_LOOK: KeyLook = { fill: null, target: false, glyph: null, label: undefined }
+const NO_LOOK: KeyLook = { fill: null, glow: null, glyph: null, label: undefined }
 
 const STATE_WORD = { good: 'right', bad: 'wrong' } as const
 
@@ -130,9 +130,9 @@ export function Keyboard({
   const isActivate = (e: KeyboardEvent) => e.key === 'Enter' || e.key === ' '
 
   const renderKey = (k: KeyRect) => {
-    const { fill, target, glyph, label } = looks.get(k.midi) ?? NO_LOOK
+    const { fill, glow, glyph, label } = looks.get(k.midi) ?? NO_LOOK
     const tone = k.black ? 'black' : 'white'
-    const base = `key key--${tone}${fill ? ` key--${fill}` : ''}`
+    const base = `key key--${tone}${fill ? ` key--${fill}` : glow ? ` key--${glow}` : ''}`
     const aria = keyAriaLabel(k.midi, label) + (glyph ? `, ${STATE_WORD[glyph]}` : '')
     const tap = interactive
       ? {
@@ -178,8 +178,8 @@ export function Keyboard({
         ) : (
           <rect class={base} x={k.x} y={keyTop} width={k.w} height={k.h} rx={3} />
         )}
-        {target && (
-          <rect class="key-target" x={k.x + 1.5} y={keyTop + 1.5} width={k.w - 3} height={k.h - 3} rx={2} aria-hidden="true" />
+        {glow === 'target' && k.black && (
+          <rect class="key-rim" x={k.x + 1.5} y={keyTop + 1.5} width={k.w - 3} height={k.h - 3} rx={2} aria-hidden="true" />
         )}
         {label !== undefined && (
           <text

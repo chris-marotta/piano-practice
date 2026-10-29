@@ -287,11 +287,28 @@ p {
   fill: var(--pressed);
 }
 
-/* Target: a 3-unit outline inset inside the key (the rect is inset 1.5), no fill. */
-.key-target {
+/* Target: the whole key glows soft green; played (a guided note already done on this leg): a dimmer tint. */
+.key--white.key--target {
+  fill: var(--target-glow);
+}
+
+.key--white.key--played {
+  fill: var(--target-dim);
+}
+
+.key--black.key--target {
+  fill: var(--target-glow-deep);
+}
+
+.key--black.key--played {
+  fill: var(--target-dim-deep);
+}
+
+/* The black target key's rim (inset 1.5 inside the key): the glow that carries across a room. */
+.key-rim {
   fill: none;
-  stroke: var(--good);
-  stroke-width: 3;
+  stroke: var(--target-rim);
+  stroke-width: 2;
   pointer-events: none;
 }
 

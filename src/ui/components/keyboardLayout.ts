@@ -1,7 +1,10 @@
 // Pure keyboard geometry (no DOM) in SVG user units. Keyboard.tsx renders it.
 
-/** Live-play states (phase 2). good / bad / pressed fill the key over any hand colour; target is an outline. */
-export type KeyState = 'good' | 'bad' | 'pressed' | 'target'
+/**
+ * Live-play states (phase 2). good / bad / pressed fill the key over any hand colour; target is a soft green glow,
+ * played a dimmer one (a guided run's notes already played on this leg).
+ */
+export type KeyState = 'good' | 'bad' | 'pressed' | 'target' | 'played'
 
 export interface KeyMark {
   midi: number
@@ -123,21 +126,21 @@ export type KeyFill = 'rh' | 'lh' | 'none' | 'split' | 'good' | 'bad' | 'pressed
 
 export interface KeyLook {
   fill: KeyFill | null
-  /** Outline in --good with no fill (lowest priority: only on an otherwise unmarked key). */
-  target: boolean
+  /** Soft --good tint, no fill (lowest priority: only on an otherwise unmarked key). Target outranks played. */
+  glow: 'target' | 'played' | null
   /** ✓ for good, × for bad, drawn in the label slot. */
   glyph: 'good' | 'bad' | null
   /** First label given for the key. */
   label: string | undefined
 }
 
-/** Spec §4.3 priority among states; a hand colour sits between 'pressed' and 'target'. */
-const STATE_ORDER: Exclude<KeyState, 'target'>[] = ['good', 'bad', 'pressed']
+/** Spec §4.3 priority among states; a hand colour sits between 'pressed' and the glows ('target' > 'played'). */
+const STATE_ORDER: Exclude<KeyState, 'target' | 'played'>[] = ['good', 'bad', 'pressed']
 
 /**
  * One look per key in [low, high] (marks outside the range are dropped). A mark with a state
  * contributes that state, not its hand colour; its finger badge is unaffected (see badgeSlots).
- * Priority: good > bad > pressed > hand colour (rh / lh / split / none) > target outline.
+ * Priority: good > bad > pressed > hand colour (rh / lh / split / none) > target glow > played glow.
  */
 export function keyLooks(marks: KeyMark[], low: number, high: number): Map<number, KeyLook> {
   const byKey = new Map<number, KeyMark[]>()
@@ -153,7 +156,7 @@ export function keyLooks(marks: KeyMark[], low: number, high: number): Map<numbe
     const states = new Set(list.map((m) => m.state))
     const state = STATE_ORDER.find((s) => states.has(s))
     if (state) {
-      out.set(midi, { fill: state, target: false, glyph: state === 'pressed' ? null : state, label })
+      out.set(midi, { fill: state, glow: null, glyph: state === 'pressed' ? null : state, label })
       continue
     }
     const hands = new Set(list.filter((m) => m.state === undefined).map((m) => m.hand))
@@ -167,7 +170,8 @@ export function keyLooks(marks: KeyMark[], low: number, high: number): Map<numbe
             : hands.has('none')
               ? 'none'
               : null
-    out.set(midi, { fill, target: fill === null && states.has('target'), glyph: null, label })
+    const glow = fill !== null ? null : states.has('target') ? 'target' : states.has('played') ? 'played' : null
+    out.set(midi, { fill, glow, glyph: null, label })
   }
   return out
 }

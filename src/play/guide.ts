@@ -65,6 +65,15 @@ function runFor(t: ScaleTarget): Expected[] {
   return scaleInfo(t).run
 }
 
+/**
+ * The run a scale guide asks for (before the octave offset; Together: the RH run, LH is 12 below) and the index of its
+ * top note: up is 0..top, down is top..end. Treat as read-only (cached per target).
+ */
+export function guideRun(t: ScaleTarget): { run: readonly Expected[]; top: number } {
+  const c = scaleInfo(t)
+  return { run: c.run, top: c.top }
+}
+
 /** Finger per run index: up[i] going up (i <= top), down[i - top] coming down (down[0] is the top note). */
 function fingerAt(t: ScaleTarget, hand: 'rh' | 'lh', i: number): number {
   const c = scaleInfo(t)

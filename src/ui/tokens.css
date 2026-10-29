@@ -21,12 +21,21 @@
   --mark-none: #b7c4d4; /* neutral highlight (hand: 'none') */
   --mark-none-deep: #5d6c7e;
 
-  /* Live play (phase 2): right / wrong / neutral pressed key fills, and the target outline (--good).
-     Neither --good nor --bad is a hand colour. Each fill is >= 3:1 on white and black keys and
-     carries --ink glyphs and labels at >= 4.5:1 (checked in tests/ui/contrast.test.ts). */
+  /* Live play (phase 2): right / wrong / neutral pressed key fills. Neither --good nor --bad is a
+     hand colour. Each fill is >= 3:1 on white and black keys and carries --ink glyphs and labels
+     at >= 4.5:1 (checked in tests/ui/contrast.test.ts). */
   --good: #5b9530;
   --bad: #df5868;
   --pressed: #7787a0;
+  /* Target glow: --good mixed into the bare key (35% on white, 55% on black), so the whole key
+     tints green but stays far lighter / darker than a solid --good press. Played (a guided note
+     already done on this leg) is the dimmer 15% / 25% mix. Key labels stay >= 4.5:1 on all four.
+     A black target key also gets a pale rim, since a dark tint alone is hard to see across a room. */
+  --target-glow: #bed1a9;
+  --target-dim: #dde3ce;
+  --target-glow-deep: #3f612c;
+  --target-dim-deep: #2d3e2a;
+  --target-rim: #a3d977;
 
   /* Status */
   --success: #8cc86a;

@@ -23,12 +23,16 @@ function handsTogether(ref: ScaleRef, octaves: 1 | 2, rhOct: number, lhOct: numb
 
 const E_MAJOR: ScaleRef = { root: 'E', form: 'major' }
 
-/** Phase 2 key states on D major (C4..B5): target outlines, right / wrong / neutral presses, a guided note. */
+/** Phase 2 key states on D major (C4..B5): target and played glows, right / wrong / neutral presses, a guided note. */
 function stateMarks(pressed: Set<number>): KeyMark[] {
   const dMajor = scaleSequence({ root: 'D', form: 'major' }, 1, 4).ascending
   const inTarget = new Set(dMajor.map((n) => noteMidi(n) % 12))
   const sample: KeyMark[] = [
-    ...dMajor.map((n) => ({ midi: noteMidi(n), hand: 'none' as const, state: 'target' as const })),
+    // B4 and C♯5 played (dim glow: one white, one black); the rest of D major glows as target.
+    ...dMajor.map((n) => {
+      const midi = noteMidi(n)
+      return { midi, hand: 'none' as const, state: midi === 71 || midi === 73 ? ('played' as const) : ('target' as const) }
+    }),
     { midi: 62, hand: 'none', state: 'good', label: 'D' }, // white, right, with a label
     { midi: 66, hand: 'none', state: 'good' }, // black, right
     { midi: 65, hand: 'none', state: 'bad' }, // white, wrong
@@ -76,7 +80,7 @@ export function DevKeyboard() {
       <RatingBar options={['nailed', 'shaky', 'lost']} onRate={(r) => setTapped(r)} disabledNailed />
       <h2 class="screen__title">Key states (phase 2)</h2>
       <p class="muted">
-        D major target outlined. ✓ D, F♯ · × F, E♭ · G guided (RH 3) · D5, E5 pressed (no target). Press a key: last{' '}
+        D major target glow (B, C♯ played: dim). ✓ D, F♯ · × F, E♭ · G guided (RH 3) · D5, E5 pressed (no target). Press a key: last{' '}
         {pressLog}.
       </p>
       <div class="stage">

@@ -1,7 +1,7 @@
 // Pure view model for the Play tab (no Preact, no window): unit tested in node.
 import type { MidiStatus } from '../../../midi/access'
-import type { GuideNext, GuideState } from '../../../play/guide'
-import { expectedRun } from '../../../play/sequence'
+import { guideRun, type GuideNext, type GuideState } from '../../../play/guide'
+import { expectedRun, type Expected } from '../../../play/sequence'
 import { chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
 import { formatNote, formatScale } from '../../../theory/format'
 import { chroma, keySignature, noteMidi, scaleNotes, type ScaleRef } from '../../../theory/scales'
@@ -38,7 +38,7 @@ export const DEFAULT_WINDOW = { low: 36, high: 84 } as const
 
 export type KeyWindow = { low: number; high: number }
 
-/** Check gives nothing away: no target outline, no finger numbers, no right/wrong colours. */
+/** Check gives nothing away: no target glow, no finger numbers, no right/wrong colours. */
 export function effectiveToggles(mode: PlayMode, t: PlayToggles): PlayToggles {
   return mode === 'check' ? { ...t, highlight: false, colours: false, fingers: false } : t
 }
@@ -167,6 +167,8 @@ interface MarksArgs {
   window: KeyWindow
   /** Guided: the key the guide just called wrong (shown bad for 400 ms). */
   flash?: number | null
+  /** Guided: the guide's state, for a scale's leg glow (index and octave offset). */
+  guide?: GuideState | null
 }
 
 /**
@@ -191,10 +193,32 @@ function chordStepMarks(
 }
 
 /**
+ * Guided scale glow: the run's own keys on the current leg (up is 0..top, down is top..end), at the locked octave.
+ * Before the next note: played (dim); after it: target. The next note itself is the hand-coloured mark; the other leg
+ * isn't shown. Together: the same for the LH run, 12 below.
+ */
+function legMarks(g: GuideState): KeyMark[] {
+  const t = g.target
+  if (t.kind !== 'scale') return []
+  const { run, top } = guideRun(t)
+  const [from, to] = g.index <= top ? [0, top] : [top, run.length - 1]
+  const offset = g.offset ?? 0
+  const shifts = t.hand === 'together' ? [0, -12] : [0]
+  const marks: KeyMark[] = []
+  for (let i = from; i <= to; i++) {
+    if (i === g.index) continue
+    const state = i < g.index ? 'played' : 'target'
+    for (const s of shifts) marks.push({ midi: (run[i] as Expected).midi + offset + s, hand: 'none', state })
+  }
+  return marks
+}
+
+/**
  * Key marks, spec §4.3 priority: pressed + in target (good ✓) > pressed + not in target (bad ×) > pressed with no
- * target > guided next note (hand colour + finger) > target outline. keyLooks resolves overlaps in that order; this
- * gives each pressed key exactly one state. In Guided the wrong-note flash is the guide's verdict, so it shows bad
- * even on a key that is in the scale (a right note in the wrong place).
+ * target > guided next note (hand colour + finger) > target glow > played glow. keyLooks resolves overlaps in that
+ * order; this gives each pressed key exactly one state. In Guided the wrong-note flash is the guide's verdict, so it
+ * shows bad even on a key that is in the scale (a right note in the wrong place). The glow is every target pitch
+ * class in the window, except in a guided scale: only the run's own notes, leg by leg (legMarks).
  */
 export function playMarks(a: MarksArgs): KeyMark[] {
   const t = effectiveToggles(a.mode, a.toggles)
@@ -223,7 +247,11 @@ export function playMarks(a: MarksArgs): KeyMark[] {
   }
 
   if (t.highlight && a.target.kind !== 'none') {
-    for (let m = a.window.low; m <= a.window.high; m++) if (pcs.has(m % 12)) marks.push({ midi: m, hand: 'none', state: 'target' })
+    if (a.mode === 'guided' && a.target.kind === 'scale') {
+      if (a.guide) marks.push(...legMarks(a.guide))
+    } else {
+      for (let m = a.window.low; m <= a.window.high; m++) if (pcs.has(m % 12)) marks.push({ midi: m, hand: 'none', state: 'target' })
+    }
   }
   return marks
 }

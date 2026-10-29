@@ -123,7 +123,7 @@ export function Play() {
   ]
   const hint = modeHint(target)
   const marksLocked = m === 'check' || target.kind === 'none'
-  const marks = playMarks({ mode: m, target, toggles: t, held, next: run?.next() ?? null, window: win, flash })
+  const marks = playMarks({ mode: m, target, toggles: t, held, next: run?.next() ?? null, window: win, flash, guide })
   const reserve = reserveRowsFor(m, target, h)
   const fit = keyboardFitVars(keyboardBox(win.low, win.high, marks, reserve), PLAY_KEY_PX)
   const status = m === 'guided' && guide ? guidedStatus(target, h, guide) : null

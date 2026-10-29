@@ -237,11 +237,11 @@ describe('keyAriaLabel', () => {
   })
 })
 
-describe('keyLooks (per-key fill, target outline, glyph)', () => {
+describe('keyLooks (per-key fill, target / played glow, glyph)', () => {
   it('a mark with a state keeps its midi and is not dropped by range filtering', () => {
     const looks = keyLooks([{ midi: 64, hand: 'none', state: 'good' }], 60, 71)
     expect([...looks.keys()]).toEqual([64])
-    expect(looks.get(64)).toEqual({ fill: 'good', target: false, glyph: 'good', label: undefined })
+    expect(looks.get(64)).toEqual({ fill: 'good', glow: null, glyph: 'good', label: undefined })
   })
   it('drops marks outside [low, high] and keeps both ends', () => {
     const looks = keyLooks(
@@ -263,26 +263,41 @@ describe('keyLooks (per-key fill, target outline, glyph)', () => {
       { midi: 65, hand: 'lh', state: 'pressed' },
     ]
     const looks = keyLooks(marks, 60, 71)
-    expect(looks.get(64)).toEqual({ fill: 'bad', target: false, glyph: 'bad', label: 'E' })
-    expect(looks.get(65)).toEqual({ fill: 'pressed', target: false, glyph: null, label: undefined })
+    expect(looks.get(64)).toEqual({ fill: 'bad', glow: null, glyph: 'bad', label: 'E' })
+    expect(looks.get(65)).toEqual({ fill: 'pressed', glow: null, glyph: null, label: undefined })
     // Badges still come from hand + finger.
     expect(badgeSlots(marks, 60).rh.map((s) => s.midi)).toEqual([64])
   })
-  it('target is an outline with no fill', () => {
-    expect(keyLooks([{ midi: 62, hand: 'none', state: 'target' }], 60, 71).get(62)).toEqual({
+  it('played is a dim glow with no fill', () => {
+    expect(keyLooks([{ midi: 62, hand: 'none', state: 'played' }], 60, 71).get(62)).toEqual({
       fill: null,
-      target: true,
+      glow: 'played',
       glyph: null,
       label: undefined,
     })
   })
-  it('one look per key, by the spec priority: good > bad > pressed > hand colour > target', () => {
+  it('target outranks played; a hand colour or a press outranks both', () => {
+    const at = (marks: KeyMark[]) => keyLooks(marks, 60, 71).get(60)
+    const s = (state: KeyMark['state']): KeyMark => ({ midi: 60, hand: 'none', state })
+    expect(at([s('played'), s('target')])).toMatchObject({ fill: null, glow: 'target' })
+    expect(at([s('played'), { midi: 60, hand: 'lh', finger: 2 }])).toMatchObject({ fill: 'lh', glow: null })
+    expect(at([s('played'), s('good')])).toMatchObject({ fill: 'good', glow: null, glyph: 'good' })
+  })
+  it('target is a glow with no fill', () => {
+    expect(keyLooks([{ midi: 62, hand: 'none', state: 'target' }], 60, 71).get(62)).toEqual({
+      fill: null,
+      glow: 'target',
+      glyph: null,
+      label: undefined,
+    })
+  })
+  it('one look per key, by the spec priority: good > bad > pressed > hand colour > target > played', () => {
     const at = (marks: KeyMark[]) => keyLooks(marks, 60, 71).get(60)
     const s = (state: KeyMark['state']): KeyMark => ({ midi: 60, hand: 'none', state })
     expect(at([s('target'), s('pressed'), s('bad'), s('good')])).toMatchObject({ fill: 'good', glyph: 'good' })
     expect(at([s('target'), s('bad'), s('pressed')])).toMatchObject({ fill: 'bad', glyph: 'bad' })
-    expect(at([s('target'), s('pressed')])).toMatchObject({ fill: 'pressed', target: false })
-    expect(at([s('target'), { midi: 60, hand: 'rh', finger: 1 }])).toMatchObject({ fill: 'rh', target: false })
+    expect(at([s('target'), s('pressed')])).toMatchObject({ fill: 'pressed', glow: null })
+    expect(at([s('target'), { midi: 60, hand: 'rh', finger: 1 }])).toMatchObject({ fill: 'rh', glow: null })
   })
   it('without states, fills match the hand rules (rh, lh, split, none)', () => {
     const looks = keyLooks(
@@ -297,7 +312,7 @@ describe('keyLooks (per-key fill, target outline, glyph)', () => {
       71,
     )
     expect([60, 62, 64, 65].map((m) => looks.get(m)!.fill)).toEqual(['rh', 'lh', 'split', 'none'])
-    expect([...looks.values()].every((l) => !l.target && l.glyph === null)).toBe(true)
+    expect([...looks.values()].every((l) => l.glow === null && l.glyph === null)).toBe(true)
   })
   it('keeps the first label for a key', () => {
     const looks = keyLooks([{ midi: 63, hand: 'rh', label: 'E♭' }, { midi: 63, hand: 'none', label: 'D♯', state: 'good' }], 60, 71)
