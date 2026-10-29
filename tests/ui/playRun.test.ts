@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { MidiEvent } from '../../src/midi/parse'
 import { expectedRun } from '../../src/play/sequence'
-import { createPlayRun, resultView, type RunOutcome } from '../../src/ui/screens/play/playRun'
+import { EMPTY_HELD } from '../../src/midi/held'
+import { createPlayRun, restartRun, resultView, type RunOutcome } from '../../src/ui/screens/play/playRun'
 import type { PlayTarget } from '../../src/ui/screens/play/playView'
 
 const on = (midi: number, t: number): MidiEvent => ({ type: 'on', midi, velocity: 80, t })
@@ -96,13 +97,30 @@ describe('createPlayRun', () => {
     expect(run?.tick(100_000)).toBeNull()
   })
 
-  it('Guided: Restart (clear) drops the octave lock, so the keyboard goes back to the fitted window', () => {
+  it('Restart mid-run: clears the run (octave lock too), the card and the flash, and always re-renders', () => {
+    // The re-render matters even when the card and flash were already empty: the next mark and status would stay stale.
     const run = createPlayRun('guided', E_MAJOR, 'rh')
     const up = midis(E_MAJOR as PlayTarget & { kind: 'scale' }).map((m) => m + 12)
     playNotes(run, up.slice(0, 3))
-    expect(run?.guide()?.offset).toBe(12)
-    run?.clear()
+    expect(run?.guide()).toMatchObject({ index: 3, offset: 12 })
+    const calls: string[] = []
+    restartRun(run, EMPTY_HELD, {
+      clearResult: () => calls.push('result'),
+      clearFlash: () => calls.push('flash'),
+      rerender: () => calls.push('rerender'),
+    })
     expect(run?.guide()).toMatchObject({ index: 0, offset: null, slips: 0, done: false })
+    expect(run?.next()).toEqual({ rh: expect.objectContaining({ midi: up[0]! - 12 }) })
+    expect(calls).toEqual(['result', 'flash', 'rerender'])
+  })
+  it('Restart with no run (Free) still clears and re-renders', () => {
+    const calls: string[] = []
+    restartRun(null, EMPTY_HELD, {
+      clearResult: () => calls.push('result'),
+      clearFlash: () => calls.push('flash'),
+      rerender: () => calls.push('rerender'),
+    })
+    expect(calls).toEqual(['result', 'flash', 'rerender'])
   })
 
   it('Guided chord: the result has no timing (inversion gaps are not a tempo)', () => {

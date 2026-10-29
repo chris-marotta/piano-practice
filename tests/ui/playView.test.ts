@@ -7,7 +7,9 @@ import {
   chordReadout,
   effectiveMode,
   effectiveToggles,
+  fitHand,
   fittedWindow,
+  followsNotes,
   guideAvailable,
   playMarks,
   reserveRowsFor,
@@ -349,6 +351,26 @@ describe('fittedWindow (keyboard zoomed to the run)', () => {
         expect(whites(w)).toBeGreaterThanOrEqual(15)
       }
   })
+  it('P14: with the fitted window moved an octave up or down (followed notes), every guided chord step stays inside', () => {
+    const roots = [...new Set([...MAJOR_ROOTS, ...MINOR_ROOTS])]
+    const off: string[] = []
+    for (const root of roots)
+      for (const { id } of CHORD_TYPES) {
+        const t: PlayTarget = { kind: 'chord', root, type: id, inversion: 0 }
+        const f = fittedWindow(t, 'rh')
+        for (const shift of [12, -12]) {
+          const w = { low: f.low + shift, high: f.high + shift }
+          for (let inv = 0; inv <= maxInversion(id); inv++) {
+            const next: GuideNext = { chord: { pcs: [], bassPc: 0, inversion: inv } }
+            const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+            const midis = ms.filter((m) => m.state === undefined).map((m) => m.midi)
+            expect(midis.length).toBeGreaterThan(0)
+            if (midis.some((m) => m < w.low || m > w.high)) off.push(`${root}${id}/${inv}${shift}`)
+          }
+        }
+      }
+    expect(off).toEqual([])
+  })
   it('P14: every guided chord step lands inside the fitted window, 2 white keys clear of each edge', () => {
     const roots = [...new Set([...MAJOR_ROOTS, ...MINOR_ROOTS])]
     const tight: string[] = []
@@ -366,6 +388,43 @@ describe('fittedWindow (keyboard zoomed to the run)', () => {
         }
       }
     expect(tight).toEqual([])
+  })
+})
+
+describe('fitHand (whose run the keyboard is zoomed to)', () => {
+  it('Guided scale: the chosen hand', () => {
+    expect(fitHand('guided', G_MAJOR, 'rh')).toBe('rh')
+    expect(fitHand('guided', G_MAJOR, 'lh')).toBe('lh')
+    expect(fitHand('guided', G_MAJOR, 'together')).toBe('together')
+  })
+  it('Check and Free with a scale: both hands (LH octave 3 through RH top), whatever the hand control says', () => {
+    for (const h of ['rh', 'lh', 'together'] as const) {
+      expect(fitHand('check', G_MAJOR, h)).toBe('together')
+      expect(fitHand('free', G_MAJOR, h)).toBe('together')
+    }
+  })
+  it('chords and nothing: RH (unchanged)', () => {
+    expect(fitHand('free', C_CHORD, 'together')).toBe('rh')
+    expect(fitHand('guided', C_CHORD, 'lh')).toBe('rh')
+    expect(fitHand('free', NONE, 'lh')).toBe('rh')
+  })
+  it('one-octave Check / Free windows: C major A2..E5 (19 white keys), F♯ major E3..A5 (18)', () => {
+    const c = fittedWindow({ kind: 'scale', ref: { root: 'C', form: 'major' }, octaves: 1 }, fitHand('check', G_MAJOR, 'rh'))
+    expect(c).toEqual({ low: 45, high: 76 })
+    expect(whiteKeys(c.low, c.high)).toHaveLength(19)
+    const fs = fittedWindow({ kind: 'scale', ref: { root: 'F#', form: 'major' }, octaves: 1 }, 'together')
+    expect(fs).toEqual({ low: 52, high: 81 })
+    expect(whiteKeys(fs.low, fs.high)).toHaveLength(18)
+  })
+})
+
+describe('followsNotes (whole-octave following on notes off screen)', () => {
+  it('everywhere but a guided scale, which follows its octave lock instead', () => {
+    expect(followsNotes('guided', G_MAJOR)).toBe(false)
+    expect(followsNotes('guided', C_CHORD)).toBe(true)
+    expect(followsNotes('free', G_MAJOR)).toBe(true)
+    expect(followsNotes('check', G_MAJOR)).toBe(true)
+    expect(followsNotes('free', NONE)).toBe(true)
   })
 })
 

@@ -6,6 +6,7 @@ import type { ScaleRef } from '../../../theory/scales'
 import {
   DEFAULT_TOGGLES,
   effectiveMode,
+  fitHand,
   fittedWindow,
   type KeyWindow,
   type PlayHand,
@@ -46,8 +47,10 @@ export const playMode = computed<PlayMode>(() => effectiveMode(mode.value, playT
 export const playHand = computed<PlayHand>(() =>
   playMode.value === 'guided' && playTarget.value.kind === 'scale' ? hand.value : 'rh',
 )
-/** The keyboard zoomed to the target's run or voicings. */
-export const fitted = computed<KeyWindow>(() => fittedWindow(playTarget.value, playHand.value))
+/** The keyboard zoomed to the target's run or voicings: guided scale per hand, Check / Free both hands (fitHand). */
+export const fitted = computed<KeyWindow>(() =>
+  fittedWindow(playTarget.value, fitHand(playMode.value, playTarget.value, hand.value)),
+)
 
 /** Free / Check (and a guided chord): the fitted window, moved by whole octaves on notes played off screen. */
 export const keyWindow = signal<KeyWindow>(fitted.peek())

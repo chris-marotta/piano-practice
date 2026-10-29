@@ -17,6 +17,7 @@ import {
   checkAvailable,
   chordReadout,
   effectiveToggles,
+  followsNotes,
   guideAvailable,
   guidedStatus,
   playMarks,
@@ -102,9 +103,11 @@ export function Play() {
   useDrone(rootOf(target), droneOn, app.value.settings.droneVolumeDb)
 
   useEffect(() => {
-    // A note off screen moves the window by whole octaves (the Roli's octave buttons).
+    // A note off screen moves the window by whole octaves (the Roli's octave buttons); a guided scale follows its lock.
     const off = onKeyboard((e) => {
-      if (e.type === 'on') keyWindow.value = shiftWindow(keyWindow.peek(), e.midi)
+      if (e.type === 'on' && followsNotes(playMode.peek(), playTarget.peek())) {
+        keyWindow.value = shiftWindow(keyWindow.peek(), e.midi)
+      }
     })
     return () => {
       off()

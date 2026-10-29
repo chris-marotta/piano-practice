@@ -121,6 +121,22 @@ function checkRun(target: Extract<PlayTarget, { kind: 'scale' }>): PlayRun {
   }
 }
 
+/** What a restart touches besides the run itself (React state in usePlayRun). */
+export interface RestartHooks {
+  clearResult(): void
+  clearFlash(): void
+  /** Always: clearing the run changes nothing React can see, so the next mark and status would stay stale. */
+  rerender(): void
+}
+
+/** Restart / Go again: the run starts over from the keys still down, and the card, the flash and the view refresh. */
+export function restartRun(run: PlayRun | null, held: HeldState, hooks: RestartHooks): void {
+  run?.clear(held)
+  hooks.clearResult()
+  hooks.clearFlash()
+  hooks.rerender()
+}
+
 /**
  * Null when the mode has no run (Free) or the target can't be run in that mode. `held`: the keys already down (the
  * caller passes heldNotes.peek(); this module stays free of the signal).

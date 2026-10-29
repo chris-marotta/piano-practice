@@ -110,7 +110,7 @@ function fitNotes(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand)
 /**
  * The window drawn for a target, zoomed to what it asks for: the run (scale) or every inversion's voicing at octave 4
  * (chord), plus 2 white keys each side, widened evenly to at least 15 white keys (an odd one goes on top). Edges are
- * white keys. Nothing picked: the Roli's 49 keys. `hand`: the hand in force (RH outside a guided scale).
+ * white keys. Nothing picked: the Roli's 49 keys. `hand`: whose run (fitHand: Together for Check and Free).
  */
 export function fittedWindow(target: PlayTarget, hand: PlayHand): KeyWindow {
   if (target.kind === 'none') return DEFAULT_WINDOW
@@ -123,6 +123,21 @@ export function fittedWindow(target: PlayTarget, hand: PlayHand): KeyWindow {
     high = whiteStep(high, Math.ceil(short / 2), 1)
   }
   return { low, high }
+}
+
+/**
+ * Whose run the keyboard is zoomed to. Guided scale: the chosen hand. Check and Free with a scale: both hands (LH
+ * octave 3 through RH top), so a two-handed run doesn't make the keyboard jump octaves (ruling, review). Chords and
+ * nothing: RH (the hand doesn't apply).
+ */
+export function fitHand(mode: PlayMode, target: PlayTarget, hand: PlayHand): PlayHand {
+  if (target.kind !== 'scale') return 'rh'
+  return mode === 'guided' ? hand : 'together'
+}
+
+/** Whole-octave following on notes off screen: everywhere but a guided scale, which follows its octave lock. */
+export function followsNotes(mode: PlayMode, target: PlayTarget): boolean {
+  return mode !== 'guided' || target.kind !== 'scale'
 }
 
 interface ShownArgs {
@@ -140,7 +155,7 @@ interface ShownArgs {
  * the followed window.
  */
 export function shownWindow(a: ShownArgs): KeyWindow {
-  if (a.mode !== 'guided' || a.target.kind !== 'scale') return a.follow
+  if (followsNotes(a.mode, a.target)) return a.follow
   const offset = a.guide?.offset ?? null
   if (offset === null) return a.fitted
   const shift = Math.round(offset / 12) * 12
@@ -228,6 +243,7 @@ export function playMarks(a: MarksArgs): KeyMark[] {
   const marks: KeyMark[] = []
 
   for (const midi of a.held) {
+    // ASSUMED: a slip outside the locked octave's window isn't drawn.
     if (!inWindow(midi)) continue
     const state =
       a.target.kind === 'none' || !t.colours ? 'pressed' : midi === flash ? 'bad' : pcs.has(midi % 12) ? 'good' : 'bad'

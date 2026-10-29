@@ -51,9 +51,10 @@ describe('randomScale', () => {
     }
   })
   it('an rng that returns 1 still picks inside the lists', () => {
-    const s = randomScale({ root: 'C', form: 'major' }, ALL_MINOR, () => 1)
-    expect(s.form).toBe('melodic')
-    expect(s.root).toBeDefined()
+    // Last form (melodic), last root (pitch class 11, B).
+    expect(randomScale({ root: 'C', form: 'major' }, ALL_MINOR, () => 1)).toEqual({ root: 'B', form: 'melodic' })
+    const lastType = CHORD_TYPES[CHORD_TYPES.length - 1]!.id
+    expect(randomChord({ root: 'C', type: 'M', inversion: 0 }, () => 1)).toEqual({ root: 'B', type: lastType, inversion: 0 })
   })
 })
 

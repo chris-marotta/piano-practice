@@ -26,9 +26,18 @@ describe('playState: octaves and the keyboard window', () => {
     expect(playTarget.value).toMatchObject({ kind: 'scale', octaves: 1 })
   })
 
-  it('starts from the fitted window', () => {
-    expect(keyWindow.value).toEqual(fittedWindow(playTarget.value, 'rh'))
+  it('Free with a scale starts from the both-hands window (LH octave 3 through RH top)', () => {
+    expect(keyWindow.value).toEqual(fittedWindow(playTarget.value, 'together'))
+    expect(fitted.value).toEqual({ low: 45, high: 76 })
+  })
+
+  it('Guided zooms to the chosen hand; Check fits both hands', () => {
+    mode.value = 'guided'
     expect(fitted.value).toEqual({ low: 55, high: 79 })
+    hand.value = 'lh'
+    expect(fitted.value).toEqual({ low: 43, high: 67 })
+    mode.value = 'check'
+    expect(fitted.value).toEqual({ low: 45, high: 76 })
   })
 
   it('a new target, mode or hand resets a followed window to the fitted one', () => {
@@ -46,6 +55,7 @@ describe('playState: octaves and the keyboard window', () => {
     expect(playHand.value).toBe('lh')
     expect(keyWindow.value).toEqual(fitted.value)
     expect(fitted.value).toEqual(fittedWindow(playTarget.value, 'lh'))
+    expect(fitted.value).not.toEqual(fittedWindow(playTarget.value, 'together'))
   })
 
   it('hand only counts in a guided scale', () => {

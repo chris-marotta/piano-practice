@@ -1,7 +1,7 @@
 // Wires one Guided / Check run (playRun.ts) to the shared keyboard stream for the Play screen.
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { heldNotes, onClear, onKeyboard } from '../../../midi/input'
-import { createPlayRun, type PlayRun, type RunOutcome } from './playRun'
+import { createPlayRun, restartRun, type PlayRun, type RunOutcome } from './playRun'
 import type { PlayHand, PlayMode, PlayTarget } from './playView'
 
 /** Wrong-note flash (Global Constraints). */
@@ -65,11 +65,12 @@ export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): 
     }
   }, [run, mode])
 
-  const again = () => {
-    run?.clear(heldNotes.peek())
-    setResult(null)
-    setFlash(null)
-  }
+  const again = () =>
+    restartRun(run, heldNotes.peek(), {
+      clearResult: () => setResult(null),
+      clearFlash: () => setFlash(null),
+      rerender: bump,
+    })
 
   // Guided shows its card while the guide is done (cleared, or restarted on a tonic per P16, it is running again);
   // Check shows it until the next attempt's first tonic or Go again.
