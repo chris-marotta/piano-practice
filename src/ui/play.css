@@ -255,3 +255,60 @@
     gap: var(--s-4);
   }
 }
+
+/* Laptop heights (1280 x 760, 1440 x 800): ~60px less than the iPad budget above, and the keyboard is just as tall
+   (the main column is capped at 1180px). Without this the LH finger badge of a black key sits under the tab bar in a
+   guided LH / Together scale. Compact band (status and result card, metrics still on one row) and outer padding. */
+@media (max-height: 819px) {
+  /* No bottom padding: the keyboard's reserved LH badge row already leaves room under the badges. */
+  .shell__main:has(> .play) {
+    padding-top: max(var(--s-3), env(safe-area-inset-top));
+    padding-bottom: 0;
+  }
+
+  .play {
+    min-height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--s-3));
+  }
+
+  .play-band,
+  .play-status {
+    min-height: 72px;
+  }
+
+  .play-status {
+    padding: var(--s-2) var(--s-5);
+  }
+
+  .play-status__headline {
+    font-size: 32px;
+  }
+
+  .play-status__detail {
+    font-size: 18px;
+  }
+
+  .run-result {
+    gap: var(--s-5);
+    padding: var(--s-2) var(--s-5);
+  }
+
+  .run-result__headline {
+    font-size: 36px;
+  }
+
+  .run-result__issues {
+    font-size: 20px;
+  }
+
+  .run-result__value {
+    font-size: 28px;
+  }
+
+  .run-result__bars {
+    height: 40px;
+  }
+
+  .run-result__again {
+    min-height: var(--tap);
+  }
+}
