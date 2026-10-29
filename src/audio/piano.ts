@@ -3,6 +3,7 @@ import type { ScaleRef } from '../theory/scales'
 import { stopDrone } from './drone'
 import { stopMetronome } from './metronome'
 import { scaleEvents, scalePlaybackNotes, type NoteEvent } from './schedule'
+import { releaseLive } from './live'
 import { audioReady } from './unlock'
 
 export { scaleEvents, scalePlaybackNotes }
@@ -55,7 +56,8 @@ export function loadPiano(): Promise<boolean> {
   return loadPromise
 }
 
-function ready(): Tone.Sampler | null {
+/** The loaded sampler once audio is unlocked, else null. */
+export function getSampler(): Tone.Sampler | null {
   return audioReady.value && sampler && sampler.loaded ? sampler : null
 }
 
@@ -92,7 +94,7 @@ function playEvents(s: Tone.Sampler, events: NoteEvent[], holdSeconds: number): 
 
 /** Right-hand register, ascending then descending, eighth notes at bpm. */
 export function playScale(ref: ScaleRef, octaves: 1 | 2, bpm: number): void {
-  const s = ready()
+  const s = getSampler()
   if (!s || !(bpm > 0)) return
   try {
     s.releaseAll()
@@ -105,7 +107,7 @@ export function playScale(ref: ScaleRef, octaves: 1 | 2, bpm: number): void {
 
 /** Block: all notes at once. Broken: ascending in eighth notes at 80 BPM. */
 export function playChord(notes: string[], mode: 'block' | 'broken'): void {
-  const s = ready()
+  const s = getSampler()
   if (!s || notes.length === 0) return
   try {
     clearPlayback()
@@ -123,6 +125,7 @@ export function playChord(notes: string[], mode: 'block' | 'broken'): void {
 /** Stops piano playback, the drone and the metronome. */
 export function stopAll(): void {
   clearPlayback()
+  releaseLive()
   try {
     sampler?.releaseAll()
   } catch {

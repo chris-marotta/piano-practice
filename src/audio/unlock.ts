@@ -5,6 +5,22 @@ import { signal } from '@preact/signals'
 export const audioReady = signal(false)
 
 let watching = false
+let configured = false
+
+/**
+ * Swap Tone's default context for one tuned for live playing ('interactive' = smallest safe output
+ * buffer). Must run before anything constructs a Tone node, since nodes bind to the context that is
+ * current at construction. Idempotent; never throws (falls back to Tone's default context).
+ */
+export function configureAudioContext(): void {
+  if (configured) return
+  configured = true
+  try {
+    Tone.setContext(new Tone.Context({ latencyHint: 'interactive' }))
+  } catch {
+    // keep Tone's default context
+  }
+}
 
 /** Call from a user gesture (tap). Never throws; leaves audioReady false on failure. */
 export async function unlockAudio(): Promise<void> {
