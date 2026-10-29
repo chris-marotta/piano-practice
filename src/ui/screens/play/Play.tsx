@@ -12,7 +12,7 @@ import { ScrollKeyboard } from '../steps/ScrollKeyboard'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
 import { PlayPicker } from './PlayPicker'
-import { fitted, hand, keyWindow, mode, playHand, playMode, playTarget, toggles } from './playState'
+import { fitted, hand, keyWindow, mode, playHand, playMode, playTarget, resetWindow, toggles } from './playState'
 import {
   checkAvailable,
   chordReadout,
@@ -127,6 +127,11 @@ export function Play() {
   const reserve = reserveRowsFor(m, target, h)
   const fit = keyboardFitVars(keyboardBox(win.low, win.high, marks, reserve), PLAY_KEY_PX)
   const status = m === 'guided' && guide ? guidedStatus(target, h, guide) : null
+  // Guided and Check: start the run over (slips, result card, and the keyboard back to its fitted window).
+  const restart = () => {
+    again()
+    resetWindow()
+  }
 
   return (
     <section class="screen play">
@@ -169,7 +174,7 @@ export function Play() {
         {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
         <div class="play-band" aria-live="polite">
           {outcome ? (
-            <RunResult outcome={outcome} onAgain={again} />
+            <RunResult outcome={outcome} onAgain={restart} />
           ) : (
             <div class="play-status">
               {m === 'free' && (
@@ -194,6 +199,11 @@ export function Play() {
               )}
               <div class="play-status__side">
                 {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
+                {m !== 'free' && (
+                  <button type="button" class="btn play-restart" onClick={restart}>
+                    Restart
+                  </button>
+                )}
                 {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
               </div>
             </div>

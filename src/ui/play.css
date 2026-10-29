@@ -156,6 +156,10 @@
   font-weight: 700;
 }
 
+.play-restart {
+  min-width: 140px;
+}
+
 .play-empty {
   font-size: var(--fs-small);
   color: var(--muted);

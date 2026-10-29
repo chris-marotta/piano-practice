@@ -57,3 +57,8 @@ effect(() => {
   void playMode.value
   keyWindow.value = fitted.value
 })
+
+/** Restart: back to the fitted window (a guided scale's lock is cleared with the run). */
+export function resetWindow(): void {
+  keyWindow.value = fitted.peek()
+}

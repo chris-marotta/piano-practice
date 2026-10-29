@@ -96,6 +96,15 @@ describe('createPlayRun', () => {
     expect(run?.tick(100_000)).toBeNull()
   })
 
+  it('Guided: Restart (clear) drops the octave lock, so the keyboard goes back to the fitted window', () => {
+    const run = createPlayRun('guided', E_MAJOR, 'rh')
+    const up = midis(E_MAJOR as PlayTarget & { kind: 'scale' }).map((m) => m + 12)
+    playNotes(run, up.slice(0, 3))
+    expect(run?.guide()?.offset).toBe(12)
+    run?.clear()
+    expect(run?.guide()).toMatchObject({ index: 0, offset: null, slips: 0, done: false })
+  })
+
   it('Guided chord: the result has no timing (inversion gaps are not a tempo)', () => {
     const run = createPlayRun('guided', C_CHORD, 'rh')
     const outs: RunOutcome[] = []
