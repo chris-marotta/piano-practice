@@ -114,3 +114,8 @@ export function chroma(note: string): number {
   if (c === undefined || Number.isNaN(c)) throw new Error(`Not a note: ${note}`)
   return c
 }
+
+/** Note name with octave for a MIDI number (61 -> 'C#4' or 'Db4'). White keys are the same either way. */
+export function midiToName(midi: number, prefer: '#' | 'b'): string {
+  return prefer === 'b' ? Note.fromMidi(midi) : Note.fromMidiSharps(midi)
+}

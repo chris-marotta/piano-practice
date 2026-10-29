@@ -9,6 +9,7 @@ import {
   scaleNotes,
   scaleSequence,
   noteMidi,
+  midiToName,
   transpose,
   enharmonic,
   chroma,
@@ -135,5 +136,17 @@ describe('chroma', () => {
     expect(chroma('F#')).toBe(6)
     expect(chroma('Gb')).toBe(6)
     expect(chroma('F##')).toBe(7)
+  })
+})
+
+describe('midiToName', () => {
+  it('spells a black key by preference', () => {
+    expect(midiToName(61, '#')).toBe('C#4')
+    expect(midiToName(61, 'b')).toBe('Db4')
+  })
+  it('leaves white keys alone and handles low octaves', () => {
+    expect(midiToName(60, '#')).toBe('C4')
+    expect(midiToName(60, 'b')).toBe('C4')
+    expect(midiToName(36, 'b')).toBe('C2')
   })
 })
