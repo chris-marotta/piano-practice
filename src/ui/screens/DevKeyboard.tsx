@@ -50,6 +50,8 @@ export function DevKeyboard() {
   const [tapped, setTapped] = useState<string>('none yet')
   const [pressed, setPressed] = useState<Set<number>>(new Set())
   const [pressLog, setPressLog] = useState<string>('none yet')
+  // Dev check: turning presses off mid-hold must still release the held key (down=false).
+  const [pressOn, setPressOn] = useState(true)
   const onKeyPress = (midi: number, down: boolean) => {
     setPressLog(`${midi} ${down ? 'down' : 'up'}`)
     setPressed((prev) => {
@@ -78,8 +80,17 @@ export function DevKeyboard() {
         {pressLog}.
       </p>
       <div class="stage">
-        <Keyboard low={60} high={83} marks={stateMarks(pressed)} reserveRows="rh" onKeyPress={onKeyPress} />
+        <Keyboard
+          low={60}
+          high={83}
+          marks={stateMarks(pressed)}
+          reserveRows="rh"
+          onKeyPress={pressOn ? onKeyPress : undefined}
+        />
       </div>
+      <button type="button" class="btn dev-press-toggle" onClick={() => setPressOn((on) => !on)}>
+        Presses {pressOn ? 'on' : 'off'}
+      </button>
     </section>
   )
 }

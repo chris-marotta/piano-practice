@@ -145,8 +145,11 @@ describe('key state marks contrast (shipped CSS)', () => {
 })
 
 describe('pressable keys (shipped CSS)', () => {
-  it('keys of a pressable keyboard take touches themselves: no pan, no double-tap zoom', () => {
-    expect(rule('.keyboard--pressable .key-hit', appCss)['touch-action']).toBe('none')
+  it('a pressable keyboard takes touches itself (no pan, no double-tap zoom), on its block-level root', () => {
+    // touch-action only applies to block-level boxes: the root <svg> (display: block), not its <g> keys.
+    expect(rule('.keyboard--pressable', appCss)['touch-action']).toBe('none')
+    expect(rule('.keyboard', appCss).display).toBe('block')
+    expect(appCss).not.toMatch(/\.keyboard--pressable \.key-hit/)
   })
   it('the focus ring on a key is keyboard-only (:focus-visible), so mouse / touch presses show no ring', () => {
     expect(rule('.key-hit:focus-visible .key', appCss).stroke).toBe('var(--accent)')

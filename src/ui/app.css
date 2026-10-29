@@ -219,6 +219,14 @@ p {
   -webkit-user-select: none;
 }
 
+/* A pressable keyboard (onKeyPress) takes touches itself: a finger drifting while holding a key
+   must not start a pan (pointercancel ends the note early), and quick repeats must not zoom.
+   On the root <svg> because touch-action is ignored on its inline <g> children. Trade-off: a drag
+   that starts on this keyboard doesn't scroll it or the page (Play's 49 keys fit 1180 wide). */
+.keyboard--pressable {
+  touch-action: none;
+}
+
 .key {
   stroke: var(--bg);
   stroke-width: 1.5;
@@ -301,12 +309,6 @@ p {
 
 .key-hit {
   cursor: pointer;
-}
-
-/* Pressable keys (onKeyPress) take the touch themselves: a finger drifting while holding a key
-   must not start a pan (pointercancel ends the note early), and quick repeats must not zoom. */
-.keyboard--pressable .key-hit {
-  touch-action: none;
 }
 
 .key-hit:focus-visible {
