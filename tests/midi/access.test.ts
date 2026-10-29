@@ -60,6 +60,29 @@ describe('connectMidi', () => {
     expect(seen).toEqual([{ type: 'on', midi: 60, velocity: 90, t: 123 }])
   })
 
+  it('one keyboard on two ports: a duplicate note-on and its off are dropped (P17)', async () => {
+    const a = fakeInput('ROLI Piano')
+    const b = fakeInput('ROLI Piano Bluetooth')
+    stubNavigator(async () => fakeAccess([a, b]))
+    await connectMidi()
+    const seen: MidiEvent[] = []
+    const unsub = onKeyboard((e) => seen.push(e))
+    a.onmidimessage!({ data: new Uint8Array([0x90, 60, 90]), timeStamp: 100 })
+    b.onmidimessage!({ data: new Uint8Array([0x90, 60, 90]), timeStamp: 102 })
+    b.onmidimessage!({ data: new Uint8Array([0x80, 60, 0]), timeStamp: 300 })
+    a.onmidimessage!({ data: new Uint8Array([0x80, 60, 0]), timeStamp: 301 })
+    // Same port, fast repeat: both kept.
+    a.onmidimessage!({ data: new Uint8Array([0x90, 62, 90]), timeStamp: 400 })
+    a.onmidimessage!({ data: new Uint8Array([0x90, 62, 90]), timeStamp: 401 })
+    unsub()
+    expect(seen).toEqual([
+      { type: 'on', midi: 60, velocity: 90, t: 100 },
+      { type: 'off', midi: 60, t: 301 },
+      { type: 'on', midi: 62, velocity: 90, t: 400 },
+      { type: 'on', midi: 62, velocity: 90, t: 401 },
+    ])
+  })
+
   it('rejection is denied and does not call onConnected', async () => {
     stubNavigator(async () => {
       throw new Error('NotAllowedError')

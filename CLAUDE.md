@@ -18,7 +18,7 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 
 ## Rules
 
-- **Pure modules.** `src/theory`, `src/data`, `src/srs`, `src/session`, `src/store`, `src/play`, plus `src/midi/parse.ts` and `src/midi/held.ts`, must not import Preact or Tone.js and must not touch `window`/`navigator`/`document`. The one exception is `store/storage.ts`, which takes an injected `Storage`.
+- **Pure modules.** `src/theory`, `src/data`, `src/srs`, `src/session`, `src/store`, `src/play`, plus `src/midi/parse.ts`, `src/midi/held.ts` and `src/midi/dedupe.ts`, must not import Preact or Tone.js and must not touch `window`/`navigator`/`document`. The one exception is `store/storage.ts`, which takes an injected `Storage`.
 - **Tonal only in theory.** Only `src/theory/*` imports `@tonaljs/tonal`.
 - **Note spelling.** Internal names use tonal's ASCII (`F#`, `Bb`, `F##`). All UI text goes through `formatNote` (`♯ ♭ 𝄪 𝄫`).
 - **Fingerings.** Never edit a fingering silently. Harmonic and melodic minor reuse the natural-minor fingering for the same root in v1 (ASSUMED, on the teacher checklist).
@@ -29,7 +29,7 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 
 ## Phase 2 modules (MIDI + Play)
 
-- `src/midi/` — `parse.ts` (bytes to `MidiEvent`), `held.ts` (held + pedal reducer), `access.ts` (Web MIDI connect, `midiStatus` signal), `input.ts` (event stream).
+- `src/midi/` — `parse.ts` (bytes to `MidiEvent`), `held.ts` (held + pedal reducer), `dedupe.ts` (P17: drops a note-on repeated from a second port within 5 ms, and its off), `access.ts` (Web MIDI connect, `midiStatus` signal), `input.ts` (event stream).
 - `src/play/` — pure analysis: `guide.ts` (Guided note-by-note state), `runDetect.ts` (Check run detection, octave offset), `analyse.ts` (evenness, tempo), `suggest.ts` (rating suggestion), `sequence.ts`, `thresholds.ts`.
 - `src/audio/live.ts` — live sampler voices for keyboard notes (`unlock.ts` gates all audio on a user gesture).
 - `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, `playView.ts` and `playRun.ts` are pure; `playState.ts` holds the signals). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip.

@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals'
+import { createDeduper } from './dedupe'
 import { clearKeyboard, emitKeyboard } from './input'
 import { parseMidi } from './parse'
 
@@ -26,16 +27,27 @@ export const midiStatus = signal<MidiStatus>(supported() ? { kind: 'off' } : { k
 let access: MIDIAccess | null = null
 let attached = new Set<MIDIInput>()
 let generation = 0
+// P17: one keyboard showing up on two ports would sound and count every note twice.
+const dedupe = createDeduper()
 
-function onMessage(e: MIDIMessageEvent): void {
+function onMessage(input: MIDIInput, e: MIDIMessageEvent): void {
   if (!e.data) return
   const ev = parseMidi(e.data, e.timeStamp)
-  if (ev) emitKeyboard(ev)
+  if (ev && dedupe.accept(input, ev)) emitKeyboard(ev)
+}
+
+/** One handler per input, so a message knows its port. */
+const handlers = new WeakMap<MIDIInput, (e: MIDIMessageEvent) => void>()
+function handlerFor(input: MIDIInput): (e: MIDIMessageEvent) => void {
+  let h = handlers.get(input)
+  if (!h) handlers.set(input, (h = (e) => onMessage(input, e)))
+  return h
 }
 
 function detachAll(): void {
   for (const input of attached) input.onmidimessage = null
   attached = new Set()
+  dedupe.reset()
 }
 
 /** Re-scan inputs: attach new ones, drop gone ones, update status. */
@@ -51,12 +63,15 @@ function refresh(): void {
       removed = true
     }
   }
-  for (const input of current) input.onmidimessage = onMessage
+  for (const input of current) input.onmidimessage = handlerFor(input)
   attached = current
 
   midiStatus.value = statusFromInputs([...current].map((i) => i.name ?? ''))
   // A device that vanished mid-note can never send its note-off.
-  if (removed) clearKeyboard()
+  if (removed) {
+    dedupe.reset()
+    clearKeyboard()
+  }
 }
 
 export async function connectMidi(opts?: { onConnected?: () => void }): Promise<void> {
