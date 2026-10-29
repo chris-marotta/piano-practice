@@ -145,26 +145,47 @@ describe('key state marks contrast (shipped CSS)', () => {
     expect(appCss).not.toMatch(/\.key-target\b/)
   })
 
+  it('labels on glowing keys: --ink on white keys, --text on black keys', () => {
+    expect(rule('.key-label--white.key-label--glow', appCss).fill).toBe('var(--ink)')
+    expect(rule('.key-label--black.key-label--glow', appCss).fill).toBe('var(--text)')
+  })
+
   it.each(['target', 'played'] as const)('a note label is at least 4.5:1 on the %s glow (white and black keys)', (state) => {
-    const onWhite = colour(rule('.key-label--white', appCss).fill as string)
-    const onBlack = colour(rule('.key-label--black', appCss).fill as string)
+    const onWhite = colour(rule('.key-label--white.key-label--glow', appCss).fill as string)
+    const onBlack = colour(rule('.key-label--black.key-label--glow', appCss).fill as string)
     expect(contrastRatio(onWhite, glow('white', state))).toBeGreaterThanOrEqual(4.5)
     expect(contrastRatio(onBlack, glow('black', state))).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('the target glow reads against the bare key, and clearly apart from the solid good press', () => {
-    expect(contrastRatio(glow('white', 'target'), white)).toBeGreaterThanOrEqual(1.4)
-    expect(contrastRatio(glow('black', 'target'), black)).toBeGreaterThanOrEqual(2)
-    expect(contrastRatio(glow('white', 'target'), fill('good'))).toBeGreaterThanOrEqual(2)
-    expect(contrastRatio(glow('black', 'target'), fill('good'))).toBeGreaterThanOrEqual(1.8)
+  it('three white-key levels: --good is 18-22% of played, 55-60% of target (the next note is the solid hand colour)', () => {
+    const share = (c: RGB) => (c[1] - white[1]) / (resolve('var(--good)')[1] - white[1])
+    expect(share(glow('white', 'played'))).toBeGreaterThanOrEqual(0.17)
+    expect(share(glow('white', 'played'))).toBeLessThanOrEqual(0.23)
+    expect(share(glow('white', 'target'))).toBeGreaterThanOrEqual(0.54)
+    expect(share(glow('white', 'target'))).toBeLessThanOrEqual(0.61)
   })
 
-  it('played is dimmer than target: closer to the bare key, still apart from it', () => {
+  it('the target glow reads strongly against the bare key', () => {
+    expect(contrastRatio(glow('white', 'target'), white)).toBeGreaterThanOrEqual(1.8)
+    expect(contrastRatio(glow('black', 'target'), black)).toBeGreaterThanOrEqual(2.5)
+  })
+
+  it('played is visibly tinted, and clearly below target', () => {
+    expect(contrastRatio(glow('white', 'played'), white)).toBeGreaterThanOrEqual(1.2)
+    expect(contrastRatio(glow('black', 'played'), black)).toBeGreaterThanOrEqual(1.4)
     for (const [tone, bare] of [['white', white], ['black', black]] as const) {
       expect(contrastRatio(glow(tone, 'played'), bare)).toBeLessThan(contrastRatio(glow(tone, 'target'), bare))
-      expect(contrastRatio(glow(tone, 'played'), glow(tone, 'target'))).toBeGreaterThanOrEqual(1.2)
-      expect(contrastRatio(glow(tone, 'played'), bare)).toBeGreaterThan(1.1)
+      expect(contrastRatio(glow(tone, 'played'), glow(tone, 'target'))).toBeGreaterThanOrEqual(1.5)
     }
+  })
+
+  it('a solid good press stays apart from the target glow: darker fill and the ✓ glyph', () => {
+    for (const tone of ['white', 'black'] as const) {
+      expect(contrastRatio(glow(tone, 'target'), fill('good'))).toBeGreaterThanOrEqual(1.6)
+    }
+    // The press is the only one of the two that is at least 3:1 on a white key, and it carries the ✓ (--ink).
+    expect(contrastRatio(fill('good'), white)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(glow('white', 'target'), white)).toBeLessThan(3)
   })
 
   it('a black target key has a light rim (the glow) at least 3:1 on its tint', () => {

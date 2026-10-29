@@ -366,6 +366,15 @@ p {
   fill: var(--ink);
 }
 
+/* Labels on target / played glows: dark on the tinted white keys, light on the tinted black keys. */
+.key-label--white.key-label--glow {
+  fill: var(--ink);
+}
+
+.key-label--black.key-label--glow {
+  fill: var(--text);
+}
+
 .badge__dot {
   stroke: var(--bg);
   stroke-width: 2;

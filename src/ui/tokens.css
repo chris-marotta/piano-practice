@@ -27,14 +27,15 @@
   --good: #5b9530;
   --bad: #df5868;
   --pressed: #7787a0;
-  /* Target glow: --good mixed into the bare key (35% on white, 55% on black), so the whole key
-     tints green but stays far lighter / darker than a solid --good press. Played (a guided note
-     already done on this leg) is the dimmer 15% / 25% mix. Key labels stay >= 4.5:1 on all four.
-     A black target key also gets a pale rim, since a dark tint alone is hard to see across a room. */
-  --target-glow: #bed1a9;
-  --target-dim: #dde3ce;
-  --target-glow-deep: #3f612c;
-  --target-dim-deep: #2d3e2a;
+  /* Glow levels: --good mixed into the bare key. Target (still to play) 58% on white, 65% on
+     black; played (a guided note already done on this leg) 22% / 30%; the next note is the solid
+     hand colour. A solid --good press stays darker than the target glow and carries the ✓. Labels
+     on glowing keys are --ink (white) / --text (black), >= 4.5:1 on all four. A black target key
+     also gets a pale rim, since a dark tint alone is hard to see across a room. */
+  --target-glow: #9bbc7e;
+  --target-dim: #d2ddc1;
+  --target-glow-deep: #456c2d;
+  --target-dim-deep: #30442a;
   --target-rim: #a3d977;
 
   /* Status */

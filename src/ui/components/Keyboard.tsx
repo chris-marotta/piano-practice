@@ -183,7 +183,7 @@ export function Keyboard({
         )}
         {label !== undefined && (
           <text
-            class={`key-label key-label--${tone}${fill ? ' key-label--marked' : ''}`}
+            class={`key-label key-label--${tone}${fill ? ' key-label--marked' : glow ? ' key-label--glow' : ''}`}
             x={k.x + k.w / 2}
             y={labelY}
             text-anchor="middle"
