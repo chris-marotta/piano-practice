@@ -9,7 +9,7 @@ interface Props {
 export function RunResult({ outcome, onAgain }: Props) {
   const v = resultView(outcome)
   return (
-    <section class={`run-result${v.clean ? ' run-result--clean' : ''}`} aria-live="polite" aria-label="Run result">
+    <section class={`run-result${v.clean ? ' run-result--clean' : ''}`} aria-label="Run result">
       <div class="run-result__main">
         <p class="run-result__headline">{v.headline}</p>
         {v.lines.length > 0 && (

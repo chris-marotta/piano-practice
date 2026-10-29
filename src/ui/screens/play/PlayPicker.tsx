@@ -29,6 +29,12 @@ const typeOptions = (ids: ChordTypeId[]) =>
 const TRIADS = typeOptions(TRIAD_IDS)
 const EXTENDED = typeOptions(CHORD_TYPES.map((t) => t.id).filter((id) => !TRIAD_IDS.includes(id)))
 
+/** New chord type, keeping the inversion where the type allows it. */
+function setChordType(type: ChordTypeId): void {
+  const sel = chordSel.value
+  chordSel.value = { ...sel, type, inversion: clampInversion(type, sel.inversion) }
+}
+
 /** What to play against: nothing, a scale (root, form, 1 or 2 octaves) or a chord (root, type, inversion). */
 export function PlayPicker() {
   const kind = targetKind.value
@@ -65,14 +71,12 @@ function ScaleControls() {
 
 function ChordTypes() {
   const sel = chordSel.value
-  const setType = (type: ChordTypeId) => (chordSel.value = { ...sel, type, inversion: clampInversion(type, sel.inversion) })
   const isTriad = TRIAD_IDS.includes(sel.type)
-  return <Segmented options={TRIADS} value={isTriad ? sel.type : null} onChange={setType} label="Triads" />
+  return <Segmented options={TRIADS} value={isTriad ? sel.type : null} onChange={setChordType} label="Triads" />
 }
 
 function ChordRootAndInversion() {
   const sel = chordSel.value
-  const setType = (type: ChordTypeId) => (chordSel.value = { ...sel, type, inversion: clampInversion(type, sel.inversion) })
   const isTriad = TRIAD_IDS.includes(sel.type)
   return (
     <>
@@ -81,7 +85,7 @@ function ChordRootAndInversion() {
         <Segmented
           options={EXTENDED}
           value={isTriad ? null : sel.type}
-          onChange={setType}
+          onChange={setChordType}
           label="Sevenths and extended chords"
         />
         <Segmented

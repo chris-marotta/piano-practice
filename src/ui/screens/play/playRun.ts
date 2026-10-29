@@ -29,8 +29,11 @@ export interface PlayRun {
   next(): GuideNext
   /** Guided state (null in Check). */
   guide(): GuideState | null
-  /** Abandon the run in progress (device unplugged, Reset keys, Go again). Nothing is reported for it. */
-  clear(): void
+  /**
+   * Abandon the run in progress (device unplugged, Reset keys, Go again). Nothing is reported for it. `held`: the keys
+   * still down to restart from (default none, as after clearKeyboard).
+   */
+  clear(held?: HeldState): void
 }
 
 const gaps = (onsets: number[]): number[] => onsets.slice(1).map((t, i) => t - (onsets[i] as number))
@@ -41,12 +44,13 @@ function guideTargetFor(target: Exclude<PlayTarget, { kind: 'none' }>, hand: Pla
   return { kind: 'scale', ref: target.ref, octaves: target.octaves, hand }
 }
 
-function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand): PlayRun {
+function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand, initialHeld: HeldState): PlayRun {
   // One target object for the life of this run: guide.ts caches per target object.
   const gt = guideTargetFor(target, hand)
   let state = createGuide(gt)
-  // Own held reduction (not the heldNotes signal), so guideStep always sees the state after this event.
-  let held: HeldState = EMPTY_HELD
+  // Own held reduction (not the heldNotes signal), so guideStep always sees the state after this event. Seeded with the
+  // keys (and pedal) already down when the run starts.
+  let held: HeldState = initialHeld
   return {
     handle(e) {
       held = reduceHeld(held, e).state
@@ -60,9 +64,9 @@ function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand
     tick: () => null,
     next: () => guideNext(state),
     guide: () => state,
-    clear() {
+    clear(next = EMPTY_HELD) {
       state = createGuide(gt)
-      held = EMPTY_HELD
+      held = next
     },
   }
 }
@@ -92,9 +96,12 @@ function checkRun(target: Extract<PlayTarget, { kind: 'scale' }>): PlayRun {
   }
 }
 
-/** Null when the mode has no run (Free) or the target can't be run in that mode. */
-export function createPlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): PlayRun | null {
-  if (mode === 'guided' && target.kind !== 'none') return guidedRun(target, hand)
+/**
+ * Null when the mode has no run (Free) or the target can't be run in that mode. `held`: the keys already down (the
+ * caller passes heldNotes.peek(); this module stays free of the signal).
+ */
+export function createPlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand, held: HeldState = EMPTY_HELD): PlayRun | null {
+  if (mode === 'guided' && target.kind !== 'none') return guidedRun(target, hand, held)
   if (mode === 'check' && target.kind === 'scale') return checkRun(target)
   return null
 }

@@ -94,11 +94,25 @@ interface MarksArgs {
   flash?: number | null
 }
 
-/** Guided chord step: the voicing at octave 4 with its RH fingering (chords are RH only). */
-function chordStepMarks(target: Extract<PlayTarget, { kind: 'chord' }>, inversion: number, fingers: boolean): KeyMark[] {
-  const notes = chordNotes(target.root, target.type, inversion)
+/**
+ * Guided chord step: the voicing with its RH fingering (chords are RH only). P14: voiced at octave 4, then moved by
+ * whole octaves onto the keyboard: up while its bottom is below window.low, down while its top is above window.high
+ * as long as the bottom stays >= window.low. (The step itself succeeds in any octave.)
+ */
+function chordStepMarks(
+  target: Extract<PlayTarget, { kind: 'chord' }>,
+  inversion: number,
+  fingers: boolean,
+  w: KeyWindow,
+): KeyMark[] {
+  const midis = chordNotes(target.root, target.type, inversion).map(noteMidi)
+  const bottom = midis[0] as number
+  const top = midis[midis.length - 1] as number
+  let shift = 0
+  while (bottom + shift < w.low) shift += 12
+  while (top + shift > w.high && bottom + shift - 12 >= w.low) shift -= 12
   const f = chordFingering(target.type, inversion, 'rh')
-  return notes.map((n, i) => ({ midi: noteMidi(n), hand: 'rh', finger: fingers ? f?.[i] : undefined }))
+  return midis.map((m, i) => ({ midi: m + shift, hand: 'rh', finger: fingers ? f?.[i] : undefined }))
 }
 
 /**
@@ -124,7 +138,7 @@ export function playMarks(a: MarksArgs): KeyMark[] {
 
   if (a.mode === 'guided' && a.next) {
     if ('chord' in a.next) {
-      if (a.target.kind === 'chord') marks.push(...chordStepMarks(a.target, a.next.chord.inversion, t.fingers))
+      if (a.target.kind === 'chord') marks.push(...chordStepMarks(a.target, a.next.chord.inversion, t.fingers, a.window))
     } else {
       for (const hand of ['rh', 'lh'] as const) {
         const n = a.next[hand]

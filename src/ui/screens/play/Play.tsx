@@ -44,6 +44,7 @@ const HANDS: { value: PlayHand; label: string }[] = [
 ]
 
 const EMPTY_STATE = 'Connect a keyboard for the full experience.'
+const HINT_ID = 'play-mode-hint'
 /** On-screen taps have no velocity: a medium touch. */
 const TAP_VELOCITY = 80
 
@@ -81,7 +82,9 @@ export function Play() {
   // Hand only shapes a guided scale; elsewhere a hand change must not restart the run.
   const h: PlayHand = m === 'guided' && target.kind === 'scale' ? hand.value : 'rh'
   const t = toggles.value
-  const shown = effectiveToggles(m, t)
+  // Check forces the mark toggles off; with nothing picked they have nothing to show, so they read Off too.
+  const forced = effectiveToggles(m, t)
+  const shown = target.kind === 'none' ? { ...forced, highlight: false, colours: false, fingers: false } : forced
   const win = keyWindow.value
   const held = heldNotes.value.held
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
@@ -109,7 +112,6 @@ export function Play() {
     ...(checkAvailable(target) ? [] : (['check'] as const)),
   ]
   const hint = modeHint(target)
-  // Check forces these off; with nothing picked they have nothing to show.
   const marksLocked = m === 'check' || target.kind === 'none'
   const marks = playMarks({ mode: m, target, toggles: t, held, next: run?.next() ?? null, window: win, flash })
   const guide = run?.guide() ?? null
@@ -119,8 +121,19 @@ export function Play() {
     <section class="screen play">
       <header class="play-head">
         <h1 class="screen__title">Play</h1>
-        <Segmented options={MODES} value={m} onChange={(v) => (mode.value = v)} label="Mode" disabledValues={disabledModes} />
-        {hint && <p class="play-hint">{hint}</p>}
+        <Segmented
+          options={MODES}
+          value={m}
+          onChange={(v) => (mode.value = v)}
+          label="Mode"
+          disabledValues={disabledModes}
+          describedBy={hint ? HINT_ID : undefined}
+        />
+        {hint && (
+          <p class="play-hint" id={HINT_ID}>
+            {hint}
+          </p>
+        )}
         <div class="play-head__chip">
           <MidiChip />
         </div>
@@ -140,7 +153,8 @@ export function Play() {
         </div>
       </div>
 
-      <div class="play-band">
+      {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
+      <div class="play-band" aria-live="polite">
         {outcome ? (
           <RunResult outcome={outcome} onAgain={again} />
         ) : (
@@ -148,9 +162,7 @@ export function Play() {
             {m === 'free' && (
               <div class="play-status__main">
                 <span class="play-status__label">Holding</span>
-                <p class="play-readout" aria-live="polite">
-                  {chordReadout(held)}
-                </p>
+                <p class="play-readout">{chordReadout(held)}</p>
               </div>
             )}
             {status && (

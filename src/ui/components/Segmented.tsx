@@ -14,6 +14,8 @@ interface Props<T extends string | number> {
   disabled?: boolean
   /** Options that can't be chosen right now (the rest stay live). */
   disabledValues?: readonly T[]
+  /** id of an element that explains the group (e.g. why an option is disabled). */
+  describedBy?: string
 }
 
 /** Rectangular segmented control (not pills). Each segment is a >= 48px toggle button. */
@@ -25,9 +27,10 @@ export function Segmented<T extends string | number>({
   size = 'md',
   disabled = false,
   disabledValues = [],
+  describedBy,
 }: Props<T>) {
   return (
-    <div class={`seg seg--${size}`} role="group" aria-label={label}>
+    <div class={`seg seg--${size}`} role="group" aria-label={label} aria-describedby={describedBy}>
       {options.map((o) => (
         <button
           key={String(o.value)}

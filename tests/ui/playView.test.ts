@@ -17,6 +17,8 @@ import {
   type PlayToggles,
 } from '../../src/ui/screens/play/playView'
 import type { GuideNext } from '../../src/play/guide'
+import { CHORD_TYPES, maxInversion } from '../../src/theory/chords'
+import { MAJOR_ROOTS, MINOR_ROOTS } from '../../src/theory/scales'
 
 const G_MAJOR: PlayTarget = { kind: 'scale', ref: { root: 'G', form: 'major' }, octaves: 1 }
 const NONE: PlayTarget = { kind: 'none' }
@@ -96,6 +98,34 @@ describe('playMarks: guided next note', () => {
       [67, 2],
       [72, 5],
     ])
+  })
+  it('P14: an A major 2nd-inversion step stays on the default keyboard (stepped down an octave)', () => {
+    const next: GuideNext = { chord: { pcs: [4, 9, 1], bassPc: 4, inversion: 2 } }
+    const ms = marks({ mode: 'guided', target: { kind: 'chord', root: 'A', type: 'M', inversion: 0 }, next })
+    const guided = ms.filter((m) => m.state === undefined)
+    expect(guided.map((m) => m.midi)).toEqual([64, 69, 73]) // E4 A4 C♯5, not E5 A5 C♯6 (85 > 84)
+    for (const m of guided) expect(m.midi).toBeGreaterThanOrEqual(DEFAULT_WINDOW.low)
+  })
+  it('P14: every root x chord type x inversion step fits the default keyboard', () => {
+    const roots = [...new Set([...MAJOR_ROOTS, ...MINOR_ROOTS])]
+    const off: string[] = []
+    for (const root of roots)
+      for (const { id } of CHORD_TYPES)
+        for (let inv = 0; inv <= maxInversion(id); inv++) {
+          const next: GuideNext = { chord: { pcs: [], bassPc: 0, inversion: inv } }
+          const ms = marks({ mode: 'guided', target: { kind: 'chord', root, type: id, inversion: 0 }, next })
+          const guided = ms.filter((m) => m.state === undefined)
+          expect(guided.length).toBeGreaterThan(0)
+          if (guided.some((m) => m.midi < DEFAULT_WINDOW.low || m.midi > DEFAULT_WINDOW.high)) off.push(`${root}${id}/${inv}`)
+        }
+    expect(off).toEqual([])
+  })
+  it('P14: a guided chord step follows a window shifted up by the octave buttons', () => {
+    const next: GuideNext = { chord: { pcs: [0, 4, 7], bassPc: 0, inversion: 0 } }
+    const w = { low: 72, high: 120 }
+    const ms = playMarks({ mode: 'guided', target: C_CHORD, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+    const guided = ms.filter((m) => m.state === undefined)
+    expect(guided.every((m) => m.midi >= w.low && m.midi <= w.high)).toBe(true)
   })
   it('the wrong-note flash shows bad, even on a key that is in the scale', () => {
     // A held while G was expected: in G major, but the guide calls it a slip.

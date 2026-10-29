@@ -1,6 +1,6 @@
 // Wires one Guided / Check run (playRun.ts) to the shared keyboard stream for the Play screen.
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { onClear, onKeyboard } from '../../../midi/input'
+import { heldNotes, onClear, onKeyboard } from '../../../midi/input'
 import { createPlayRun, type PlayRun, type RunOutcome } from './playRun'
 import type { PlayHand, PlayMode, PlayTarget } from './playView'
 
@@ -22,7 +22,8 @@ export interface PlayRunView {
  * onClear (device unplugged, Reset keys) abandons the run in progress: no result is reported for it.
  */
 export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): PlayRunView {
-  const run = useMemo(() => createPlayRun(mode, target, hand), [mode, target, hand])
+  // Seeded with the keys already down, so a chord held while switching to Guided still counts.
+  const run = useMemo(() => createPlayRun(mode, target, hand, heldNotes.peek()), [mode, target, hand])
   const [result, setResult] = useState<{ run: PlayRun; outcome: RunOutcome } | null>(null)
   const [flash, setFlash] = useState<number | null>(null)
   const [, setVersion] = useState(0)
@@ -38,6 +39,8 @@ export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): 
       if (outcome) setResult({ run, outcome })
     }
     const offKeys = onKeyboard((e) => {
+      // Check: the next attempt starting hides the last card (a result from this same event still shows below).
+      if (mode === 'check' && e.type === 'on') setResult(null)
       const r = run.handle(e)
       if (r.flash !== null) {
         setFlash(r.flash)
@@ -59,16 +62,16 @@ export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): 
       clearInterval(timer)
       clearTimeout(flashTimer.current)
     }
-  }, [run])
+  }, [run, mode])
 
   const again = () => {
-    run?.clear()
+    run?.clear(heldNotes.peek())
     setResult(null)
     setFlash(null)
   }
 
-  // Guided shows its card while the guide is done (a cleared guide is running again); Check keeps the last card
-  // until the next run finishes or Go again.
+  // Guided shows its card while the guide is done (a cleared guide is running again); Check shows it until the next
+  // attempt's first note or Go again.
   const guide = run?.guide() ?? null
   const showing = result !== null && result.run === run && (guide === null || guide.done)
   return { run, outcome: showing ? result.outcome : null, flash, again }

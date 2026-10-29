@@ -70,6 +70,21 @@ describe('createPlayRun', () => {
     expect(last[0]).toMatchObject({ kind: 'guided', slips: 0 })
   })
 
+  it('Guided: keys already down when the run starts count (held seed)', () => {
+    const held = { held: new Set([60, 64]), sounding: new Set([60, 64]), pedal: false }
+    const run = createPlayRun('guided', C_CHORD, 'rh', held)
+    run?.handle(on(67, 0)) // completes C E G with the two keys held from before
+    expect(run?.guide()?.index).toBe(1)
+  })
+
+  it('Guided: clear() takes the held keys to restart from', () => {
+    const run = createPlayRun('guided', C_CHORD, 'rh')
+    run?.handle(on(60, 0))
+    run?.clear({ held: new Set([64]), sounding: new Set([64]), pedal: false })
+    run?.handle(on(67, 100)) // held is now {64, 67}: no C, no match
+    expect(run?.guide()?.index).toBe(0)
+  })
+
   it('Guided: a cleared run reports nothing and starts over', () => {
     const run = createPlayRun('guided', E_MAJOR, 'rh')
     const run8 = midis(E_MAJOR as PlayTarget & { kind: 'scale' })
