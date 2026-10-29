@@ -1,14 +1,15 @@
 // Session auto-check (spec §6), pure: rep tile assignment, chord matching, and the per-step run checker. No Preact,
 // no window: time comes in on the notes and through tick(now), so it is unit tested in node.
 import { analyseRun, type PlayedNote } from '../../../play/analyse'
-import { createRunDetector, type FinishedRun, type RunHand } from '../../../play/runDetect'
+import { createRunDetector, type FinishedRun } from '../../../play/runDetect'
 import { expectedRun } from '../../../play/sequence'
 import { chordNotes, type DiatonicChord } from '../../../theory/chords'
 import { chroma, type ScaleRef } from '../../../theory/scales'
 import { outcomeOf, type RunOutcome } from '../play/playRun'
 import { preferFor } from '../play/playView'
 
-export type RepKind = RunHand
+/** A rep tile's hand. The detector only says Together or single; P15 splits single into RH / LH by octave offset. */
+export type RepKind = 'rh' | 'lh' | 'together'
 
 /** P15: a one-hand run this many semitones (or more) below the RH run from octave 4 is the left hand. */
 const LH_OFFSET = 12
@@ -87,8 +88,8 @@ export interface StepChecker {
 /**
  * One run detector for a scale step. Every run is analysed against the RH run from octave 4; the analyser's
  * octave-offset search absorbs whichever octave was actually played. Hand (P15): Together comes from the detector's
- * pair ratio; a one-hand run is LH when its offset is an octave or more below (≤ −12), else RH. (The detector's
- * median-below-60 rule read LH runs from G3, A3 or B3 as RH.)
+ * pair ratio; a single-hand run is LH when its offset is an octave or more below (≤ −12), else RH. (A pitch-median
+ * split read LH runs from G3, A3 or B3 as RH, so the detector no longer guesses the hand.)
  */
 export function createStepChecker(ref: ScaleRef, octaves: 1 | 2): StepChecker {
   const rh = expectedRun(ref, octaves, 4)

@@ -1,7 +1,6 @@
 import { collapsePairs } from './analyse'
 import type { PlayedNote } from './analyse'
 import {
-  LH_MEDIAN_BELOW,
   MIN_RUN_NOTES,
   PAIR_WINDOW_MS,
   RUN_END_SILENCE_MS,
@@ -9,7 +8,12 @@ import {
   TOGETHER_PAIR_RATIO,
 } from './thresholds'
 
-export type RunHand = 'rh' | 'lh' | 'together'
+/**
+ * 'single' is a one-hand run. Which hand it was is not decided here: callers read it from the run's octave offset
+ * against the RH run from octave 4 (ruling P15, see autoCheck.ts), which a pitch median gets wrong for LH runs from
+ * G3, A3 or B3.
+ */
+export type RunHand = 'together' | 'single'
 
 export interface FinishedRun {
   notes: PlayedNote[]
@@ -18,16 +22,12 @@ export interface FinishedRun {
 
 /**
  * Together when at least TOGETHER_PAIR_RATIO of the onsets belong to octave pairs (exactly 12 apart, within
- * PAIR_WINDOW_MS). Otherwise left hand when the median pitch is below LH_MEDIAN_BELOW, else right hand.
+ * PAIR_WINDOW_MS), else single. For a single-hand run the hand comes from the octave offset (P15), not from here.
  */
 export function classifyHand(notes: PlayedNote[]): RunHand {
-  if (notes.length === 0) return 'rh'
+  if (notes.length === 0) return 'single'
   const pairedOnsets = 2 * (notes.length - collapsePairs(notes).length)
-  if (pairedOnsets / notes.length >= TOGETHER_PAIR_RATIO) return 'together'
-  const midis = notes.map((n) => n.midi).sort((a, b) => a - b)
-  const mid = midis.length >> 1
-  const median = midis.length % 2 ? (midis[mid] as number) : ((midis[mid - 1] as number) + (midis[mid] as number)) / 2
-  return median < LH_MEDIAN_BELOW ? 'lh' : 'rh'
+  return pairedOnsets / notes.length >= TOGETHER_PAIR_RATIO ? 'together' : 'single'
 }
 
 export interface RunDetector {

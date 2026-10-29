@@ -25,7 +25,7 @@ function playOut(d: ReturnType<typeof createRunDetector>, notes: PlayedNote[]): 
 const detector = () => createRunDetector({ tonicPc: G, expectedLength: 15 })
 
 describe('createRunDetector', () => {
-  it('a clean 15-note run ends on the final G (after the pair window) and reads as right hand', () => {
+  it('a clean 15-note run ends on the final G (after the pair window) and reads as single-hand', () => {
     const d = detector()
     const notes = run(G_UP_DOWN)
     const out = feed(d, notes)
@@ -34,7 +34,7 @@ describe('createRunDetector', () => {
     const lastT = (notes[14] as PlayedNote).t
     expect(d.tick(lastT + PAIR_WINDOW_MS - 1)).toBeNull()
     const finished = d.tick(lastT + PAIR_WINDOW_MS) as FinishedRun
-    expect(finished.hand).toBe('rh')
+    expect(finished.hand).toBe('single')
     expect(finished.notes).toEqual(notes)
   })
 
@@ -56,7 +56,7 @@ describe('createRunDetector', () => {
     expect(d.tick(last + RUN_END_SILENCE_MS - 1)).toBeNull()
     const finished = d.tick(last + RUN_END_SILENCE_MS) as FinishedRun
     expect(finished.notes).toEqual(notes)
-    expect(finished.hand).toBe('rh')
+    expect(finished.hand).toBe('single')
     expect(d.tick(last + 10_000)).toBeNull()
   })
 
@@ -121,9 +121,9 @@ describe('createRunDetector', () => {
     expect(d.tick(100_000)).toBeNull()
   })
 
-  it('a run an octave lower (MIDI 43-55) reads as left hand', () => {
+  it('a run an octave lower (MIDI 43-55) is single-hand too: which hand comes from the octave offset (P15)', () => {
     const d = detector()
-    expect((playOut(d, run(lower(G_UP_DOWN))) as FinishedRun).hand).toBe('lh')
+    expect((playOut(d, run(lower(G_UP_DOWN))) as FinishedRun).hand).toBe('single')
   })
 
   it('octave-paired notes read as together and finish on the final pair', () => {
@@ -243,7 +243,7 @@ describe('createRunDetector', () => {
     expect(pushed.every((r) => r === null)).toBe(true)
     const second = d.tick((next[14] as PlayedNote).t + PAIR_WINDOW_MS) as FinishedRun
     expect(second.notes).toEqual(next)
-    expect(second.hand).toBe('rh')
+    expect(second.hand).toBe('single')
   })
 
   it('does not finish on a non-tonic note even when long enough', () => {
@@ -254,15 +254,10 @@ describe('createRunDetector', () => {
 })
 
 describe('classifyHand', () => {
-  it('right hand above the split, left hand below', () => {
-    expect(classifyHand(run(G_UP_DOWN))).toBe('rh')
-    expect(classifyHand(run(lower(G_UP_DOWN)))).toBe('lh')
-  })
-
-  it('a median of exactly 60 reads as right hand', () => {
-    expect(classifyHand(run([58, 60, 62]))).toBe('rh')
-    expect(classifyHand(run([58, 59, 61, 62]))).toBe('rh') // median 60 (average of the middle two)
-    expect(classifyHand(run([57, 58, 60, 61]))).toBe('lh') // median 59
+  it('one-hand runs read as single at any pitch (hand comes from the octave offset, P15)', () => {
+    expect(classifyHand(run(G_UP_DOWN))).toBe('single')
+    expect(classifyHand(run(lower(G_UP_DOWN)))).toBe('single')
+    expect(classifyHand(run([57, 58, 60, 61]))).toBe('single')
   })
 
   it('together needs at least 60% of onsets in octave pairs', () => {
@@ -283,10 +278,10 @@ describe('classifyHand', () => {
 
   it('fast neighbouring notes in one hand are not pairs', () => {
     const quick = [60, 62, 64, 65, 67].map((midi, i) => ({ midi, t: i * 60 }))
-    expect(classifyHand(quick)).toBe('rh')
+    expect(classifyHand(quick)).toBe('single')
   })
 
-  it('an empty run reads as right hand', () => {
-    expect(classifyHand([])).toBe('rh')
+  it('an empty run reads as single', () => {
+    expect(classifyHand([])).toBe('single')
   })
 })
