@@ -1,4 +1,5 @@
 // Pure view model for the Play tab (no Preact, no window): unit tested in node.
+import type { MidiStatus } from '../../../midi/access'
 import type { GuideNext, GuideState } from '../../../play/guide'
 import { expectedRun } from '../../../play/sequence'
 import { chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
@@ -20,6 +21,14 @@ export interface PlayToggles {
   colours: boolean
   fingers: boolean
   drone: boolean
+}
+
+/**
+ * The "Connect a keyboard for the full experience." line: not once connected, and not where Web MIDI is unsupported
+ * (iPad), since the chip already says keyboard input needs Chrome on a computer.
+ */
+export function showConnectHint(status: MidiStatus): boolean {
+  return status.kind !== 'connected' && status.kind !== 'unsupported'
 }
 
 export const DEFAULT_TOGGLES: PlayToggles = { highlight: true, colours: true, fingers: true, drone: false }

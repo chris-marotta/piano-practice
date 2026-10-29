@@ -11,6 +11,7 @@ import {
   playMarks,
   reserveRowsFor,
   shiftWindow,
+  showConnectHint,
   targetPitchClasses,
   type PlayMode,
   type PlayTarget,
@@ -251,5 +252,16 @@ describe('reserveRowsFor', () => {
     expect(reserveRowsFor('guided', C_CHORD, 'lh')).toBe('rh')
     expect(reserveRowsFor('guided', G_MAJOR, 'lh')).toBe(true)
     expect(reserveRowsFor('guided', G_MAJOR, 'together')).toBe(true)
+  })
+})
+
+describe('showConnectHint', () => {
+  it('shows "Connect a keyboard…" only where connecting is possible but not done', () => {
+    expect(showConnectHint({ kind: 'off' })).toBe(true)
+    expect(showConnectHint({ kind: 'denied' })).toBe(true)
+    expect(showConnectHint({ kind: 'no-device' })).toBe(true)
+    expect(showConnectHint({ kind: 'connected', name: 'Roli' })).toBe(false)
+    // iPad: the chip already says keyboard input needs Chrome on a computer.
+    expect(showConnectHint({ kind: 'unsupported' })).toBe(false)
   })
 })

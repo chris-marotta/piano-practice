@@ -22,6 +22,7 @@ import {
   playMarks,
   reserveRowsFor,
   shiftWindow,
+  showConnectHint,
   targetTitle,
   type PlayHand,
   type PlayMode,
@@ -56,7 +57,11 @@ function modeHint(target: PlayTarget): string | null {
 
 const rootOf = (t: PlayTarget): string => (t.kind === 'scale' ? t.ref.root : t.kind === 'chord' ? t.root : 'C')
 
-/** The first tap on the on-screen keys is the gesture that turns sound on (iPad: no MIDI, no chip prompt). */
+/**
+ * A tap on the on-screen keys is the gesture that turns sound on (iPad: no MIDI, no chip prompt). Called on press and
+ * on release: for touch, pointerdown is not a user activation (pointerup is), so on an iPad from a cold start the
+ * first key's release is what unlocks audio. That first note stays silent; the ones after it sound.
+ */
 function ensureSound(): void {
   if (audioReady.peek()) {
     void loadPiano()
@@ -69,10 +74,9 @@ function ensureSound(): void {
 
 function onKeyPress(midi: number, down: boolean): void {
   const t = performance.now()
-  if (down) {
-    ensureSound()
-    emitKeyboard({ type: 'on', midi, velocity: TAP_VELOCITY, t })
-  } else emitKeyboard({ type: 'off', midi, t })
+  ensureSound()
+  if (down) emitKeyboard({ type: 'on', midi, velocity: TAP_VELOCITY, t })
+  else emitKeyboard({ type: 'off', midi, t })
 }
 
 /** Play against a scale, a chord or nothing: Free (marks + chord name), Guided (next note) or Check (from memory). */
@@ -181,7 +185,7 @@ export function Play() {
             )}
             <div class="play-status__side">
               {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
-              {midiStatus.value.kind !== 'connected' && <p class="play-empty">{EMPTY_STATE}</p>}
+              {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
             </div>
           </div>
         )}
