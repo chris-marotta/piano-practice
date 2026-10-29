@@ -2,6 +2,7 @@ import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
 import { Library } from './ui/screens/Library'
+import { Play } from './ui/screens/play/Play'
 import { Placement } from './ui/screens/Placement'
 import { Today } from './ui/screens/Today'
 import { Session } from './ui/screens/Session'
@@ -16,6 +17,7 @@ function Screen({ route: r }: { route: Route }) {
   if (r === 'placement') return <Placement />
   if (r === 'today') return <Today />
   if (r === 'session') return <Session />
+  if (r === 'play') return <Play />
   if (r === 'library') return <Library />
   if (r === 'progress') return <Progress />
   return <Settings />

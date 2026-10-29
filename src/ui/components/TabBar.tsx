@@ -2,6 +2,7 @@ import { devPage, route, type Route } from '../state'
 
 const TABS: { id: Route; label: string }[] = [
   { id: 'today', label: 'Today' },
+  { id: 'play', label: 'Play' },
   { id: 'library', label: 'Library' },
   { id: 'progress', label: 'Progress' },
 ]
@@ -17,7 +18,7 @@ function GearIcon() {
   )
 }
 
-/** Bottom tab bar: Today · Library · Progress, gear to Settings. Links, so taps add history entries. */
+/** Bottom tab bar: Today · Play · Library · Progress, gear to Settings. Links, so taps add history entries. */
 export function TabBar() {
   // Dev pages aren't tabs, so nothing is marked active on them.
   const current = devPage.value === null ? route.value : null

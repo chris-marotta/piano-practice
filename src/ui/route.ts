@@ -1,8 +1,8 @@
 // Pure hash-route helpers (no window access) so they can be unit tested in node.
 
-export type Route = 'today' | 'session' | 'library' | 'progress' | 'settings' | 'placement'
+export type Route = 'today' | 'session' | 'play' | 'library' | 'progress' | 'settings' | 'placement'
 
-export const ROUTES: readonly Route[] = ['today', 'session', 'library', 'progress', 'settings', 'placement']
+export const ROUTES: readonly Route[] = ['today', 'session', 'play', 'library', 'progress', 'settings', 'placement']
 
 const isRoute = (p: string): p is Route => (ROUTES as readonly string[]).includes(p)
 

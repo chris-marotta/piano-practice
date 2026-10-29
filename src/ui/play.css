@@ -1,0 +1,257 @@
+/* Play tab: picker, mode and toggles on top, a status band, the 49-key keyboard anchored at the bottom.
+   Tokens live in tokens.css. Budget at 1180 x 820: ~696px between the safe paddings and the tab bar. The tightest
+   case is a guided scale with LH or Together (both badge rows, keyboard ~322px): 8px gaps keep it on one screen. */
+
+.play {
+  gap: var(--s-2);
+  /* Fill the screen so the keyboard sits at the bottom and doesn't move when the band changes height. */
+  min-height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - 2 * var(--s-5));
+}
+
+.play-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+}
+
+.play-head .seg {
+  flex: 0 0 360px;
+}
+
+/* A mode the target can't use (Check for a chord, Guided and Check with nothing picked). */
+.play-head .seg__opt:disabled {
+  opacity: 0.35;
+}
+
+.play-hint {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.play-head__chip {
+  margin-left: auto;
+  min-width: 0;
+}
+
+.play-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.play-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.play-picker__none {
+  color: var(--muted);
+}
+
+.play-controls {
+  justify-content: space-between;
+}
+
+.play-controls .seg {
+  flex: 0 0 300px;
+}
+
+.play-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.play-toggles .toggle {
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  font-size: 18px;
+}
+
+/* ---- status band: chord readout, guided progress, or the result card ---- */
+
+.play-band {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-height: 96px;
+}
+
+/* Status and result fill the band, so free space goes to them rather than to a gap over the keys. */
+.play-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-5);
+  min-height: 96px;
+  padding: var(--s-3) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.play-status__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.play-status__label {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Read from the piano stool. */
+.play-readout {
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.play-status__headline {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.play-status__detail {
+  font-size: 22px;
+  color: var(--muted);
+}
+
+.play-status__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-1);
+  text-align: right;
+}
+
+.play-status__target {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.play-empty {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* ---- result card ---- */
+
+.run-result {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-6);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--warn);
+  border-radius: var(--radius);
+}
+
+.run-result--clean {
+  border-left-color: var(--success);
+}
+
+.run-result__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.run-result__headline {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.run-result--clean .run-result__headline {
+  color: var(--success);
+}
+
+.run-result__issues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 24px;
+}
+
+.run-result__more {
+  color: var(--muted);
+}
+
+.run-result__timing {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+
+.run-result__stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.run-result__label {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.run-result__value {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* One bar per gap between notes, height by length: a long bar is a late note. */
+.run-result__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 56px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.run-result__bar {
+  width: 6px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+.run-result__again {
+  min-width: 200px;
+  min-height: 60px;
+}
+
+/* ---- keyboard ---- */
+
+.play-keyboard {
+  margin-top: auto;
+}
+
+.play-keyboard .stage {
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .run-result {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+}

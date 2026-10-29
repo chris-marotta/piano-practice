@@ -12,6 +12,8 @@ interface Props<T extends string | number> {
   label: string
   size?: 'md' | 'lg'
   disabled?: boolean
+  /** Options that can't be chosen right now (the rest stay live). */
+  disabledValues?: readonly T[]
 }
 
 /** Rectangular segmented control (not pills). Each segment is a >= 48px toggle button. */
@@ -22,6 +24,7 @@ export function Segmented<T extends string | number>({
   label,
   size = 'md',
   disabled = false,
+  disabledValues = [],
 }: Props<T>) {
   return (
     <div class={`seg seg--${size}`} role="group" aria-label={label}>
@@ -32,7 +35,7 @@ export function Segmented<T extends string | number>({
           class="seg__opt"
           data-value={String(o.value)}
           aria-pressed={o.value === value}
-          disabled={disabled}
+          disabled={disabled || disabledValues.includes(o.value)}
           onClick={() => onChange(o.value)}
         >
           {o.label}

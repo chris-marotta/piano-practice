@@ -1,0 +1,225 @@
+import { describe, expect, it } from 'vitest'
+import type { KeyMark } from '../../src/ui/components/keyboardLayout'
+import {
+  DEFAULT_TOGGLES,
+  DEFAULT_WINDOW,
+  checkAvailable,
+  chordReadout,
+  effectiveMode,
+  effectiveToggles,
+  guideAvailable,
+  playMarks,
+  reserveRowsFor,
+  shiftWindow,
+  targetPitchClasses,
+  type PlayMode,
+  type PlayTarget,
+  type PlayToggles,
+} from '../../src/ui/screens/play/playView'
+import type { GuideNext } from '../../src/play/guide'
+
+const G_MAJOR: PlayTarget = { kind: 'scale', ref: { root: 'G', form: 'major' }, octaves: 1 }
+const NONE: PlayTarget = { kind: 'none' }
+const C_CHORD: PlayTarget = { kind: 'chord', root: 'C', type: 'M', inversion: 0 }
+
+function marks(opts: {
+  mode?: PlayMode
+  target?: PlayTarget
+  toggles?: Partial<PlayToggles>
+  held?: number[]
+  next?: GuideNext
+  flash?: number | null
+}): KeyMark[] {
+  return playMarks({
+    mode: opts.mode ?? 'free',
+    target: opts.target ?? G_MAJOR,
+    toggles: { ...DEFAULT_TOGGLES, ...opts.toggles },
+    held: new Set(opts.held ?? []),
+    next: opts.next ?? null,
+    window: DEFAULT_WINDOW,
+    flash: opts.flash ?? null,
+  })
+}
+
+const at = (ms: KeyMark[], midi: number) => ms.filter((m) => m.midi === midi)
+const stateAt = (ms: KeyMark[], midi: number) => at(ms, midi).find((m) => m.state && m.state !== 'target')?.state
+
+describe('playMarks: priority (spec §4.3)', () => {
+  it('pressed + in target is good, pressed + not in target is bad (by pitch class)', () => {
+    const ms = marks({ held: [66, 65] })
+    expect(stateAt(ms, 66)).toBe('good')
+    expect(stateAt(ms, 65)).toBe('bad')
+  })
+  it('any octave of a scale note counts as in target', () => {
+    expect(stateAt(marks({ held: [42] }), 42)).toBe('good') // F#2
+  })
+  it('pressed with no target is the neutral pressed fill', () => {
+    expect(stateAt(marks({ target: NONE, held: [65] }), 65)).toBe('pressed')
+  })
+  it('with right/wrong colours off, presses are neutral', () => {
+    const ms = marks({ held: [66, 65], toggles: { colours: false } })
+    expect(stateAt(ms, 66)).toBe('pressed')
+    expect(stateAt(ms, 65)).toBe('pressed')
+  })
+  it('Check shows only the neutral pressed fill', () => {
+    const ms = marks({ mode: 'check', held: [66, 65] })
+    expect(stateAt(ms, 66)).toBe('pressed')
+    expect(stateAt(ms, 65)).toBe('pressed')
+  })
+  it('a pressed key never carries two states', () => {
+    const ms = marks({ held: [67], mode: 'guided', next: { rh: { midi: 67, finger: 1 } } })
+    expect(at(ms, 67).filter((m) => m.state && m.state !== 'target')).toHaveLength(1)
+  })
+})
+
+describe('playMarks: guided next note', () => {
+  it('marks the next RH note with its hand colour and finger', () => {
+    const ms = marks({ mode: 'guided', next: { rh: { midi: 67, finger: 1 } } })
+    expect(at(ms, 67).find((m) => m.state === undefined)).toMatchObject({ hand: 'rh', finger: 1 })
+  })
+  it('marks both hands in Together', () => {
+    const ms = marks({ mode: 'guided', next: { rh: { midi: 67, finger: 1 }, lh: { midi: 55, finger: 5 } } })
+    expect(at(ms, 55).find((m) => m.state === undefined)).toMatchObject({ hand: 'lh', finger: 5 })
+  })
+  it('hides the finger number when finger numbers are off, keeping the hand colour', () => {
+    const ms = marks({ mode: 'guided', next: { rh: { midi: 67, finger: 1 } }, toggles: { fingers: false } })
+    const m = at(ms, 67).find((x) => x.state === undefined)
+    expect(m?.hand).toBe('rh')
+    expect(m?.finger).toBeUndefined()
+  })
+  it('a guided chord step marks the voicing at octave 4 with RH fingers', () => {
+    const next: GuideNext = { chord: { pcs: [4, 7, 0], bassPc: 4, inversion: 1 } }
+    const ms = marks({ mode: 'guided', target: C_CHORD, next })
+    const guided = ms.filter((m) => m.state === undefined)
+    expect(guided.map((m) => [m.midi, m.finger])).toEqual([
+      [64, 1],
+      [67, 2],
+      [72, 5],
+    ])
+  })
+  it('the wrong-note flash shows bad, even on a key that is in the scale', () => {
+    // A held while G was expected: in G major, but the guide calls it a slip.
+    const ms = marks({ mode: 'guided', held: [69], flash: 69 })
+    expect(stateAt(ms, 69)).toBe('bad')
+  })
+  it('the flash outlives the key press', () => {
+    expect(stateAt(marks({ mode: 'guided', flash: 61 }), 61)).toBe('bad')
+  })
+  it('no flash when right/wrong colours are off', () => {
+    expect(stateAt(marks({ mode: 'guided', flash: 61, toggles: { colours: false } }), 61)).toBeUndefined()
+  })
+})
+
+describe('playMarks: target highlight', () => {
+  const outlined = (ms: KeyMark[]) => ms.filter((m) => m.state === 'target').map((m) => m.midi)
+  it('outlines every target note in the window when highlight is on', () => {
+    const o = outlined(marks({}))
+    expect(o).toContain(67)
+    expect(o).toContain(42)
+    expect(o).not.toContain(65)
+    expect(o.every((m) => m >= DEFAULT_WINDOW.low && m <= DEFAULT_WINDOW.high)).toBe(true)
+    expect(o).toHaveLength(29) // 7 pitch classes over C2..C6: 4 octaves x 7 + C6
+  })
+  it('is absent when highlight is off', () => {
+    expect(outlined(marks({ toggles: { highlight: false } }))).toEqual([])
+  })
+  it('is absent in Check even with highlight on', () => {
+    expect(outlined(marks({ mode: 'check' }))).toEqual([])
+  })
+  it('is absent with no target', () => {
+    expect(outlined(marks({ target: NONE }))).toEqual([])
+  })
+})
+
+describe('effectiveToggles', () => {
+  it('Check forces highlight, colours and finger numbers off', () => {
+    expect(effectiveToggles('check', DEFAULT_TOGGLES)).toEqual({ highlight: false, colours: false, fingers: false, drone: false })
+    expect(effectiveToggles('check', { ...DEFAULT_TOGGLES, drone: true }).drone).toBe(true)
+  })
+  it('Free and Guided pass the toggles through', () => {
+    expect(effectiveToggles('free', DEFAULT_TOGGLES)).toEqual(DEFAULT_TOGGLES)
+    expect(effectiveToggles('guided', DEFAULT_TOGGLES)).toEqual(DEFAULT_TOGGLES)
+  })
+  it('defaults: highlight, colours and fingers on, drone off', () => {
+    expect(DEFAULT_TOGGLES).toEqual({ highlight: true, colours: true, fingers: true, drone: false })
+  })
+})
+
+describe('targetPitchClasses', () => {
+  it('a major scale has its 7 pitch classes', () => {
+    expect([...targetPitchClasses(G_MAJOR)].sort((a, b) => a - b)).toEqual([0, 2, 4, 6, 7, 9, 11])
+  })
+  it('melodic minor counts ascending and descending: A melodic includes F, F♯, G, G♯', () => {
+    const pcs = targetPitchClasses({ kind: 'scale', ref: { root: 'A', form: 'melodic' }, octaves: 1 })
+    for (const pc of [5, 6, 7, 8]) expect(pcs.has(pc)).toBe(true)
+    expect(pcs.size).toBe(9)
+  })
+  it('a chord has its own pitch classes', () => {
+    expect([...targetPitchClasses(C_CHORD)].sort((a, b) => a - b)).toEqual([0, 4, 7])
+  })
+  it('nothing is empty', () => {
+    expect(targetPitchClasses(NONE).size).toBe(0)
+  })
+})
+
+describe('keyboard window', () => {
+  it('defaults to the Roli 49 keys, C2..C6', () => {
+    expect(DEFAULT_WINDOW).toEqual({ low: 36, high: 84 })
+  })
+  it('shifts up by whole octaves to include a high note', () => {
+    expect(shiftWindow(DEFAULT_WINDOW, 90)).toEqual({ low: 48, high: 96 })
+    expect(shiftWindow(DEFAULT_WINDOW, 110)).toEqual({ low: 72, high: 120 })
+  })
+  it('shifts down for a low note', () => {
+    expect(shiftWindow(DEFAULT_WINDOW, 30)).toEqual({ low: 24, high: 72 })
+  })
+  it('stays put for a note inside', () => {
+    const w = shiftWindow(DEFAULT_WINDOW, 84)
+    expect(w).toEqual(DEFAULT_WINDOW)
+  })
+})
+
+describe('chordReadout', () => {
+  it('names an inversion with its slash bass: E-G-C is C/E', () => {
+    expect(chordReadout(new Set([64, 67, 72]))).toBe('C/E')
+  })
+  it('names a root-position triad', () => {
+    expect(chordReadout(new Set([60, 64, 67]))).toBe('C')
+  })
+  it('a single note or nothing is —', () => {
+    expect(chordReadout(new Set([60]))).toBe('—')
+    expect(chordReadout(new Set())).toBe('—')
+  })
+})
+
+describe('mode availability', () => {
+  it('Check works with scales only', () => {
+    expect(checkAvailable(G_MAJOR)).toBe(true)
+    expect(checkAvailable(C_CHORD)).toBe(false)
+    expect(checkAvailable(NONE)).toBe(false)
+  })
+  it('Guided needs a target', () => {
+    expect(guideAvailable(G_MAJOR)).toBe(true)
+    expect(guideAvailable(C_CHORD)).toBe(true)
+    expect(guideAvailable(NONE)).toBe(false)
+  })
+  it('an unavailable mode falls back to Free', () => {
+    expect(effectiveMode('check', C_CHORD)).toBe('free')
+    expect(effectiveMode('check', NONE)).toBe('free')
+    expect(effectiveMode('guided', NONE)).toBe('free')
+    expect(effectiveMode('check', G_MAJOR)).toBe('check')
+  })
+})
+
+describe('reserveRowsFor', () => {
+  it('no badge rows when nothing can show a finger', () => {
+    expect(reserveRowsFor('free', G_MAJOR, 'rh')).toBe(false)
+    expect(reserveRowsFor('check', G_MAJOR, 'lh')).toBe(false)
+  })
+  it('RH rows for RH and chords, both for LH and Together', () => {
+    expect(reserveRowsFor('guided', G_MAJOR, 'rh')).toBe('rh')
+    expect(reserveRowsFor('guided', C_CHORD, 'lh')).toBe('rh')
+    expect(reserveRowsFor('guided', G_MAJOR, 'lh')).toBe(true)
+    expect(reserveRowsFor('guided', G_MAJOR, 'together')).toBe(true)
+  })
+})

@@ -29,6 +29,8 @@ export interface RunAnalysis {
   notes: number
   /** Octave shift (semitones, multiple of 12) that best lines the played run up with the expected one. */
   offset: number
+  /** Onsets the timing is judged on (matched and wrong notes, in order): evenness and tempo come from these. */
+  onsets: number[]
 }
 
 const OFFSETS = [-36, -24, -12, 0, 12, 24, 36]
@@ -198,6 +200,7 @@ export function analyseRun(
     tempo: tempoFromOnsets(onsets),
     notes: notes.length,
     offset,
+    onsets,
   }
 }
 

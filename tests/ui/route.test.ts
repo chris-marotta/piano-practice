@@ -19,6 +19,10 @@ describe('resolveRoute', () => {
     for (const p of ['today', 'session', 'library', 'progress', 'settings'] as const)
       expect(resolveRoute(p, true)).toBe(p)
   })
+  it('passes play through once placed (phase 2 Play tab)', () => {
+    expect(resolveRoute('play', true)).toBe('play')
+    expect(resolveRoute('play', false)).toBe('placement')
+  })
   it('sends placement to today once placed, so a typed #/placement cannot wipe progress (R14)', () => {
     expect(resolveRoute('placement', true)).toBe('today')
   })
