@@ -1,5 +1,6 @@
 import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
+import { UnlockPrompt } from './ui/components/UnlockPrompt'
 import { DevKeyboard } from './ui/screens/DevKeyboard'
 import { Library } from './ui/screens/Library'
 import { Play } from './ui/screens/play/Play'
@@ -12,6 +13,8 @@ import { devPage, route, type Route } from './ui/state'
 
 /** Focus screens hide the tab bar so a stray tap mid-practice can't leave the session. */
 const FULL_SCREEN: Route[] = ['placement', 'session']
+/** Screens whose MidiChip already shows the unlock prompt; the others get the app-level one. */
+const CHIP_SCREENS: Route[] = ['session', 'play', 'settings']
 
 function Screen({ route: r }: { route: Route }) {
   if (r === 'placement') return <Placement />
@@ -31,6 +34,7 @@ export function App() {
   return (
     <div class={`shell${showTabs ? ' shell--tabs' : ''}`}>
       <Banner />
+      {(devKeyboard || !CHIP_SCREENS.includes(r)) && <UnlockPrompt />}
       <main class="shell__main">
         {devKeyboard ? <DevKeyboard /> : <Screen route={r} />}
       </main>

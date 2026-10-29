@@ -191,6 +191,16 @@ p {
   flex: 1;
 }
 
+/* "Tap anywhere to turn on sound": an instruction, not a warning. */
+.banner--sound .banner__mark {
+  background: var(--accent);
+}
+
+.banner--sound .banner__text {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .banner__dismiss {
   flex: none;
 }

@@ -32,7 +32,7 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 - `src/midi/` — `parse.ts` (bytes to `MidiEvent`), `held.ts` (held + pedal reducer), `dedupe.ts` (P17: drops a note-on repeated from a second port within 5 ms, and its off), `access.ts` (Web MIDI connect, `midiStatus` signal), `input.ts` (event stream).
 - `src/play/` — pure analysis: `guide.ts` (Guided note-by-note state), `runDetect.ts` (Check run detection, octave offset), `analyse.ts` (evenness, tempo), `suggest.ts` (rating suggestion), `sequence.ts`, `thresholds.ts`.
 - `src/audio/live.ts` — live sampler voices for keyboard notes (`unlock.ts` gates all audio on a user gesture).
-- `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, `playView.ts` and `playRun.ts` are pure; `playState.ts` holds the signals). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip.
+- `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, `playView.ts` and `playRun.ts` are pure; `playState.ts` holds the signals). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip. `src/ui/unlockOnTap.ts` is the one app-level "tap anywhere to turn on sound" listener (armed from `main.tsx`); `UnlockPrompt` shows that prompt on screens without a chip.
 - Settings added: `midiEnabled` (default false), `keyboardSound` (default true).
 
 ## Dev hooks (DEV builds only, stripped from `dist/`)
