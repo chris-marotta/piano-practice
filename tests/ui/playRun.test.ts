@@ -96,6 +96,91 @@ describe('createPlayRun', () => {
     expect(run?.tick(100_000)).toBeNull()
   })
 
+  it('Guided chord: the result has no timing (inversion gaps are not a tempo)', () => {
+    const run = createPlayRun('guided', C_CHORD, 'rh')
+    const outs: RunOutcome[] = []
+    ;[[60, 64, 67], [64, 67, 72], [67, 72, 76]].forEach((chord, k) => {
+      chord.forEach((m, i) => {
+        const o = run?.handle(on(m, k * 1000 + i)).outcome
+        if (o) outs.push(o)
+      })
+      chord.forEach((m) => run?.handle(off(m, k * 1000 + 500)))
+    })
+    expect(outs).toHaveLength(1)
+    expect(outs[0]).toMatchObject({ evenness: null, tempo: null, intervals: [] })
+    expect(resultView(outs[0] as RunOutcome).timing).toBe(false)
+  })
+
+  describe('P16: Guided restarts on a tonic after done', () => {
+    const e4 = midis(E_MAJOR as PlayTarget & { kind: 'scale' })
+
+    it('a tonic note-on after a finished run starts a fresh run with that note as its first', () => {
+      const run = createPlayRun('guided', E_MAJOR, 'rh')
+      expect(playNotes(run, e4)).toHaveLength(1)
+      expect(run?.guide()?.done).toBe(true)
+      // E3: a different octave locks the new run an octave down.
+      const r = run?.handle(on(52, 20_000))
+      expect(r).toEqual({ flash: null, outcome: null })
+      expect(run?.guide()).toMatchObject({ done: false, index: 1, offset: -12, slips: 0 })
+      expect(run?.next()).toEqual({ rh: { midi: 54, finger: 2 } })
+      // The restarted run reports its own result.
+      const outs = playNotes(
+        run,
+        e4.slice(1).map((m) => m - 12),
+        20_400,
+      )
+      expect(outs).toHaveLength(1)
+      expect(outs[0]).toMatchObject({ kind: 'guided', slips: 0 })
+    })
+
+    it('a non-tonic note after done changes nothing (no flash, still done)', () => {
+      const run = createPlayRun('guided', E_MAJOR, 'rh')
+      playNotes(run, e4)
+      const before = run?.guide()
+      expect(run?.handle(on(66, 20_000))).toEqual({ flash: null, outcome: null })
+      expect(run?.guide()).toBe(before)
+    })
+
+    it('Together: the restarting tonic pairs with its octave partner to lock', () => {
+      const run = createPlayRun('guided', E_MAJOR, 'together')
+      e4.forEach((m, i) => {
+        run?.handle(on(m - 12, i * 400))
+        run?.handle(on(m, i * 400 + 10))
+      })
+      expect(run?.guide()?.done).toBe(true)
+      run?.handle(on(52, 20_000))
+      run?.handle(on(64, 20_010))
+      expect(run?.guide()).toMatchObject({ done: false, index: 1, offset: 0 })
+    })
+
+    it('chord: a root note-on after done restarts at root position', () => {
+      const run = createPlayRun('guided', C_CHORD, 'rh')
+      ;[[60, 64, 67], [64, 67, 72], [67, 72, 76]].forEach((chord, k) => {
+        chord.forEach((m, i) => run?.handle(on(m, k * 1000 + i)))
+        chord.forEach((m) => run?.handle(off(m, k * 1000 + 500)))
+      })
+      expect(run?.guide()?.done).toBe(true)
+      run?.handle(on(64, 5000)) // E: not the root, still done
+      expect(run?.guide()?.done).toBe(true)
+      run?.handle(off(64, 5100))
+      run?.handle(on(48, 6000)) // C3 restarts
+      expect(run?.guide()).toMatchObject({ done: false, index: 0, slips: 0 })
+      run?.handle(on(52, 6001))
+      run?.handle(on(55, 6002)) // C E G with the restarting C as the bass
+      expect(run?.guide()?.index).toBe(1)
+    })
+  })
+
+  it('restartsOn: the pitch class a next run starts on (scale tonic, chord root)', () => {
+    const check = createPlayRun('check', E_MAJOR, 'rh')
+    expect(check?.restartsOn(64)).toBe(true)
+    expect(check?.restartsOn(40)).toBe(true)
+    expect(check?.restartsOn(66)).toBe(false)
+    const chord = createPlayRun('guided', C_CHORD, 'rh')
+    expect(chord?.restartsOn(72)).toBe(true)
+    expect(chord?.restartsOn(64)).toBe(false)
+  })
+
   it('Check: G major with two wrong notes reports two issue lines', () => {
     const run = createPlayRun('check', G_MAJOR, 'rh')
     const notes = midis(G_MAJOR as PlayTarget & { kind: 'scale' })
@@ -154,6 +239,12 @@ describe('resultView', () => {
     const v = resultView({ ...base, evenness: null, tempo: null, intervals: [] })
     expect(v.evenness).toBe('—')
     expect(v.tempo).toBe('♩ ≈ —')
+    expect(v.timing).toBe(false)
+  })
+  it('timing shows when either evenness or tempo is known', () => {
+    expect(resultView(base).timing).toBe(true)
+    expect(resultView({ ...base, evenness: null }).timing).toBe(true)
+    expect(resultView({ ...base, tempo: null }).timing).toBe(true)
   })
   it('guided slips are counted, not listed', () => {
     expect(resultView({ ...base, kind: 'guided', slips: 1 }).headline).toBe('1 slip')

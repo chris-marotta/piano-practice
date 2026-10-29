@@ -30,6 +30,11 @@ export interface PlayRun {
   /** Guided state (null in Check). */
   guide(): GuideState | null
   /**
+   * True when a note-on of this pitch can start the next run: the scale's tonic or the chord's root, by pitch class.
+   * Check: the detector's start condition, so the card hides only when the next attempt starts. Guided: P16.
+   */
+  restartsOn(midi: number): boolean
+  /**
    * Abandon the run in progress (device unplugged, Reset keys, Go again). Nothing is reported for it. `held`: the keys
    * still down to restart from (default none, as after clearKeyboard).
    */
@@ -37,6 +42,8 @@ export interface PlayRun {
 }
 
 const gaps = (onsets: number[]): number[] => onsets.slice(1).map((t, i) => t - (onsets[i] as number))
+
+const pc = (midi: number): number => ((midi % 12) + 12) % 12
 
 /** Guided target: chords are stepped through every inversion, so the chosen inversion doesn't matter. */
 function guideTargetFor(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand): GuideTarget {
@@ -51,19 +58,29 @@ function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand
   // Own held reduction (not the heldNotes signal), so guideStep always sees the state after this event. Seeded with the
   // keys (and pedal) already down when the run starts.
   let held: HeldState = initialHeld
+  const startPc = chroma(target.kind === 'chord' ? target.root : target.ref.root)
+  const restartsOn = (midi: number): boolean => pc(midi) === startPc
   return {
     handle(e) {
       held = reduceHeld(held, e).state
+      // P16: once done, a tonic (chord: root) starts the same target again, and this note is its first.
+      if (state.done && e.type === 'on' && restartsOn(e.midi)) state = createGuide(gt)
       const wasDone = state.done
       const step = guideStep(state, e, held)
       state = step.state
       if (!state.done || wasDone) return { flash: step.flash, outcome: null }
       const r = guideResult(state)
-      return { flash: step.flash, outcome: { kind: 'guided', ...r, issues: [], intervals: gaps(state.onsets) } }
+      // Chords: the gaps between inversions are not a tempo, so the card shows no timing.
+      const timing =
+        gt.kind === 'chord'
+          ? { evenness: null, tempo: null, intervals: [] }
+          : { evenness: r.evenness, tempo: r.tempo, intervals: gaps(state.onsets) }
+      return { flash: step.flash, outcome: { kind: 'guided', slips: r.slips, issues: [], ...timing } }
     },
     tick: () => null,
     next: () => guideNext(state),
     guide: () => state,
+    restartsOn,
     clear(next = EMPTY_HELD) {
       state = createGuide(gt)
       held = next
@@ -88,7 +105,8 @@ function checkRun(target: Extract<PlayTarget, { kind: 'scale' }>): PlayRun {
   // P3: every run is judged against the RH run from octave 4; the octave-offset search absorbs LH and Together.
   const expected = expectedRun(target.ref, target.octaves, 4)
   const prefer = preferFor(target.ref)
-  const detector = createRunDetector({ tonicPc: chroma(target.ref.root), expectedLength: expected.length })
+  const tonicPc = chroma(target.ref.root)
+  const detector = createRunDetector({ tonicPc, expectedLength: expected.length })
   const judge = (run: FinishedRun | null): RunOutcome | null => (run ? judgeRun(expected, run, prefer) : null)
   return {
     handle(e) {
@@ -98,6 +116,7 @@ function checkRun(target: Extract<PlayTarget, { kind: 'scale' }>): PlayRun {
     tick: (now) => judge(detector.tick(now)),
     next: () => null,
     guide: () => null,
+    restartsOn: (midi) => pc(midi) === tonicPc,
     clear: () => detector.reset(),
   }
 }
@@ -122,6 +141,8 @@ export interface ResultView {
   headline: string
   lines: string[]
   more: string | null
+  /** Show the timing block (evenness, strip, tempo): false when neither evenness nor tempo is known (chords). */
+  timing: boolean
   evenness: string
   tempo: string
   /** Interval bar heights, 0..1 of the longest gap. */
@@ -138,6 +159,7 @@ export function resultView(o: RunOutcome): ResultView {
     headline: clean ? 'Clean run ✓' : `${o.slips} slip${o.slips === 1 ? '' : 's'}`,
     lines,
     more: rest > 0 ? `and ${rest} more` : null,
+    timing: o.evenness !== null || o.tempo !== null,
     evenness: o.evenness === null ? '—' : `${Math.round(o.evenness * 100)}%`,
     tempo: `♩ ≈ ${o.tempo ?? '—'}`,
     bars: longest > 0 ? o.intervals.map((g) => g / longest) : [],

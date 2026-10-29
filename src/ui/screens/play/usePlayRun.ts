@@ -39,8 +39,9 @@ export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): 
       if (outcome) setResult({ run, outcome })
     }
     const offKeys = onKeyboard((e) => {
-      // Check: the next attempt starting hides the last card (a result from this same event still shows below).
-      if (mode === 'check' && e.type === 'on') setResult(null)
+      // Check: the next attempt starting (a tonic, the detector's start condition) hides the last card, so brushing
+      // another key while reading it doesn't. A result from this same event still shows below.
+      if (mode === 'check' && e.type === 'on' && run.restartsOn(e.midi)) setResult(null)
       const r = run.handle(e)
       if (r.flash !== null) {
         setFlash(r.flash)
@@ -70,8 +71,8 @@ export function usePlayRun(mode: PlayMode, target: PlayTarget, hand: PlayHand): 
     setFlash(null)
   }
 
-  // Guided shows its card while the guide is done (a cleared guide is running again); Check shows it until the next
-  // attempt's first note or Go again.
+  // Guided shows its card while the guide is done (cleared, or restarted on a tonic per P16, it is running again);
+  // Check shows it until the next attempt's first tonic or Go again.
   const guide = run?.guide() ?? null
   const showing = result !== null && result.run === run && (guide === null || guide.done)
   return { run, outcome: showing ? result.outcome : null, flash, again }

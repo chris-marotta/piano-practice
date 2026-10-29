@@ -6,7 +6,7 @@ interface Props {
   onAgain?: () => void
 }
 
-/** The end of a Guided or Check run (also a session rep's detected run): clean or the issues, evenness with its interval strip, tempo, Go again. */
+/** The end of a Guided or Check run (also a session rep's detected run): clean or the issues, evenness with its interval strip and tempo (when known), Go again. */
 export function RunResult({ outcome, onAgain }: Props) {
   const v = resultView(outcome)
   return (
@@ -22,23 +22,26 @@ export function RunResult({ outcome, onAgain }: Props) {
           </ul>
         )}
       </div>
-      <div class="run-result__timing">
-        <div class="run-result__stat">
-          <span class="run-result__label">Evenness</span>
-          <span class="run-result__value">{v.evenness}</span>
-        </div>
-        {v.bars.length > 0 && (
-          <div class="run-result__bars" aria-hidden="true">
-            {v.bars.map((h, i) => (
-              <span key={i} class="run-result__bar" style={{ height: `${Math.max(8, h * 100)}%` }} />
-            ))}
+      {/* No timing block when there is no timing to show (chords: inversion gaps are not a tempo). */}
+      {v.timing && (
+        <div class="run-result__timing">
+          <div class="run-result__stat">
+            <span class="run-result__label">Evenness</span>
+            <span class="run-result__value">{v.evenness}</span>
           </div>
-        )}
-        <div class="run-result__stat">
-          <span class="run-result__label">Tempo</span>
-          <span class="run-result__value">{v.tempo}</span>
+          {v.bars.length > 0 && (
+            <div class="run-result__bars" aria-hidden="true">
+              {v.bars.map((h, i) => (
+                <span key={i} class="run-result__bar" style={{ height: `${Math.max(8, h * 100)}%` }} />
+              ))}
+            </div>
+          )}
+          <div class="run-result__stat">
+            <span class="run-result__label">Tempo</span>
+            <span class="run-result__value">{v.tempo}</span>
+          </div>
         </div>
-      </div>
+      )}
       {onAgain && (
         <button type="button" class="btn btn--primary btn--lg run-result__again" onClick={onAgain}>
           Go again
