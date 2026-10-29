@@ -303,6 +303,12 @@ p {
   cursor: pointer;
 }
 
+/* Pressable keys (onKeyPress) take the touch themselves: a finger drifting while holding a key
+   must not start a pan (pointercancel ends the note early), and quick repeats must not zoom. */
+.keyboard--pressable .key-hit {
+  touch-action: none;
+}
+
 .key-hit:focus-visible {
   outline: none;
 }

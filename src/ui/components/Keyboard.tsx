@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks'
+import { createPressTracker, type PressTracker, type ReleaseKind } from './pressTracker'
 import {
   BADGE_GAP,
   BADGE_R,
@@ -54,50 +55,47 @@ function glyphPath(glyph: 'good' | 'bad', cx: number, cy: number, s: number): st
 }
 
 /**
- * Pointer presses for onKeyPress. Each pointer (and the keyboard) holds at most one key; release
- * fires once per press, and anything still down when the keyboard unmounts is released then.
+ * Pointer presses for onKeyPress (bookkeeping in pressTracker). Release always goes to the last
+ * callback given, so a press held when onKeyPress is removed, or when the keyboard unmounts, still
+ * gets its down=false.
  */
 function usePresses(onKeyPress: Props['onKeyPress']) {
   const cb = useRef(onKeyPress)
-  cb.current = onKeyPress
-  const pointers = useRef(new Map<number, number>()) // pointerId -> midi
-  const keys = useRef(new Set<number>()) // midis held with Enter / Space
-  useEffect(
-    () => () => {
-      for (const midi of pointers.current.values()) cb.current?.(midi, false)
-      for (const midi of keys.current) cb.current?.(midi, false)
-      pointers.current.clear()
-      keys.current.clear()
-    },
-    [],
-  )
+  if (onKeyPress) cb.current = onKeyPress
+  const tracker = useRef<PressTracker | null>(null)
+  tracker.current ??= createPressTracker()
+  const t = tracker.current
+  const releaseAll = () => {
+    for (const midi of t.releaseAll()) cb.current?.(midi, false)
+  }
+  const pressable = onKeyPress !== undefined
+  // Handlers come off the keys when onKeyPress goes away, so release what they were holding.
+  useEffect(() => {
+    if (!pressable) releaseAll()
+  }, [pressable])
+  useEffect(() => releaseAll, [])
+  const release = (kind: ReleaseKind) => (e: PointerEvent) => {
+    const midi = t.up(e, kind)
+    if (midi !== null) cb.current?.(midi, false)
+  }
   return {
     down(e: PointerEvent, midi: number) {
-      if (e.pointerType === 'mouse' && e.button !== 0) return
-      if (pointers.current.has(e.pointerId)) return
+      if (!t.down(e, midi)) return
       try {
         // A drag off the key still sends this key its pointerup.
         ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       } catch {
         // capture unsupported: pointerleave still releases
       }
-      pointers.current.set(e.pointerId, midi)
       cb.current?.(midi, true)
     },
-    up(e: PointerEvent) {
-      const midi = pointers.current.get(e.pointerId)
-      if (midi === undefined) return
-      pointers.current.delete(e.pointerId)
-      cb.current?.(midi, false)
-    },
+    up: release('up'),
+    end: release('end'),
     keyDown(midi: number) {
-      if (keys.current.has(midi)) return // auto-repeat
-      keys.current.add(midi)
-      cb.current?.(midi, true)
+      if (t.keyDown(midi)) cb.current?.(midi, true)
     },
     keyUp(midi: number) {
-      if (!keys.current.delete(midi)) return
-      cb.current?.(midi, false)
+      if (t.keyUp(midi)) cb.current?.(midi, false)
     },
   }
 }
@@ -156,9 +154,9 @@ export function Keyboard({
                 onBlur: () => presses.keyUp(k.midi),
                 onPointerDown: (e: PointerEvent) => presses.down(e, k.midi),
                 onPointerUp: presses.up,
-                onPointerCancel: presses.up,
-                onPointerLeave: presses.up,
-                onLostPointerCapture: presses.up,
+                onPointerCancel: presses.end,
+                onPointerLeave: presses.end,
+                onLostPointerCapture: presses.end,
               }
             : {}),
         }
@@ -216,7 +214,7 @@ export function Keyboard({
   return (
     <div class="keyboard-scroll">
       <svg
-        class="keyboard"
+        class={onKeyPress ? 'keyboard keyboard--pressable' : 'keyboard'}
         viewBox={`-2 0 ${viewBoxWidth} ${height}`}
         width="100%"
         preserveAspectRatio="xMidYMid meet"

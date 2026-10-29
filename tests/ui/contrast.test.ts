@@ -143,3 +143,13 @@ describe('key state marks contrast (shipped CSS)', () => {
     expect(contrastRatio(colour(r.stroke as string), black)).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe('pressable keys (shipped CSS)', () => {
+  it('keys of a pressable keyboard take touches themselves: no pan, no double-tap zoom', () => {
+    expect(rule('.keyboard--pressable .key-hit', appCss)['touch-action']).toBe('none')
+  })
+  it('the focus ring on a key is keyboard-only (:focus-visible), so mouse / touch presses show no ring', () => {
+    expect(rule('.key-hit:focus-visible .key', appCss).stroke).toBe('var(--accent)')
+    expect(appCss).not.toMatch(/\.key-hit:focus(?!-visible)/)
+  })
+})
