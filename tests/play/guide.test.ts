@@ -115,6 +115,13 @@ describe('guide: scale, one hand', () => {
 describe('guide: together', () => {
   const together: GuideTarget = { kind: 'scale', ref: { root: 'G', form: 'major' }, octaves: 1, hand: 'together' }
 
+  /** Locked on the G pair, index 1: the A pair (A3 57 + A4 69) is expected next. */
+  function lockedTogether(): GuideState {
+    let s = createGuide(together)
+    s = guideStep(s, on(55, 0), EMPTY_HELD).state
+    return guideStep(s, on(67, 50), EMPTY_HELD).state
+  }
+
   it('shows both hands, LH 12 below', () => {
     const next = guideNext(createGuide(together)) as { rh: { midi: number }; lh: { midi: number } }
     expect(next.rh.midi).toBe(gRun[0])
@@ -139,29 +146,67 @@ describe('guide: together', () => {
     expect(s.offset).toBe(0)
   })
 
-  it('a pair 200 ms apart is a slip (timeout found at the next event)', () => {
-    let s = createGuide(together)
-    s = guideStep(s, on(55, 0), EMPTY_HELD).state // G3 lock pair
-    s = guideStep(s, on(67, 50), EMPTY_HELD).state
-    expect(s.index).toBe(1)
-    s = guideStep(s, on(contains(1), 1000), EMPTY_HELD).state // A3 pending
-    const r = guideStep(s, on((gRun[1] as number), 1200), EMPTY_HELD) // A4 200 ms later
+  it('a pair 200 ms apart is one slip, no flash, and the late partner is consumed', () => {
+    let s = lockedTogether()
+    s = guideStep(s, on(57, 1000), EMPTY_HELD).state // A3 pending
+    const r = guideStep(s, on(69, 1200), EMPTY_HELD) // A4 200 ms later
     expect(r.state.slips).toBe(1)
-    expect(r.flash).toBe(57)
+    expect(r.flash).toBeNull()
     expect(r.state.index).toBe(1)
-    // the late note starts a fresh pending
-    expect(r.state.pending).toEqual({ midi: gRun[1], t: 1200 })
+    expect(r.state.pending).toBeNull()
   })
 
-  it('a pair 11 apart is a slip and clears pending', () => {
-    let s = createGuide(together)
-    s = guideStep(s, on(55, 0), EMPTY_HELD).state
-    s = guideStep(s, on(67, 50), EMPTY_HELD).state // locked, index 1
+  it('late pair then an immediate correct replay: still one slip, then advances', () => {
+    let s = lockedTogether()
+    s = guideStep(s, on(57, 1000), EMPTY_HELD).state
+    s = guideStep(s, on(69, 1200), EMPTY_HELD).state
+    s = guideStep(s, on(57, 1210), EMPTY_HELD).state
+    s = guideStep(s, on(69, 1240), EMPTY_HELD).state
+    expect(s.slips).toBe(1)
+    expect(s.index).toBe(2)
+  })
+
+  it('a stray note between the pair counts once and does not break the pair', () => {
+    let s = lockedTogether()
+    s = guideStep(s, on(57, 1000), EMPTY_HELD).state // A3
+    const stray = guideStep(s, on(61, 1010), EMPTY_HELD) // C#4
+    expect(stray.flash).toBe(61)
+    expect(stray.state.slips).toBe(1)
+    s = guideStep(stray.state, on(69, 1020), EMPTY_HELD).state // A4 completes the pair
+    expect(s.index).toBe(2)
+    s = guideStep(s, on(59, 1500), EMPTY_HELD).state // B pair
+    s = guideStep(s, on(71, 1520), EMPTY_HELD).state
+    expect(s.slips).toBe(1)
+    expect(s.index).toBe(3)
+  })
+
+  it('a wrong key first flashes once and never flashes the correct key', () => {
+    let s = lockedTogether()
+    const w = guideStep(s, on(61, 1000), EMPTY_HELD) // C#4: wrong
+    expect(w.flash).toBe(61)
+    s = guideStep(w.state, on(57, 1050), EMPTY_HELD).state // A3
+    const r = guideStep(s, on(69, 1070), EMPTY_HELD)
+    expect(r.flash).toBeNull()
+    expect(r.state.slips).toBe(1)
+    expect(r.state.index).toBe(2)
+  })
+
+  it('a late non-partner is one slip, then handled as a fresh note', () => {
+    let s = lockedTogether()
+    s = guideStep(s, on(57, 1000), EMPTY_HELD).state
+    const r = guideStep(s, on(61, 1300), EMPTY_HELD) // wrong note, late
+    expect(r.state.slips).toBe(2) // stale A3, plus C#4 itself
+    expect(r.flash).toBe(61)
+    expect(r.state.pending).toBeNull()
+  })
+
+  it('a pair 11 apart is one slip; the expected note stays pending', () => {
+    let s = lockedTogether()
     s = guideStep(s, on(57, 1000), EMPTY_HELD).state
     const r = guideStep(s, on(68, 1050), EMPTY_HELD) // 11 above
     expect(r.state.slips).toBe(1)
     expect(r.flash).toBe(68)
-    expect(r.state.pending).toBeNull()
+    expect(r.state.pending).toEqual({ midi: 57, t: 1000 })
     expect(r.state.index).toBe(1)
   })
 
@@ -171,15 +216,15 @@ describe('guide: together', () => {
     expect(guideNext(s)).toMatchObject({ rh: { midi: 67 }, lh: { midi: 55 } })
   })
 
-  it('a wrong pair (12 apart, wrong notes) is a slip after locking', () => {
-    let s = createGuide(together)
-    s = guideStep(s, on(55, 0), EMPTY_HELD).state
-    s = guideStep(s, on(67, 50), EMPTY_HELD).state
-    s = guideStep(s, on(58, 1000), EMPTY_HELD).state
-    const r = guideStep(s, on(70, 1050), EMPTY_HELD)
-    expect(r.state.slips).toBe(1)
-    expect(r.flash).toBe(70)
-    expect(r.state.index).toBe(1)
+  it('a wrong pair (12 apart, wrong notes) slips on each wrong key and never advances', () => {
+    let s = lockedTogether()
+    const a1 = guideStep(s, on(58, 1000), EMPTY_HELD)
+    expect(a1.flash).toBe(58)
+    expect(a1.state.pending).toBeNull()
+    const a2 = guideStep(a1.state, on(70, 1050), EMPTY_HELD)
+    expect(a2.flash).toBe(70)
+    expect(a2.state.slips).toBe(2)
+    expect(a2.state.index).toBe(1)
   })
 
   it('finishes a clean together run', () => {
@@ -193,10 +238,6 @@ describe('guide: together', () => {
     expect(guideNext(s)).toBeNull()
     expect(s.onsets).toHaveLength(gRun.length)
   })
-
-  function contains(i: number): number {
-    return (gRun[i] as number) - 12
-  }
 })
 
 describe('guide: chord', () => {

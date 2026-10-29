@@ -39,25 +39,52 @@ export function createGuide(target: GuideTarget): GuideState {
 }
 
 type ScaleTarget = Extract<GuideTarget, { kind: 'scale' }>
+type ChordTarget = Extract<GuideTarget, { kind: 'chord' }>
 
-/** One-hand and Together both use the RH run from octave 4 (LH-only from octave 3). Together's LH is that run minus 12. */
+interface ScaleCache {
+  run: Expected[]
+  /** Index of the top note: the run is up (0..top) then down (top+1..). */
+  top: number
+  fingers: { rh?: number[]; lh?: number[] }
+}
+
+const scaleCache = new WeakMap<ScaleTarget, ScaleCache>()
+const chordCache = new WeakMap<ChordTarget, number[][]>()
+
+function scaleInfo(t: ScaleTarget): ScaleCache {
+  let c = scaleCache.get(t)
+  if (!c) {
+    // One-hand and Together both use the RH run from octave 4 (LH-only from octave 3). Together's LH is that run minus 12.
+    c = { run: expectedRun(t.ref, t.octaves, t.hand === 'lh' ? 3 : 4), top: t.octaves * 7, fingers: {} }
+    scaleCache.set(t, c)
+  }
+  return c
+}
+
 function runFor(t: ScaleTarget): Expected[] {
-  return expectedRun(t.ref, t.octaves, t.hand === 'lh' ? 3 : 4)
+  return scaleInfo(t).run
 }
 
-/** Index of the top note: the run is up (0..top) then down (top+1..). */
-function topIndex(t: ScaleTarget): number {
-  return t.octaves * 7
-}
-
+/** Finger per run index: up[i] going up (i <= top), down[i - top] coming down (down[0] is the top note). */
 function fingerAt(t: ScaleTarget, hand: 'rh' | 'lh', i: number): number {
-  const top = topIndex(t)
-  if (i <= top) return fingeringSequence(t.ref, t.octaves, hand, 'up')[i] as number
-  return fingeringSequence(t.ref, t.octaves, hand, 'down')[i - top] as number
+  const c = scaleInfo(t)
+  let f = c.fingers[hand]
+  if (!f) {
+    const up = fingeringSequence(t.ref, t.octaves, hand, 'up')
+    const down = fingeringSequence(t.ref, t.octaves, hand, 'down')
+    f = c.run.map((_, k) => (k <= c.top ? up[k] : down[k - c.top]) as number)
+    c.fingers[hand] = f
+  }
+  return f[i] as number
 }
 
-function chordPcs(t: Extract<GuideTarget, { kind: 'chord' }>, inversion: number): number[] {
-  return chordNotes(t.root, t.type, inversion).map(chroma)
+function chordPcs(t: ChordTarget, inversion: number): number[] {
+  let c = chordCache.get(t)
+  if (!c) {
+    c = []
+    chordCache.set(t, c)
+  }
+  return (c[inversion] ??= chordNotes(t.root, t.type, inversion).map(chroma))
 }
 
 export function guideNext(s: GuideState): GuideNext {
@@ -117,37 +144,63 @@ function scaleStep(s: GuideState, t: ScaleTarget, e: Extract<MidiEvent, { type: 
   return { state: { ...s, slips: s.slips + 1 }, flash: e.midi }
 }
 
+/**
+ * Together, one mistake = one slip. Once locked, `pending` is always an expected note (RH or LH of this step).
+ * - Fresh note: expected -> pending; otherwise slip + flash.
+ * - Second note inside the window: the exact pair advances; if exactly one of the two is expected it stays pending and
+ *   the other is the slip; if neither is, one slip and nothing pending.
+ * - Second note after the window: one slip (no flash for the stale note). Its exact-octave partner arriving late is
+ *   consumed with it; any other note is then handled as a fresh one.
+ */
 function togetherStep(s: GuideState, t: ScaleTarget, e: Extract<MidiEvent, { type: 'on' }>): Step {
   const run = runFor(t)
   const first = run[0] as Expected
-  const locked = s.offset !== null
-  const slip = (flash: number, pending: GuideState['pending']): Step =>
-    locked ? { state: { ...s, slips: s.slips + 1, pending }, flash } : { state: { ...s, pending }, flash: null }
-
   const p = s.pending
-  if (p === null) return { state: { ...s, pending: { midi: e.midi, t: e.t } }, flash: null }
 
-  // The pending note timed out: it was a lone note. Count it now and let this event start a new pair.
-  if (e.t - p.t > PAIR_WINDOW_MS) return slip(p.midi, { midi: e.midi, t: e.t })
-
-  // Anything but an exact octave: a wrong pair.
-  if (Math.abs(e.midi - p.midi) !== 12) return slip(e.midi, null)
-
-  const upper = Math.max(e.midi, p.midi)
-  const onset = Math.min(e.t, p.t)
-  if (!locked) {
-    if (chroma(first.name) !== upper % 12) return { state: { ...s, pending: null }, flash: null }
-    return { state: advance(s, t, { offset: upper - first.midi, pending: null }, onset), flash: null }
+  if (s.offset === null) {
+    // Before the octave lock nothing is a slip: a pair on the tonic locks, everything else is ignored.
+    if (p === null || e.t - p.t > PAIR_WINDOW_MS) return { state: { ...s, pending: { midi: e.midi, t: e.t } }, flash: null }
+    if (Math.abs(e.midi - p.midi) === 12) {
+      const upper = Math.max(e.midi, p.midi)
+      if (chroma(first.name) === upper % 12) {
+        return { state: advance(s, t, { offset: upper - first.midi, pending: null }, Math.min(e.t, p.t)), flash: null }
+      }
+    }
+    return { state: { ...s, pending: null }, flash: null }
   }
-  if (upper - (s.offset as number) === (run[s.index] as Expected).midi) {
-    return { state: advance(s, t, { pending: null }, onset), flash: null }
+
+  const upperExpected = (run[s.index] as Expected).midi + s.offset
+  const isExpected = (m: number): boolean => m === upperExpected || m === upperExpected - 12
+  const slipped = (pending: GuideState['pending'], flash: number | null): Step => ({
+    state: { ...s, slips: s.slips + 1, pending },
+    flash,
+  })
+  const fresh = (): Step =>
+    isExpected(e.midi)
+      ? { state: { ...s, pending: { midi: e.midi, t: e.t } }, flash: null }
+      : slipped(null, e.midi)
+
+  if (p === null) return fresh()
+
+  if (e.t - p.t > PAIR_WINDOW_MS) {
+    if (Math.abs(e.midi - p.midi) === 12) return slipped(null, null)
+    return togetherStep({ ...s, slips: s.slips + 1, pending: null }, t, e)
   }
-  return slip(upper, null)
+
+  if (Math.abs(e.midi - p.midi) === 12 && Math.max(e.midi, p.midi) === upperExpected) {
+    return { state: advance(s, t, { pending: null }, Math.min(e.t, p.t)), flash: null }
+  }
+  const pe = isExpected(p.midi)
+  const ne = isExpected(e.midi)
+  if (pe && !ne) return slipped(p, e.midi)
+  if (ne && !pe) return slipped({ midi: e.midi, t: e.t }, p.midi)
+  if (pe && ne) return slipped(p, e.midi)
+  return slipped(null, e.midi)
 }
 
 function chordStep(
   s: GuideState,
-  t: Extract<GuideTarget, { kind: 'chord' }>,
+  t: ChordTarget,
   e: Extract<MidiEvent, { type: 'on' | 'off' }>,
   held: HeldState,
 ): Step {
