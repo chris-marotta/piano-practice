@@ -9,6 +9,7 @@ import {
   keyAriaLabel,
   keyLooks,
   keyRects,
+  keyboardMaxWidth,
   minRenderWidth,
   verticalLayout,
   whiteKeys,
@@ -218,7 +219,10 @@ export function Keyboard({
         viewBox={`-2 0 ${viewBoxWidth} ${height}`}
         width="100%"
         preserveAspectRatio="xMidYMid meet"
-        style={{ maxWidth: `${whiteCount * maxKeyPx}px`, minWidth: `${minRenderWidth(viewBoxWidth)}px` }}
+        style={{
+          maxWidth: keyboardMaxWidth(whiteCount, maxKeyPx, viewBoxWidth, height),
+          minWidth: `${minRenderWidth(viewBoxWidth)}px`,
+        }}
         role={interactive ? 'group' : 'img'}
         aria-label="Piano keyboard"
       >

@@ -6,6 +6,10 @@ import {
   badgeSlots,
   isBlack,
   keyAriaLabel,
+  keyboardAspect,
+  keyboardBox,
+  keyboardFitVars,
+  keyboardMaxWidth,
   minRenderWidth,
   verticalLayout,
   keyRects,
@@ -190,6 +194,34 @@ describe('minRenderWidth', () => {
   })
   it('fits an iPad landscape content column (1132px) for the widest range, C3..B6', () => {
     expect(minRenderWidth(28 * KEY.whiteW + 4)).toBeLessThan(1132)
+  })
+})
+
+describe('keyboardMaxWidth', () => {
+  it('caps the width per white key, and by --kb-max-h times the aspect ratio where a page sets it', () => {
+    expect(keyboardMaxWidth(15, 80, 604, 336)).toBe('min(1200px, calc(var(--kb-max-h, 100000px) * 1.7976))')
+  })
+  it('without --kb-max-h the fallback is never the smaller term (other screens keep the per-key cap)', () => {
+    const css = keyboardMaxWidth(29, 56, 1164, 172)
+    expect(css.startsWith('min(1624px, ')).toBe(true)
+    expect(100000 * (1164 / 172)).toBeGreaterThan(1624)
+  })
+})
+
+describe('keyboardBox / keyboardFitVars (Play sizes the keyboard to its room)', () => {
+  it('the box is the viewBox Keyboard draws: 15 white keys, both badge rows reserved', () => {
+    const { height } = verticalLayout({ rhRows: 0, lhRows: 0 }, true)
+    expect(keyboardBox(55, 79, [], true)).toEqual({ whiteCount: 15, width: 604, height })
+  })
+  it('the aspect rounds down, so the SVG never overshoots the height it is given', () => {
+    expect(keyboardAspect(604, 336)).toBe(1.7976)
+    expect(604 / keyboardAspect(604, 336)).toBeGreaterThanOrEqual(336)
+  })
+  it('vars: aspect, width cap per white key, and the MIN_SCALE height', () => {
+    const box = { whiteCount: 15, width: 604, height: 336 }
+    const minH = Math.ceil(minRenderWidth(604) / 1.7976)
+    expect(keyboardFitVars(box, 80)).toBe(`--kb-aspect: 1.7976; --kb-max-w: 1200px; --kb-min-h: ${minH}px`)
+    expect(minH).toBeGreaterThanOrEqual(336 * MIN_SCALE)
   })
 })
 

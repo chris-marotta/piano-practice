@@ -7,17 +7,20 @@ import {
   chordReadout,
   effectiveMode,
   effectiveToggles,
+  fittedWindow,
   guideAvailable,
   playMarks,
   reserveRowsFor,
   shiftWindow,
   showConnectHint,
+  shownWindow,
   targetPitchClasses,
   type PlayMode,
   type PlayTarget,
   type PlayToggles,
 } from '../../src/ui/screens/play/playView'
-import type { GuideNext } from '../../src/play/guide'
+import { createGuide, type GuideNext, type GuideState } from '../../src/play/guide'
+import { isBlack, whiteKeys } from '../../src/ui/components/keyboardLayout'
 import { CHORD_TYPES, maxInversion } from '../../src/theory/chords'
 import { MAJOR_ROOTS, MINOR_ROOTS } from '../../src/theory/scales'
 
@@ -207,6 +210,107 @@ describe('keyboard window', () => {
   it('stays put for a note inside', () => {
     const w = shiftWindow(DEFAULT_WINDOW, 84)
     expect(w).toEqual(DEFAULT_WINDOW)
+  })
+})
+
+describe('fittedWindow (keyboard zoomed to the run)', () => {
+  type Form = 'major' | 'natural' | 'harmonic' | 'melodic'
+  const scale = (root: string, octaves: 1 | 2 = 1, form: Form = 'major'): PlayTarget => ({
+    kind: 'scale',
+    ref: { root, form },
+    octaves,
+  })
+  const whites = (w: { low: number; high: number }) => whiteKeys(w.low, w.high).length
+
+  it('nothing picked: the Roli 49 keys', () => {
+    expect(fittedWindow(NONE, 'rh')).toEqual(DEFAULT_WINDOW)
+  })
+  it('C major RH, 1 octave: C4..C5 + 2 white keys each side, widened to 15 white keys (bias up): G3..G5', () => {
+    const w = fittedWindow(scale('C'), 'rh')
+    expect(w).toEqual({ low: 55, high: 79 })
+    expect(whites(w)).toBe(15)
+  })
+  it('C major RH, 2 octaves: C4..C6 + 2 each side (19 white keys, no widening): A3..E6', () => {
+    const w = fittedWindow(scale('C', 2), 'rh')
+    expect(w).toEqual({ low: 57, high: 88 })
+    expect(whites(w)).toBe(19)
+  })
+  it('LH only starts at octave 3: G2..G4', () => {
+    expect(fittedWindow(scale('C'), 'lh')).toEqual({ low: 43, high: 67 })
+  })
+  it('Together spans the LH run at octave 3 through the RH top at octave 4: A2..E5', () => {
+    expect(fittedWindow(scale('C'), 'together')).toEqual({ low: 45, high: 76 })
+  })
+  it('a black-key tonic: F♯ major margins from the nearest white keys, widened evenly to C4..C6', () => {
+    expect(fittedWindow(scale('F#'), 'rh')).toEqual({ low: 60, high: 84 })
+  })
+  it('a chord spans every inversion at octave 4 (C: C4..E5), +2 each side, odd remainder up: A3..A5', () => {
+    const w = fittedWindow(C_CHORD, 'rh')
+    expect(w).toEqual({ low: 57, high: 81 })
+    expect(whites(w)).toBe(15)
+  })
+  it('every scale and chord: white edges and at least 15 white keys', () => {
+    const roots = [...new Set([...MAJOR_ROOTS, ...MINOR_ROOTS])]
+    const targets: PlayTarget[] = []
+    for (const root of roots) {
+      for (const form of ['major', 'natural', 'harmonic', 'melodic'] as const)
+        for (const octaves of [1, 2] as const) targets.push(scale(root, octaves, form))
+      for (const { id } of CHORD_TYPES) targets.push({ kind: 'chord', root, type: id, inversion: 0 })
+    }
+    for (const t of targets)
+      for (const hand of ['rh', 'lh', 'together'] as const) {
+        const w = fittedWindow(t, hand)
+        expect(isBlack(w.low) || isBlack(w.high)).toBe(false)
+        expect(whites(w)).toBeGreaterThanOrEqual(15)
+      }
+  })
+  it('P14: every guided chord step lands inside the fitted window, 2 white keys clear of each edge', () => {
+    const roots = [...new Set([...MAJOR_ROOTS, ...MINOR_ROOTS])]
+    const tight: string[] = []
+    for (const root of roots)
+      for (const { id } of CHORD_TYPES) {
+        const t: PlayTarget = { kind: 'chord', root, type: id, inversion: 0 }
+        const w = fittedWindow(t, 'rh')
+        for (let inv = 0; inv <= maxInversion(id); inv++) {
+          const next: GuideNext = { chord: { pcs: [], bassPc: 0, inversion: inv } }
+          const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+          const midis = ms.filter((m) => m.state === undefined).map((m) => m.midi)
+          const below = whiteKeys(w.low, Math.min(...midis) - 1).length
+          const above = whiteKeys(Math.max(...midis) + 1, w.high).length
+          if (below < 2 || above < 2) tight.push(`${root}${id}/${inv}`)
+        }
+      }
+    expect(tight).toEqual([])
+  })
+})
+
+describe('shownWindow (which window the keyboard draws)', () => {
+  const C1: PlayTarget = { kind: 'scale', ref: { root: 'C', form: 'major' }, octaves: 1 }
+  const fitted = { low: 55, high: 79 }
+  const follow = { low: 67, high: 91 }
+  const guided = (offset: number | null): GuideState => ({
+    ...createGuide({ kind: 'scale', ref: { root: 'C', form: 'major' }, octaves: 1, hand: 'rh' }),
+    offset,
+  })
+  it('Free and Check draw the followed window (fitted, moved by whole octaves on notes off screen)', () => {
+    expect(shownWindow({ mode: 'free', target: C1, fitted, follow, guide: null })).toBe(follow)
+    expect(shownWindow({ mode: 'check', target: C1, fitted, follow, guide: null })).toBe(follow)
+  })
+  it('Guided scale before the octave lock: the fitted window as is', () => {
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(null) })).toBe(fitted)
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: null })).toBe(fitted)
+  })
+  it('Guided scale once locked: the fitted window moved by the lock offset', () => {
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(0) })).toEqual(fitted)
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(-24) })).toEqual({ low: 31, high: 55 })
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(12) })).toEqual({ low: 67, high: 91 })
+  })
+  it('an offset that is not a whole octave moves by the nearest whole octave (edges stay on white keys)', () => {
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(11) })).toEqual({ low: 67, high: 91 })
+    expect(shownWindow({ mode: 'guided', target: C1, fitted, follow, guide: guided(-5) })).toEqual(fitted)
+  })
+  it('Guided chord has no octave lock: it follows like Free (P14 marks move with it)', () => {
+    expect(shownWindow({ mode: 'guided', target: C_CHORD, fitted, follow, guide: null })).toBe(follow)
   })
 })
 

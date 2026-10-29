@@ -210,6 +210,41 @@ export function minRenderWidth(viewBoxWidth: number): number {
   return Math.ceil(viewBoxWidth * MIN_SCALE)
 }
 
+/** Width over height, rounded down (4 places), so an SVG sized by it is never taller than the height it was given. */
+export function keyboardAspect(viewBoxWidth: number, height: number): number {
+  return Math.floor((viewBoxWidth / height) * 1e4) / 1e4
+}
+
+/**
+ * CSS max-width (px) for the SVG: `maxKeyPx` per white key, and no wider than `--kb-max-h` (a height the page can
+ * set, e.g. Play's keyboard box) times the aspect ratio, so the keys grow until either runs out. Without the property
+ * the fallback never binds.
+ */
+export function keyboardMaxWidth(whiteCount: number, maxKeyPx: number, viewBoxWidth: number, height: number): string {
+  return `min(${whiteCount * maxKeyPx}px, calc(var(--kb-max-h, 100000px) * ${keyboardAspect(viewBoxWidth, height)}))`
+}
+
+/** The SVG Keyboard draws for these props, in units (the viewBox: white keys plus the 4-unit edge, and its height). */
+export function keyboardBox(
+  low: number,
+  high: number,
+  marks: KeyMark[],
+  reserveRows: ReserveRows = false,
+): { whiteCount: number; width: number; height: number } {
+  const whiteCount = whiteKeys(low, high).length
+  return { whiteCount, width: whiteCount * KEY.whiteW + 4, height: verticalLayout(badgeSlots(marks, low), reserveRows).height }
+}
+
+/**
+ * CSS custom properties for a box that sizes its keyboard to the room it gets (Play): the aspect ratio, the width cap
+ * (maxKeyPx per white key) and the smallest height the keyboard renders at (MIN_SCALE).
+ */
+export function keyboardFitVars(box: { whiteCount: number; width: number; height: number }, maxKeyPx: number): string {
+  const aspect = keyboardAspect(box.width, box.height)
+  const minH = Math.ceil(minRenderWidth(box.width) / aspect)
+  return `--kb-aspect: ${aspect}; --kb-max-w: ${box.whiteCount * maxKeyPx}px; --kb-min-h: ${minH}px`
+}
+
 // ---- accessibility ----
 
 const SHARP_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']

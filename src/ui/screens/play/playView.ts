@@ -5,7 +5,7 @@ import { expectedRun } from '../../../play/sequence'
 import { chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
 import { formatNote, formatScale } from '../../../theory/format'
 import { chroma, keySignature, noteMidi, scaleNotes, type ScaleRef } from '../../../theory/scales'
-import type { KeyMark, ReserveRows } from '../../components/keyboardLayout'
+import { isBlack, whiteKeys, type KeyMark, type ReserveRows } from '../../components/keyboardLayout'
 import { chordPanel, detection } from '../library/libraryView'
 
 export type PlayMode = 'free' | 'guided' | 'check'
@@ -79,6 +79,72 @@ export function shiftWindow(w: KeyWindow, midi: number): KeyWindow {
     high -= 12
   }
   return low === w.low ? w : { low, high }
+}
+
+/** White keys of margin each side of the run, and the narrowest window drawn (about two octaves). */
+const FIT_MARGIN = 2
+const FIT_MIN_WHITES = 15
+
+/** The `n`th white key strictly below (dir -1) or above (dir 1) `midi`. */
+function whiteStep(midi: number, n: number, dir: -1 | 1): number {
+  let m = midi
+  for (let left = n; left > 0; ) {
+    m += dir
+    if (!isBlack(m)) left--
+  }
+  return m
+}
+
+/** Every note the run / guide can ask for, at its home octave. */
+function fitNotes(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand): number[] {
+  if (target.kind === 'chord') {
+    const out: number[] = []
+    for (let inv = 0; inv <= maxInversion(target.type); inv++) out.push(...chordNotes(target.root, target.type, inv).map(noteMidi))
+    return out
+  }
+  // As the guide and check use them: RH from octave 4, LH-only from octave 3, Together's LH is the RH run minus 12.
+  const run = expectedRun(target.ref, target.octaves, hand === 'lh' ? 3 : 4).map((e) => e.midi)
+  return hand === 'together' ? [...run, ...run.map((m) => m - 12)] : run
+}
+
+/**
+ * The window drawn for a target, zoomed to what it asks for: the run (scale) or every inversion's voicing at octave 4
+ * (chord), plus 2 white keys each side, widened evenly to at least 15 white keys (an odd one goes on top). Edges are
+ * white keys. Nothing picked: the Roli's 49 keys. `hand`: the hand in force (RH outside a guided scale).
+ */
+export function fittedWindow(target: PlayTarget, hand: PlayHand): KeyWindow {
+  if (target.kind === 'none') return DEFAULT_WINDOW
+  const notes = fitNotes(target, hand)
+  let low = whiteStep(Math.min(...notes), FIT_MARGIN, -1)
+  let high = whiteStep(Math.max(...notes), FIT_MARGIN, 1)
+  const short = FIT_MIN_WHITES - whiteKeys(low, high).length
+  if (short > 0) {
+    low = whiteStep(low, Math.floor(short / 2), -1)
+    high = whiteStep(high, Math.ceil(short / 2), 1)
+  }
+  return { low, high }
+}
+
+interface ShownArgs {
+  mode: PlayMode
+  target: PlayTarget
+  fitted: KeyWindow
+  /** The fitted window moved by whole octaves on notes played off screen (shiftWindow). */
+  follow: KeyWindow
+  guide: GuideState | null
+}
+
+/**
+ * The window the keyboard draws. Guided scale: the fitted window, moved by the octave the tonic locked (whole octaves;
+ * the offset is one in practice, else the nearest). Everywhere else (Free, Check, a guided chord, which has no lock):
+ * the followed window.
+ */
+export function shownWindow(a: ShownArgs): KeyWindow {
+  if (a.mode !== 'guided' || a.target.kind !== 'scale') return a.follow
+  const offset = a.guide?.offset ?? null
+  if (offset === null) return a.fitted
+  const shift = Math.round(offset / 12) * 12
+  return shift === 0 ? a.fitted : { low: a.fitted.low + shift, high: a.fitted.high + shift }
 }
 
 /** Spelling for played notes: the key signature's accidental (P4). */

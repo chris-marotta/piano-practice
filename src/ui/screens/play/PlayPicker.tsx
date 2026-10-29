@@ -3,7 +3,7 @@ import type { ScaleForm } from '../../../theory/scales'
 import { Segmented } from '../../components/Segmented'
 import { clampInversion, inversionOptions, respellForForm } from '../library/libraryView'
 import { RootPicker } from '../library/RootPicker'
-import { chordSel, octaves, octavesSel, scaleSel, targetKind, type TargetKind } from './playState'
+import { chordSel, octavesSel, scaleSel, targetKind, type TargetKind } from './playState'
 
 const KINDS: { value: TargetKind; label: string }[] = [
   { value: 'none', label: 'Nothing' },
@@ -64,7 +64,7 @@ function ScaleControls() {
   return (
     <>
       <Segmented options={FORMS} value={ref.form} onChange={setForm} label="Scale form" />
-      <Segmented options={OCTAVES} value={octaves.value} onChange={(o) => (octavesSel.value = o)} label="Octaves" />
+      <Segmented options={OCTAVES} value={octavesSel.value} onChange={(o) => (octavesSel.value = o)} label="Octaves" />
     </>
   )
 }

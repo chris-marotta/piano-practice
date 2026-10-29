@@ -1,8 +1,10 @@
-/* Play tab: picker, mode and toggles on top, a status band, the 49-key keyboard anchored at the bottom.
-   Tokens live in tokens.css. Budget at 1180 x 820: ~696px between the safe paddings and the tab bar. The tightest
-   case is a guided scale with LH or Together (both badge rows, keyboard ~322px): 8px gaps keep it on one screen. */
+/* Play tab: picker, mode and toggles on top, then the stage: a status band and the keyboard anchored at the bottom.
+   Tokens live in tokens.css. Budget at 1180 x 820: ~696px between the safe paddings and the tab bar. The keyboard is
+   zoomed to the target (>= 15 white keys) and grows until it fills the width or the room the band leaves; the
+   tightest case is a guided scale with LH or Together (both badge rows). */
 
 .play {
+  --band-min: 96px;
   gap: var(--s-2);
   /* Fill the screen so the keyboard sits at the bottom and doesn't move when the band changes height. */
   min-height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - 2 * var(--s-5));
@@ -72,13 +74,28 @@
   font-size: 18px;
 }
 
+/* ---- stage: the band and the keyboard share the rest of the screen ---- */
+
+/* The rest of the screen, sized by the column rather than its content (a size container), so the keyboard can ask for
+   the full-width height (100cqw / aspect) and give some back when the band needs more (a Check card with issues).
+   The floor and the scroll only matter when the controls wrap on a narrow screen. */
+.play-stage {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: calc(var(--band-min) + var(--s-2) + 160px);
+  container-type: size;
+  overflow-y: auto;
+}
+
 /* ---- status band: chord readout, guided progress, or the result card ---- */
 
 .play-band {
   display: flex;
   flex-direction: column;
   flex: 1 0 auto;
-  min-height: 96px;
+  min-height: var(--band-min);
 }
 
 /* Status and result fill the band, so free space goes to them rather than to a gap over the keys. */
@@ -88,7 +105,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-5);
-  min-height: 96px;
+  min-height: var(--band-min);
   padding: var(--s-3) var(--s-5);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -241,8 +258,16 @@
 
 /* ---- keyboard ---- */
 
+/* Set inline from Play.tsx: --kb-aspect (width / height), --kb-max-w (the per-key cap), --kb-min-h (MIN_SCALE).
+   The SVG fills this box's height (--kb-max-h, 100cqh of this box) or the width, whichever runs out first. */
 .play-keyboard {
-  margin-top: auto;
+  flex: 0 1 calc(min(100cqw, var(--kb-max-w)) / var(--kb-aspect));
+  min-height: var(--kb-min-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  container-type: size;
+  --kb-max-h: 100cqh;
 }
 
 .play-keyboard .stage {
@@ -267,12 +292,8 @@
   }
 
   .play {
+    --band-min: 72px;
     min-height: calc(100dvh - var(--tabbar-h) - var(--safe-bottom) - var(--s-3));
-  }
-
-  .play-band,
-  .play-status {
-    min-height: 72px;
   }
 
   .play-status {

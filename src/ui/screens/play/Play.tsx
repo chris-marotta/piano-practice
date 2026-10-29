@@ -4,6 +4,7 @@ import { audioReady, unlockAudio } from '../../../audio/unlock'
 import { midiStatus } from '../../../midi/access'
 import { clearKeyboard, emitKeyboard, heldNotes, onKeyboard } from '../../../midi/input'
 import { formatNote, formatScale } from '../../../theory/format'
+import { keyboardBox, keyboardFitVars } from '../../components/keyboardLayout'
 import { MidiChip } from '../../components/MidiChip'
 import { Segmented } from '../../components/Segmented'
 import { app } from '../../state'
@@ -11,11 +12,10 @@ import { ScrollKeyboard } from '../steps/ScrollKeyboard'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
 import { PlayPicker } from './PlayPicker'
-import { hand, keyWindow, mode, playTarget, toggles } from './playState'
+import { fitted, hand, keyWindow, mode, playHand, playMode, playTarget, toggles } from './playState'
 import {
   checkAvailable,
   chordReadout,
-  effectiveMode,
   effectiveToggles,
   guideAvailable,
   guidedStatus,
@@ -23,6 +23,7 @@ import {
   reserveRowsFor,
   shiftWindow,
   showConnectHint,
+  shownWindow,
   targetTitle,
   type PlayHand,
   type PlayMode,
@@ -48,6 +49,11 @@ const EMPTY_STATE = 'Connect a keyboard for the full experience.'
 const HINT_ID = 'play-mode-hint'
 /** On-screen taps have no velocity: a medium touch. */
 const TAP_VELOCITY = 80
+/**
+ * ASSUMED: white-key width cap (px). A 15-white-key window then fills the 1132px column at 1180 and 1440 wide
+ * (15 x 80 = 1200) unless the height runs out first (play.css), and a short window doesn't grow giant keys.
+ */
+const PLAY_KEY_PX = 80
 
 function modeHint(target: PlayTarget): string | null {
   if (target.kind === 'none') return 'Pick a scale or chord for Guided and Check'
@@ -82,16 +88,16 @@ function onKeyPress(midi: number, down: boolean): void {
 /** Play against a scale, a chord or nothing: Free (marks + chord name), Guided (next note) or Check (from memory). */
 export function Play() {
   const target = playTarget.value
-  const m = effectiveMode(mode.value, target)
-  // Hand only shapes a guided scale; elsewhere a hand change must not restart the run.
-  const h: PlayHand = m === 'guided' && target.kind === 'scale' ? hand.value : 'rh'
+  const m = playMode.value
+  const h = playHand.value
   const t = toggles.value
   // Check forces the mark toggles off; with nothing picked they have nothing to show, so they read Off too.
   const forced = effectiveToggles(m, t)
   const shown = target.kind === 'none' ? { ...forced, highlight: false, colours: false, fingers: false } : forced
-  const win = keyWindow.value
   const held = heldNotes.value.held
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
+  const guide = run?.guide() ?? null
+  const win = shownWindow({ mode: m, target, fitted: fitted.value, follow: keyWindow.value, guide })
   const droneOn = t.drone && target.kind !== 'none'
   useDrone(rootOf(target), droneOn, app.value.settings.droneVolumeDb)
 
@@ -118,7 +124,8 @@ export function Play() {
   const hint = modeHint(target)
   const marksLocked = m === 'check' || target.kind === 'none'
   const marks = playMarks({ mode: m, target, toggles: t, held, next: run?.next() ?? null, window: win, flash })
-  const guide = run?.guide() ?? null
+  const reserve = reserveRowsFor(m, target, h)
+  const fit = keyboardFitVars(keyboardBox(win.low, win.high, marks, reserve), PLAY_KEY_PX)
   const status = m === 'guided' && guide ? guidedStatus(target, h, guide) : null
 
   return (
@@ -157,49 +164,53 @@ export function Play() {
         </div>
       </div>
 
-      {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
-      <div class="play-band" aria-live="polite">
-        {outcome ? (
-          <RunResult outcome={outcome} onAgain={again} />
-        ) : (
-          <div class="play-status">
-            {m === 'free' && (
-              <div class="play-status__main">
-                <span class="play-status__label">Holding</span>
-                <p class="play-readout">{chordReadout(held)}</p>
+      {/* The keyboard grows to the column width or the room left (play.css); the band takes the rest. */}
+      <div class="play-stage">
+        {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
+        <div class="play-band" aria-live="polite">
+          {outcome ? (
+            <RunResult outcome={outcome} onAgain={again} />
+          ) : (
+            <div class="play-status">
+              {m === 'free' && (
+                <div class="play-status__main">
+                  <span class="play-status__label">Holding</span>
+                  <p class="play-readout">{chordReadout(held)}</p>
+                </div>
+              )}
+              {status && (
+                <div class="play-status__main">
+                  <p class="play-status__headline">{status.headline}</p>
+                  <p class="play-status__detail">{status.detail}</p>
+                </div>
+              )}
+              {m === 'check' && target.kind === 'scale' && (
+                <div class="play-status__main">
+                  <p class="play-status__headline">From memory: {formatScale(target.ref)}</p>
+                  <p class="play-status__detail">
+                    Start on {formatNote(target.ref.root)}. The result shows when you finish.
+                  </p>
+                </div>
+              )}
+              <div class="play-status__side">
+                {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
+                {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
               </div>
-            )}
-            {status && (
-              <div class="play-status__main">
-                <p class="play-status__headline">{status.headline}</p>
-                <p class="play-status__detail">{status.detail}</p>
-              </div>
-            )}
-            {m === 'check' && target.kind === 'scale' && (
-              <div class="play-status__main">
-                <p class="play-status__headline">From memory: {formatScale(target.ref)}</p>
-                <p class="play-status__detail">
-                  Start on {formatNote(target.ref.root)}. The result shows when you finish.
-                </p>
-              </div>
-            )}
-            <div class="play-status__side">
-              {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
-              {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div class="play-keyboard">
-        <ScrollKeyboard
-          low={win.low}
-          high={win.high}
-          marks={marks}
-          firstMidi={win.low}
-          reserveRows={reserveRowsFor(m, target, h)}
-          onKeyPress={onKeyPress}
-        />
+        <div class="play-keyboard" style={fit}>
+          <ScrollKeyboard
+            low={win.low}
+            high={win.high}
+            marks={marks}
+            firstMidi={win.low}
+            reserveRows={reserve}
+            maxKeyPx={PLAY_KEY_PX}
+            onKeyPress={onKeyPress}
+          />
+        </div>
       </div>
     </section>
   )
