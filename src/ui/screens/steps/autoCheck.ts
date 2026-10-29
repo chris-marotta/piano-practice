@@ -1,14 +1,17 @@
 // Session auto-check (spec §6), pure: rep tile assignment, chord matching, and the per-step run checker. No Preact,
 // no window: time comes in on the notes and through tick(now), so it is unit tested in node.
-import type { PlayedNote } from '../../../play/analyse'
-import { createRunDetector, type RunHand } from '../../../play/runDetect'
+import { analyseRun, type PlayedNote } from '../../../play/analyse'
+import { createRunDetector, type FinishedRun, type RunHand } from '../../../play/runDetect'
 import { expectedRun } from '../../../play/sequence'
 import { chordNotes, type DiatonicChord } from '../../../theory/chords'
 import { chroma, type ScaleRef } from '../../../theory/scales'
-import { judgeRun, type RunOutcome } from '../play/playRun'
+import { outcomeOf, type RunOutcome } from '../play/playRun'
 import { preferFor } from '../play/playView'
 
 export type RepKind = RunHand
+
+/** P15: a one-hand run this many semitones (or more) below the RH run from octave 4 is the left hand. */
+const LH_OFFSET = 12
 
 /** The six rep tiles, in order: Right hand ×2, Left hand ×2, Together ×2. */
 export const REP_KINDS: RepKind[] = ['rh', 'rh', 'lh', 'lh', 'together', 'together']
@@ -82,16 +85,22 @@ export interface StepChecker {
 }
 
 /**
- * One run detector for a scale step. A finished run is judged against the RH run (octave 4) or, for a LH run, the LH
- * run (octave 3); Together uses RH. The analyser's octave-offset search absorbs whichever octave was actually played.
+ * One run detector for a scale step. Every run is analysed against the RH run from octave 4; the analyser's
+ * octave-offset search absorbs whichever octave was actually played. Hand (P15): Together comes from the detector's
+ * pair ratio; a one-hand run is LH when its offset is an octave or more below (≤ −12), else RH. (The detector's
+ * median-below-60 rule read LH runs from G3, A3 or B3 as RH.)
  */
 export function createStepChecker(ref: ScaleRef, octaves: 1 | 2): StepChecker {
   const rh = expectedRun(ref, octaves, 4)
-  const lh = expectedRun(ref, octaves, 3)
   const prefer = preferFor(ref)
   const detector = createRunDetector({ tonicPc: chroma(ref.root), expectedLength: rh.length })
-  const judge = (run: ReturnType<typeof detector.push>): StepRun | null =>
-    run ? { hand: run.hand, outcome: judgeRun(run.hand === 'lh' ? lh : rh, run, prefer) } : null
+  const judge = (run: FinishedRun | null): StepRun | null => {
+    if (!run) return null
+    const together = run.hand === 'together'
+    const a = analyseRun(rh, run.notes, { together, prefer })
+    const hand: RepKind = together ? 'together' : a.offset <= -LH_OFFSET ? 'lh' : 'rh'
+    return { hand, outcome: outcomeOf(a, prefer) }
+  }
   return {
     push: (n) => judge(detector.push(n)),
     tick: (now) => judge(detector.tick(now)),

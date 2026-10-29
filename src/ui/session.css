@@ -384,12 +384,16 @@
 .run-dialog {
   width: calc(100% - 2 * var(--s-5));
   max-width: 920px;
-  padding: var(--s-5);
+  padding: 0; /* on __body, so a tap on the padding isn't a backdrop tap */
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
   font-size: var(--fs-body);
+}
+
+.run-dialog__body {
+  padding: var(--s-5);
 }
 
 .run-dialog::backdrop {

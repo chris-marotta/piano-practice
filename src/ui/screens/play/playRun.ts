@@ -2,7 +2,7 @@
 // time comes in on the events and through tick(now), so it is unit tested in node.
 import { EMPTY_HELD, reduceHeld, type HeldState } from '../../../midi/held'
 import type { MidiEvent } from '../../../midi/parse'
-import { analyseRun, describeIssue } from '../../../play/analyse'
+import { analyseRun, describeIssue, type RunAnalysis } from '../../../play/analyse'
 import { createGuide, guideNext, guideResult, guideStep, type GuideNext, type GuideState, type GuideTarget } from '../../../play/guide'
 import { createRunDetector, type FinishedRun } from '../../../play/runDetect'
 import { expectedRun, type Expected } from '../../../play/sequence'
@@ -73,7 +73,11 @@ function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand
 
 /** A detected run analysed against `expected`, as a Check result: issues in plain words, timing for the strip. */
 export function judgeRun(expected: Expected[], run: FinishedRun, prefer: '#' | 'b'): RunOutcome {
-  const a = analyseRun(expected, run.notes, { together: run.hand === 'together', prefer })
+  return outcomeOf(analyseRun(expected, run.notes, { together: run.hand === 'together', prefer }), prefer)
+}
+
+/** An analysis as a Check result (for callers that also need the analysis itself, e.g. its octave offset). */
+export function outcomeOf(a: RunAnalysis, prefer: '#' | 'b'): RunOutcome {
   const issues = [...a.wrong, ...a.missed, ...a.extra]
     .sort((x, y) => x.index - y.index)
     .map((i) => describeIssue(i, prefer))

@@ -123,6 +123,43 @@ describe('createStepChecker', () => {
     expect(done?.outcome.slips).toBe(0)
   })
 
+  describe('hand by octave offset vs the RH run from octave 4 (P15)', () => {
+    const G = { root: 'G', form: 'major' as const }
+    const finish = (notes: { midi: number; t: number }[]) => {
+      const checker = createStepChecker(G, 2)
+      // A Together run finishes on push (the final tonic's partner); one-hand runs on tick after the pair window.
+      const pushed = notes.map((n) => checker.push(n)).filter((x) => x !== null)
+      return pushed[0] ?? checker.tick((notes[notes.length - 1]?.t ?? 0) + 200)
+    }
+    const g4 = expectedRun(G, 2, 4).map((e) => e.midi)
+
+    it('a G major 2-octave LH run from G3 → lh (median rule would say rh)', () => {
+      const done = finish(play(g4.map((m) => m - 12)))
+      expect(done?.hand).toBe('lh')
+      expect(done?.outcome.slips).toBe(0)
+    })
+
+    it('RH from G4 → rh', () => {
+      expect(finish(play(g4))?.hand).toBe('rh')
+    })
+
+    it('RH played an octave up (+12) → rh', () => {
+      const done = finish(play(g4.map((m) => m + 12)))
+      expect(done?.hand).toBe('rh')
+      expect(done?.outcome.slips).toBe(0)
+    })
+
+    it('Together stays Together (pair ratio)', () => {
+      const notes = g4.flatMap((m, i) => [
+        { midi: m - 12, t: 1000 + i * 400 },
+        { midi: m, t: 1010 + i * 400 },
+      ])
+      const done = finish(notes)
+      expect(done?.hand).toBe('together')
+      expect(done?.outcome.slips).toBe(0)
+    })
+  })
+
   it('three wrong notes → 3 slips', () => {
     const checker = createStepChecker(E, 1)
     const midis = expectedRun(E, 1, 4).map((e) => e.midi)

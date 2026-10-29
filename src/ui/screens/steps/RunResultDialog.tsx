@@ -41,22 +41,25 @@ export function RunResultDialog({ title, outcome, onClose, onUntick }: Props) {
         e.preventDefault()
         onClose()
       }}
-      // A tap on the backdrop lands on the <dialog> itself; taps on the card land on its children.
+      // Only a backdrop tap lands on the <dialog> itself: the dialog has no padding and __body fills it, so taps
+      // anywhere inside the card (its padding included) land on __body or below.
       onClick={(e) => {
         if (e.target === ref.current) onClose()
       }}
     >
-      <h2 id={`${id}-title`} class="run-dialog__title">
-        {title}
-      </h2>
-      <RunResult outcome={outcome} />
-      <div class="run-dialog__actions">
-        <button type="button" class="btn" onClick={onUntick}>
-          Untick
-        </button>
-        <button ref={closeRef} type="button" class="btn btn--primary" onClick={onClose}>
-          Close
-        </button>
+      <div class="run-dialog__body">
+        <h2 id={`${id}-title`} class="run-dialog__title">
+          {title}
+        </h2>
+        <RunResult outcome={outcome} />
+        <div class="run-dialog__actions">
+          <button type="button" class="btn" onClick={onUntick}>
+            Untick
+          </button>
+          <button ref={closeRef} type="button" class="btn btn--primary" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
     </dialog>
   )
