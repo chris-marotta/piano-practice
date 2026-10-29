@@ -2,11 +2,11 @@
 import type { MidiStatus } from '../../../midi/access'
 import { guideRun, type GuideNext, type GuideState } from '../../../play/guide'
 import { expectedRun, type Expected } from '../../../play/sequence'
-import { chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
+import { CHORD_TYPES, chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
 import { formatNote, formatScale } from '../../../theory/format'
-import { chroma, keySignature, noteMidi, scaleNotes, type ScaleRef } from '../../../theory/scales'
+import { chroma, keySignature, noteMidi, scaleNotes, type ScaleForm, type ScaleRef } from '../../../theory/scales'
 import { isBlack, whiteKeys, type KeyMark, type ReserveRows } from '../../components/keyboardLayout'
-import { chordPanel, detection } from '../library/libraryView'
+import { chordPanel, detection, pickerKeys, type PickerContext } from '../library/libraryView'
 
 export type PlayMode = 'free' | 'guided' | 'check'
 export type PlayHand = 'rh' | 'lh' | 'together'
@@ -261,6 +261,42 @@ export function reserveRowsFor(mode: PlayMode, target: PlayTarget, hand: PlayHan
   if (mode !== 'guided') return false
   if (target.kind === 'scale' && hand !== 'rh') return true
   return 'rh'
+}
+
+// ---- random pick ----
+
+/** One item, by an rng in [0, 1) (a 1 still lands on the last item). */
+const pick = <T>(items: readonly T[], rng: () => number): T =>
+  items[Math.min(items.length - 1, Math.floor(rng() * items.length))] as T
+
+/** The RootPicker's 12 roots for a form or for chords, spelled as it offers them; `skipPc`: one pitch class left out. */
+const rootsFor = (ctx: PickerContext, skipPc: number | null): string[] =>
+  pickerKeys('C', ctx)
+    .map((k) => k.root)
+    .filter((r) => chroma(r) !== skipPc)
+
+/**
+ * Random: a form from major plus the minor forms enabled in Settings, then a root the RootPicker offers for that form.
+ * Never the current scale (same form and pitch class, whatever the spelling). The octaves choice is the caller's.
+ */
+export function randomScale(
+  current: ScaleRef,
+  minorForms: { natural: boolean; harmonic: boolean; melodic: boolean },
+  rng: () => number,
+): ScaleRef {
+  const forms: ScaleForm[] = ['major', ...(['natural', 'harmonic', 'melodic'] as const).filter((f) => minorForms[f])]
+  const form = pick(forms, rng)
+  const root = pick(rootsFor(form, form === current.form ? chroma(current.root) : null), rng)
+  return { root, form }
+}
+
+type PlayChord = { root: string; type: ChordTypeId; inversion: number }
+
+/** Random: any chord type, any root the chord RootPicker offers, root position. Never the current root and type. */
+export function randomChord(current: PlayChord, rng: () => number): PlayChord {
+  const type = pick(CHORD_TYPES.map((t) => t.id), rng)
+  const root = pick(rootsFor('chord', type === current.type ? chroma(current.root) : null), rng)
+  return { root, type, inversion: 0 }
 }
 
 // ---- words ----

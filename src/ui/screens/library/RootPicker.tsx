@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact'
 import { Segmented } from '../../components/Segmented'
 import { pickerKeys, spellingOptions, type PickerContext } from './libraryView'
 
@@ -5,10 +6,12 @@ interface Props {
   root: string
   context: PickerContext
   onChange: (root: string) => void
+  /** Extra controls at the end of the row (Play's Random). */
+  children?: ComponentChildren
 }
 
 /** 12 large root buttons, C..B (black-key roots on a darker face), plus the enharmonic spelling toggle. */
-export function RootPicker({ root, context, onChange }: Props) {
+export function RootPicker({ root, context, onChange, children }: Props) {
   const keys = pickerKeys(root, context)
   const spellings = spellingOptions(root)
   return (
@@ -33,6 +36,7 @@ export function RootPicker({ root, context, onChange }: Props) {
           <p class="roots__single">One spelling</p>
         )}
       </div>
+      {children}
     </div>
   )
 }

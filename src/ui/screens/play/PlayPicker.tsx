@@ -1,9 +1,11 @@
 import { CHORD_TYPES, type ChordTypeId } from '../../../theory/chords'
 import type { ScaleForm } from '../../../theory/scales'
 import { Segmented } from '../../components/Segmented'
+import { app } from '../../state'
 import { clampInversion, inversionOptions, respellForForm } from '../library/libraryView'
 import { RootPicker } from '../library/RootPicker'
 import { chordSel, octavesSel, scaleSel, targetKind, type TargetKind } from './playState'
+import { randomChord, randomScale } from './playView'
 
 const KINDS: { value: TargetKind; label: string }[] = [
   { value: 'none', label: 'Nothing' },
@@ -35,6 +37,20 @@ function setChordType(type: ChordTypeId): void {
   chordSel.value = { ...sel, type, inversion: clampInversion(type, sel.inversion) }
 }
 
+/** Random: a new scale (major or an enabled minor form) or chord, never the current one; octaves stay as picked. */
+function pickRandom(): void {
+  if (targetKind.peek() === 'chord') chordSel.value = randomChord(chordSel.peek(), Math.random)
+  else scaleSel.value = randomScale(scaleSel.peek(), app.peek().settings.minorForms, Math.random)
+}
+
+function RandomButton() {
+  return (
+    <button type="button" class="btn play-random" onClick={pickRandom}>
+      Random
+    </button>
+  )
+}
+
 /** What to play against: nothing, a scale (root, form, 1 or 2 octaves) or a chord (root, type, inversion). */
 export function PlayPicker() {
   const kind = targetKind.value
@@ -51,7 +67,9 @@ export function PlayPicker() {
           root={scaleSel.value.root}
           context={scaleSel.value.form}
           onChange={(root) => (scaleSel.value = { ...scaleSel.value, root })}
-        />
+        >
+          <RandomButton />
+        </RootPicker>
       )}
       {kind === 'chord' && <ChordRootAndInversion />}
     </div>
@@ -80,7 +98,9 @@ function ChordRootAndInversion() {
   const isTriad = TRIAD_IDS.includes(sel.type)
   return (
     <>
-      <RootPicker root={sel.root} context="chord" onChange={(root) => (chordSel.value = { ...sel, root })} />
+      <RootPicker root={sel.root} context="chord" onChange={(root) => (chordSel.value = { ...sel, root })}>
+        <RandomButton />
+      </RootPicker>
       <div class="play-row">
         <Segmented
           options={EXTENDED}

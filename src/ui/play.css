@@ -49,6 +49,12 @@
   gap: var(--s-3);
 }
 
+/* Random sits at the end of the root row (no extra row: the keyboard keeps its height). */
+.play-random {
+  flex: none;
+  min-height: 56px;
+}
+
 .play-picker__none {
   color: var(--muted);
 }
