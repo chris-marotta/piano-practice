@@ -74,18 +74,32 @@ interface Alignment {
   steps: { step: Step; i: number; j: number }[]
 }
 
-/** Levenshtein of expected vs played-minus-offset. Backtrace tie-break: substitution, then deletion (missed), then insertion (extra). */
+/**
+ * Levenshtein of expected vs played-minus-offset. Among minimum-cost alignments the one with the most exact matches wins
+ * (so a skipped note plus a stray note is not mislabelled as two wrong notes). Any remaining tie breaks in the backtrace:
+ * substitution, then deletion (missed), then insertion (extra).
+ */
 function align(expected: number[], played: number[]): Alignment {
   const n = expected.length
   const m = played.length
-  const d: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
-  for (let i = 1; i <= n; i++) (d[i] as number[])[0] = i
-  for (let j = 1; j <= m; j++) (d[0] as number[])[j] = j
-  const cell = (i: number, j: number): number => (d[i] as number[])[j] as number
+  const cost: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
+  const hits: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
+  for (let i = 1; i <= n; i++) (cost[i] as number[])[0] = i
+  for (let j = 1; j <= m; j++) (cost[0] as number[])[j] = j
+  const c = (i: number, j: number): number => (cost[i] as number[])[j] as number
+  const h = (i: number, j: number): number => (hits[i] as number[])[j] as number
   for (let i = 1; i <= n; i++) {
     for (let j = 1; j <= m; j++) {
-      const sub = cell(i - 1, j - 1) + (expected[i - 1] === played[j - 1] ? 0 : 1)
-      ;(d[i] as number[])[j] = Math.min(sub, cell(i - 1, j) + 1, cell(i, j - 1) + 1)
+      const same = expected[i - 1] === played[j - 1]
+      const options = [
+        { cost: c(i - 1, j - 1) + (same ? 0 : 1), hits: h(i - 1, j - 1) + (same ? 1 : 0) },
+        { cost: c(i - 1, j) + 1, hits: h(i - 1, j) },
+        { cost: c(i, j - 1) + 1, hits: h(i, j - 1) },
+      ]
+      let best = options[0] as (typeof options)[number]
+      for (const o of options) if (o.cost < best.cost || (o.cost === best.cost && o.hits > best.hits)) best = o
+      ;(cost[i] as number[])[j] = best.cost
+      ;(hits[i] as number[])[j] = best.hits
     }
   }
   const steps: Alignment['steps'] = []
@@ -94,14 +108,14 @@ function align(expected: number[], played: number[]): Alignment {
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0) {
       const same = expected[i - 1] === played[j - 1]
-      if (cell(i, j) === cell(i - 1, j - 1) + (same ? 0 : 1)) {
+      if (c(i, j) === c(i - 1, j - 1) + (same ? 0 : 1) && h(i, j) === h(i - 1, j - 1) + (same ? 1 : 0)) {
         steps.push({ step: same ? 'match' : 'wrong', i: i - 1, j: j - 1 })
         i--
         j--
         continue
       }
     }
-    if (i > 0 && cell(i, j) === cell(i - 1, j) + 1) {
+    if (i > 0 && c(i, j) === c(i - 1, j) + 1 && h(i, j) === h(i - 1, j)) {
       steps.push({ step: 'missed', i: i - 1, j: -1 })
       i--
       continue
@@ -109,7 +123,7 @@ function align(expected: number[], played: number[]): Alignment {
     steps.push({ step: 'extra', i, j: j - 1 })
     j--
   }
-  return { cost: cell(n, m), steps: steps.reverse() }
+  return { cost: c(n, m), steps: steps.reverse() }
 }
 
 function intervals(onsets: number[]): number[] {
@@ -171,7 +185,10 @@ export function analyseRun(
       extra.push({ kind: 'extra', index: i, played: (notes[j] as PlayedNote).midi, direction: direction(i) })
     }
   }
-  const onsets = notes.map((p) => p.t)
+  // Timing is judged on the beats that lined up with an expected note (matches and wrong notes), not on extras.
+  const onsets = alignment.steps
+    .filter((st) => st.step === 'match' || st.step === 'wrong')
+    .map((st) => (notes[st.j] as PlayedNote).t)
   return {
     wrong,
     missed,

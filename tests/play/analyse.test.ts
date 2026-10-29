@@ -139,7 +139,58 @@ describe('analyseRun', () => {
   })
 })
 
+describe('analyseRun alignment and timing', () => {
+  it('a skipped note plus a stray note is missed + extra, not two wrong notes', () => {
+    // G B C# C D E F# G ... : A skipped, stray C# after B
+    const m = [67, 71, 73, ...cleanMidis.slice(3)]
+    const a = analyseRun(exp, asPlayed(m), opts)
+    expect(a.wrong).toEqual([])
+    expect(a.missed).toHaveLength(1)
+    expect(a.missed[0]).toMatchObject({ index: 1, direction: 'up' })
+    expect(describeIssue(a.missed[0]!, '#')).toBe('Missed A going up')
+    expect(a.extra).toHaveLength(1)
+    expect(a.extra[0]).toMatchObject({ index: 3, played: 73, direction: 'up' })
+    expect(a.slips).toBe(2)
+  })
+
+  it('a self-corrected note does not hurt evenness or tempo', () => {
+    const played: PlayedNote[] = cleanMidis.map((midi, i) => ({ midi, t: i * 500 }))
+    played.splice(6, 0, { midi: 77, t: 6 * 500 - 120 }) // stray F just before the F#
+    const a = analyseRun(exp, played, opts)
+    expect(a.extra).toHaveLength(1)
+    expect(a.evenness).toBe(1)
+    expect(a.tempo).toBe(60)
+  })
+
+  it('off-grid extras beyond a clean run leave evenness alone', () => {
+    const played = asPlayed([...cleanMidis, 61, 62, 63])
+    played[15]!.t = 7500 + 37
+    played[16]!.t = 7500 + 90
+    played[17]!.t = 7500 + 400
+    const a = analyseRun(exp, played, opts)
+    expect(a.extra).toHaveLength(3)
+    expect(a.evenness).toBe(1)
+    expect(a.tempo).toBe(60)
+  })
+
+  it('timing is null when too few notes lined up', () => {
+    const a = analyseRun(exp, asPlayed([67, 69, 71]), opts)
+    expect(a.evenness).toBeNull()
+    expect(a.tempo).toBeNull()
+  })
+
+  it('a lone note picks the offset closest to zero among equal costs (-12 over -24)', () => {
+    const a = analyseRun(exp, [{ midi: 55, t: 0 }], opts)
+    expect(a.offset).toBe(-12)
+    expect(a.missed).toHaveLength(14)
+  })
+})
+
 describe('collapsePairs', () => {
+  it('does not collapse two identical pitches inside the window', () => {
+    expect(collapsePairs([{ midi: 67, t: 0 }, { midi: 67, t: 50 }])).toHaveLength(2)
+  })
+
   it('does not collapse neighbouring notes in a quick one-hand run', () => {
     const p: PlayedNote[] = [
       { midi: 67, t: 0 },
