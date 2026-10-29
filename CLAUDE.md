@@ -24,7 +24,7 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 - **Fingerings.** Never edit a fingering silently. Harmonic and melodic minor reuse the natural-minor fingering for the same root in v1 (ASSUMED, on the teacher checklist).
 - **Hash routing is required.** Routes are `#/today`, `#/library`, etc., so the app works under a relative `base: './'` (any GitHub Pages subpath) with no server rewrites. Do not switch to path routing.
 - **Push only when Chris says so.** No remote is configured; do not push or add one without his explicit go-ahead.
-- **MIDI stays behind `src/midi/input.ts`.** Only `src/midi/access.ts` touches `navigator.requestMIDIAccess`; it parses to `MidiEvent`s and emits them on the shared stream in `input.ts` (`onKeyboard`, `onClear`, `heldNotes`). Everything downstream sees `MidiEvent`s only. Event timestamps are ms in the `performance.now()` timebase; all other MIDI messages are dropped.
+- **MIDI stays behind `src/midi/input.ts`.** Downstream code consumes notes only as `MidiEvent`s from `src/midi/input.ts` (`onKeyboard`, `onClear`, `heldNotes`). Connection status (`midiStatus`) and connect/disconnect come from `src/midi/access.ts`; nothing else touches `navigator.requestMIDIAccess`. Event timestamps are ms in the `performance.now()` timebase; all other MIDI messages are dropped.
 - **Play thresholds are ASSUMED.** All run/evenness/suggestion constants live in `src/play/thresholds.ts`; tune on the Roli, don't scatter new magic numbers.
 
 ## Phase 2 modules (MIDI + Play)
@@ -32,7 +32,7 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 - `src/midi/` — `parse.ts` (bytes to `MidiEvent`), `held.ts` (held + pedal reducer), `access.ts` (Web MIDI connect, `midiStatus` signal), `input.ts` (event stream).
 - `src/play/` — pure analysis: `guide.ts` (Guided note-by-note state), `runDetect.ts` (Check run detection, octave offset), `analyse.ts` (evenness, tempo), `suggest.ts` (rating suggestion), `sequence.ts`, `thresholds.ts`.
 - `src/audio/live.ts` — live sampler voices for keyboard notes (`unlock.ts` gates all audio on a user gesture).
-- `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, pure `playView.ts`/`playState.ts`/`playRun.ts`). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip.
+- `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, `playView.ts` and `playRun.ts` are pure; `playState.ts` holds the signals). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip.
 - Settings added: `midiEnabled` (default false), `keyboardSound` (default true).
 
 ## Dev hooks (DEV builds only, stripped from `dist/`)

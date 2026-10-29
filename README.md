@@ -17,9 +17,9 @@ Progress is stored in the browser's `localStorage`.
 - Play tab: a free-play keyboard with a scale or chord target. Free shows right and wrong notes
   and names the chord you hold; Guided walks you note by note with hand colours and fingering;
   Check is a from-memory run that reports slips in plain language, evenness, and tempo.
-- Keyboard input (Chrome on a computer): plug in a MIDI keyboard and the app plays its notes
-  live, marks the on-screen keys, and auto-checks scale reps and chords in a session
-  (suggesting a rating; you still tap it).
+- Keyboard input (Chrome on a computer): after connecting a MIDI keyboard once in Settings, the
+  app plays its notes live, marks the on-screen keys, and auto-checks scale reps and chords in a
+  session (suggesting a rating; you still tap it).
 - Progress: mastery grid (box and support level per scale), streak, minutes, 8-week calendar.
 - Library: scales with fingering, chords, chords in a key, and a "What's this chord?" detector.
 - Settings: minor forms (natural, harmonic, melodic), octaves, start tempo, drone and
@@ -42,8 +42,8 @@ runs the app without a keyboard and everything else works as before).
    Together tiles from what you play, and chord steps tick a chord once you hold it.
 
 Settings, Keyboard sound turns the app's live piano off (for example when another app already
-plays the keyboard). Thresholds for run detection live in `src/play/thresholds.ts` and are guesses until
-tuned on the real keyboard.
+plays the keyboard). Thresholds for run detection live in `src/play/thresholds.ts` and are
+guesses until tuned on the real keyboard.
 
 ## Commands
 
