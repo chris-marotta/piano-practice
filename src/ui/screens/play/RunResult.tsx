@@ -2,10 +2,11 @@ import { resultView, type RunOutcome } from './playRun'
 
 interface Props {
   outcome: RunOutcome
-  onAgain: () => void
+  /** "Go again" on the Play tab. Omitted (no button) where the caller supplies its own actions, as in a session. */
+  onAgain?: () => void
 }
 
-/** The end of a Guided or Check run: clean or the issues, evenness with its interval strip, tempo, Go again. */
+/** The end of a Guided or Check run (also a session rep's detected run): clean or the issues, evenness with its interval strip, tempo, Go again. */
 export function RunResult({ outcome, onAgain }: Props) {
   const v = resultView(outcome)
   return (
@@ -38,9 +39,11 @@ export function RunResult({ outcome, onAgain }: Props) {
           <span class="run-result__value">{v.tempo}</span>
         </div>
       </div>
-      <button type="button" class="btn btn--primary btn--lg run-result__again" onClick={onAgain}>
-        Go again
-      </button>
+      {onAgain && (
+        <button type="button" class="btn btn--primary btn--lg run-result__again" onClick={onAgain}>
+          Go again
+        </button>
+      )}
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { playChord } from '../../../audio/piano'
 import { unlockAudio } from '../../../audio/unlock'
+import { midiStatus } from '../../../midi/access'
 import type { Step } from '../../../session/builder'
 import type { Rating } from '../../../srs/scheduler'
 import { chordNotes, type DiatonicChord } from '../../../theory/chords'
@@ -11,6 +12,7 @@ import { Segmented } from '../../components/Segmented'
 import { chordCard, chordMarks, chordStepRange, inversionsOfTonic } from './chordView'
 import { ScrollKeyboard } from './ScrollKeyboard'
 import { useMounted, useSilenceOnLeave } from './useAudio'
+import { useChordMatches } from './useAutoCheck'
 
 type ChordStepData = Extract<Step, { kind: 'chords' }>
 type Mode = 'block' | 'broken'
@@ -61,6 +63,8 @@ export function ChordStep({ step, onRate }: Props) {
   const range = useMemo(() => chordStepRange(step.chords, step.includeInversions), [step])
   const inversions = useMemo(() => inversionsOfTonic(tonic), [tonic])
   const cadence = useMemo(() => (step.includeInversions ? voiceLedCadence(step.chords) : []), [step])
+  // Keyboard connected: a progression card gets ✓ once its chord has been held (spec §6). No rating suggestion.
+  const played = useChordMatches(step.chords, midiStatus.value.kind === 'connected')
 
   const show = async (v: Voiced) => {
     stopCadence()
@@ -88,10 +92,22 @@ export function ChordStep({ step, onRate }: Props) {
   const marks = chordMarks(sel.notes, sel.type, sel.inversion)
   const firstMidi = Math.min(...marks.map((m) => m.midi))
 
-  const card = (v: Voiced, numeral: string, sub: string) => (
-    <button key={v.key} type="button" class="btn chord-card" aria-pressed={sel.key === v.key} onClick={() => show(v)}>
+  const card = (v: Voiced, numeral: string, sub: string, done = false) => (
+    <button
+      key={v.key}
+      type="button"
+      class={`btn chord-card${done ? ' chord-card--played' : ''}`}
+      aria-pressed={sel.key === v.key}
+      aria-label={done ? `${numeral} ${sub}, played` : undefined}
+      onClick={() => show(v)}
+    >
       <span class="chord-card__numeral">{numeral}</span>
       <span class="chord-card__name">{sub}</span>
+      {done && (
+        <svg class="chord-card__done" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      )}
     </button>
   )
 
@@ -113,7 +129,7 @@ export function ChordStep({ step, onRate }: Props) {
           <div class="chord-set__cards">
             {step.chords.map((c, i) => {
               const v = chordCard(c)
-              return card(rootVoicing(c, i), v.numeral, `${v.name} ${v.quality}`)
+              return card(rootVoicing(c, i), v.numeral, `${v.name} ${v.quality}`, played.has(i))
             })}
           </div>
         </div>

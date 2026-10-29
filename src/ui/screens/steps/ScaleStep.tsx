@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks'
 import { playScale } from '../../../audio/piano'
 import { unlockAudio } from '../../../audio/unlock'
+import { midiStatus } from '../../../midi/access'
+import { suggestRating } from '../../../play/suggest'
 import type { Step } from '../../../session/builder'
 import type { Settings } from '../../../srs/items'
 import type { Rating } from '../../../srs/scheduler'
@@ -9,6 +11,8 @@ import { FingerRow } from '../../components/FingerRow'
 import { RatingBar } from '../../components/RatingBar'
 import { Segmented } from '../../components/Segmented'
 import { update } from '../../state'
+import { REP_KINDS, emptyTiles, placeRun, tileResult, toggleTile, untick } from './autoCheck'
+import { RunResultDialog } from './RunResultDialog'
 import {
   familyLine,
   fingerRows,
@@ -22,6 +26,7 @@ import {
 import { ScrollKeyboard } from './ScrollKeyboard'
 import { Toggle } from './Toggle'
 import { useDrone, useMetronome, useMounted, useSilenceOnLeave } from './useAudio'
+import { useScaleRuns } from './useAutoCheck'
 
 type ScaleStepData = Extract<Step, { kind: 'scale' }>
 
@@ -39,6 +44,10 @@ const REPS: { hand: 'rh' | 'lh' | 'both'; label: string }[] = [
   { hand: 'both', label: 'Together' },
   { hand: 'both', label: 'Together' },
 ]
+
+/** "Right hand · rep 2": which tile a result card belongs to. */
+const repTitle = (i: number): string =>
+  `${REPS[i]?.label ?? ''} · rep ${REP_KINDS.slice(0, i + 1).filter((k) => k === REP_KINDS[i]).length}`
 
 const DIRECTIONS: { value: Direction; label: string }[] = [
   { value: 'up', label: 'Up' },
@@ -108,13 +117,23 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   const [phase, setPhase] = useState<'gate' | 'answer' | 'practice'>('gate')
   const [peeked, setPeeked] = useState(false)
   const [showKeyboard, setShowKeyboard] = useState(false)
-  const [reps, setReps] = useState<boolean[]>(() => REPS.map(() => false))
+  // v1 hand ticks, plus (keyboard connected) the detected runs that ticked a tile by themselves (spec §6).
+  const [tiles, setTiles] = useState(emptyTiles)
+  const [openTile, setOpenTile] = useState<number | null>(null)
   const [direction, setDirection] = useState<Direction>('up')
   const mounted = useMounted()
 
   useSilenceOnLeave()
   useDrone(step.ref.root, settings.droneOn, settings.droneVolumeDb)
   useMetronome(step.tempo, settings.metronomeOn)
+
+  // Auto-check only while a keyboard is connected; disconnected, the tiles are v1's hand toggles. Results already
+  // detected stay on their tiles (and in the suggestion) after an unplug.
+  const connected = midiStatus.value.kind === 'connected'
+  useScaleRuns(step.ref, settings.octaves, connected, (run) => setTiles((ts) => placeRun(ts, run.hand, run.outcome)))
+  const results = tiles.flatMap((t) => (t.result ? [t.result] : []))
+  const suggested = suggestRating(results, { peeked })
+  const open = openTile === null ? null : tiles[openTile]?.result ?? null
 
   const play = async () => {
     await unlockAudio()
@@ -186,23 +205,63 @@ export function ScaleStep({ step, settings, onRate }: Props) {
           </div>
           <div class="step__foot">
             <div class="reps" role="group" aria-label="Reps">
-              {REPS.map((r, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  class={`btn rep rep--${r.hand}`}
-                  aria-pressed={reps[i]}
-                  onClick={() => setReps((rs) => rs.map((v, j) => (j === i ? !v : v)))}
-                >
-                  {reps[i] && <Check />}
-                  {r.label}
-                </button>
-              ))}
+              {REPS.map((r, i) => {
+                const tile = tiles[i]
+                const res = tile?.result ? tileResult(tile.result) : null
+                if (!res) {
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      class={`btn rep rep--${r.hand}`}
+                      aria-pressed={tile?.ticked ?? false}
+                      onClick={() => setTiles((ts) => toggleTile(ts, i))}
+                    >
+                      {tile?.ticked && <Check />}
+                      {r.label}
+                    </button>
+                  )
+                }
+                // A detected rep: its result on the tile; a tap opens the result card (with Untick).
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    class={`btn rep rep--${r.hand} rep--detected`}
+                    aria-pressed="true"
+                    aria-haspopup="dialog"
+                    aria-label={`${r.label}: ${res.clean ? 'clean' : res.slips}${res.evenness ? `, evenness ${res.evenness}` : ''}`}
+                    onClick={() => setOpenTile(i)}
+                  >
+                    <span class="rep__label">{r.label}</span>
+                    <span class="rep__result">
+                      {res.clean ? <Check /> : <span class="rep__slips">{res.slips}</span>}
+                      {res.evenness && <span class="rep__even">{res.evenness}</span>}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            <RatingBar options={['nailed', 'shaky', 'lost']} onRate={(r) => onRate(r, { peeked })} disabledNailed={peeked} />
+            <RatingBar
+              options={['nailed', 'shaky', 'lost']}
+              onRate={(r) => onRate(r, { peeked })}
+              disabledNailed={peeked}
+              suggested={suggested}
+            />
             {peeked && <p class="step__hint">Peeked: max Shaky</p>}
           </div>
         </>
+      )}
+      {openTile !== null && open && (
+        <RunResultDialog
+          title={repTitle(openTile)}
+          outcome={open}
+          onClose={() => setOpenTile(null)}
+          onUntick={() => {
+            setTiles((ts) => untick(ts, openTile))
+            setOpenTile(null)
+          }}
+        />
       )}
     </div>
   )

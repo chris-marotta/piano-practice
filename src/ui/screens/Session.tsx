@@ -1,7 +1,9 @@
 import { useEffect } from 'preact/hooks'
 import { stopAll } from '../../audio/piano'
+import { midiStatus } from '../../midi/access'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
+import { MidiChip } from '../components/MidiChip'
 import { app, currentSession, route, today, update } from '../state'
 import { useWakeLock } from '../useWakeLock'
 import { Done } from './Done'
@@ -89,6 +91,12 @@ export function Session() {
         >
           <span class="session__progress-fill" style={{ width: `${(i / total) * 100}%` }} />
         </div>
+        {/* Keyboard status in the bar (spec §6). Hidden where Web MIDI can't work (the iPad), so v1 sessions look as before. */}
+        {midiStatus.value.kind !== 'unsupported' && (
+          <div class="session__chip">
+            <MidiChip />
+          </div>
+        )}
         <button type="button" class="btn btn--quiet session__end" onClick={endSession}>
           End session
         </button>

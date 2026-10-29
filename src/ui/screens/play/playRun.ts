@@ -5,7 +5,7 @@ import type { MidiEvent } from '../../../midi/parse'
 import { analyseRun, describeIssue } from '../../../play/analyse'
 import { createGuide, guideNext, guideResult, guideStep, type GuideNext, type GuideState, type GuideTarget } from '../../../play/guide'
 import { createRunDetector, type FinishedRun } from '../../../play/runDetect'
-import { expectedRun } from '../../../play/sequence'
+import { expectedRun, type Expected } from '../../../play/sequence'
 import { chroma } from '../../../theory/scales'
 import { preferFor, type PlayHand, type PlayMode, type PlayTarget } from './playView'
 
@@ -71,19 +71,21 @@ function guidedRun(target: Exclude<PlayTarget, { kind: 'none' }>, hand: PlayHand
   }
 }
 
+/** A detected run analysed against `expected`, as a Check result: issues in plain words, timing for the strip. */
+export function judgeRun(expected: Expected[], run: FinishedRun, prefer: '#' | 'b'): RunOutcome {
+  const a = analyseRun(expected, run.notes, { together: run.hand === 'together', prefer })
+  const issues = [...a.wrong, ...a.missed, ...a.extra]
+    .sort((x, y) => x.index - y.index)
+    .map((i) => describeIssue(i, prefer))
+  return { kind: 'check', slips: a.slips, issues, evenness: a.evenness, tempo: a.tempo, intervals: gaps(a.onsets) }
+}
+
 function checkRun(target: Extract<PlayTarget, { kind: 'scale' }>): PlayRun {
   // P3: every run is judged against the RH run from octave 4; the octave-offset search absorbs LH and Together.
   const expected = expectedRun(target.ref, target.octaves, 4)
   const prefer = preferFor(target.ref)
   const detector = createRunDetector({ tonicPc: chroma(target.ref.root), expectedLength: expected.length })
-  const judge = (run: FinishedRun | null): RunOutcome | null => {
-    if (!run) return null
-    const a = analyseRun(expected, run.notes, { together: run.hand === 'together', prefer })
-    const issues = [...a.wrong, ...a.missed, ...a.extra]
-      .sort((x, y) => x.index - y.index)
-      .map((i) => describeIssue(i, prefer))
-    return { kind: 'check', slips: a.slips, issues, evenness: a.evenness, tempo: a.tempo, intervals: gaps(a.onsets) }
-  }
+  const judge = (run: FinishedRun | null): RunOutcome | null => (run ? judgeRun(expected, run, prefer) : null)
   return {
     handle(e) {
       if (e.type !== 'on') return { flash: null, outcome: null }

@@ -36,6 +36,11 @@
   transition: width 0.3s ease;
 }
 
+.session__chip {
+  flex: none;
+  max-width: 420px;
+}
+
 .session__end {
   flex: none;
   padding: 0 var(--s-3);
@@ -351,6 +356,70 @@
   flex: none;
 }
 
+/* A rep ticked by a detected run (spec §6): the label, then ✓ or "3 slips" and the evenness. */
+.rep--detected {
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.15;
+}
+
+.rep__result {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 18px;
+}
+
+.rep__result .rep__check {
+  width: 22px;
+  height: 22px;
+}
+
+.rep__even {
+  font-weight: 400;
+}
+
+/* ---- detected rep result card (RunResultDialog) ---- */
+
+.run-dialog {
+  width: calc(100% - 2 * var(--s-5));
+  max-width: 920px;
+  padding: var(--s-5);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: var(--fs-body);
+}
+
+.run-dialog::backdrop {
+  background: rgb(6 8 11 / 0.72);
+}
+
+.run-dialog__title {
+  margin-bottom: var(--s-4);
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+/* One column: the issue lines get the full width, the timing sits below them. */
+.run-dialog .run-result {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-4);
+}
+
+.run-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+
+.run-dialog__actions .btn {
+  min-width: 140px;
+  min-height: 56px;
+}
+
 /* ---- chord step ---- */
 
 .chord-sets {
@@ -413,6 +482,24 @@
 .chord-card[aria-pressed='true'] {
   border: 2px solid var(--rh);
   background: color-mix(in srgb, var(--rh) 14%, var(--surface));
+}
+
+.chord-card {
+  position: relative;
+}
+
+/* Held correctly since entering the step (spec §6). */
+.chord-card__done {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  width: 26px;
+  height: 26px;
+  color: var(--success);
+}
+
+.chord-card--played {
+  border-color: var(--success);
 }
 
 .chord-card[aria-pressed='true'] .chord-card__name {

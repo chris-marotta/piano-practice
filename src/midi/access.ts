@@ -89,3 +89,17 @@ export function disconnectMidi(): void {
   midiStatus.value = { kind: 'off' }
   clearKeyboard()
 }
+
+// ---- dev hook ----
+
+// DEV only: the preview browser has no keyboard, so midiStatus never reaches 'connected'. fakeConnected() pretends one
+// is plugged in (no MIDIAccess), so session auto-check can be driven with __keyboard.inject (input.ts).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  const w = window as unknown as { __keyboard?: Record<string, unknown> }
+  w.__keyboard = {
+    ...w.__keyboard,
+    fakeConnected() {
+      midiStatus.value = { kind: 'connected', name: 'Dev keyboard' }
+    },
+  }
+}

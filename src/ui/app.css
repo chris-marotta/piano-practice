@@ -500,20 +500,42 @@ p {
 
 .rating {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   min-height: var(--tap-lg);
   font-size: 26px;
+  line-height: 1.15;
+}
+
+/* Session auto-check's suggestion (spec §6): an outline in the button's own colour, offset so it reads at arm's
+   length, plus a small line. Quieter than a selected state (a solid fill, as on rep tiles); Chris still taps. */
+.rating--suggested {
+  outline: 3px solid var(--rating-tone, var(--text));
+  outline-offset: 3px;
+}
+
+.rating__suggested {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--rating-tone, var(--text));
 }
 
 .rating--nailed {
+  --rating-tone: var(--success);
   border-color: var(--success);
   background: color-mix(in srgb, var(--success) 16%, var(--surface));
 }
 
 .rating--shaky {
+  --rating-tone: var(--text);
   border-color: var(--muted);
 }
 
 .rating--lost {
+  --rating-tone: var(--warn);
   border-color: var(--warn);
   background: color-mix(in srgb, var(--warn) 14%, var(--surface));
 }
