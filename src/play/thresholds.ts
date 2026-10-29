@@ -4,7 +4,10 @@
 export const PAIR_WINDOW_MS = 150
 /** Silence this long after the last note ends a run. */
 export const RUN_END_SILENCE_MS = 2000
-/** Silence this long before a note means a new run is starting. */
+/**
+ * Silence this long before a tonic means a new run is starting. ASSUMED limitation: a tonic after a 1.5-2 s pause
+ * inside a run (a slow top tonic) closes that run instead of continuing it.
+ */
 export const RUN_START_SILENCE_MS = 1500
 /** Runs shorter than this are ignored. */
 export const MIN_RUN_NOTES = 5

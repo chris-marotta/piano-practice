@@ -42,18 +42,19 @@ export interface RunDetector {
  * Streaming run detector for Check mode and session auto-check.
  *
  * - A run starts on a tonic note while the detector is fresh. Other notes before a start are ignored.
- * - A run finishes when its collapsed length (Together pairs count once) reaches expectedLength on a tonic note,
- *   or after RUN_END_SILENCE_MS of silence (tick), or when a tonic arrives RUN_START_SILENCE_MS or more after the
- *   last note (that tonic starts the next run).
- * - Runs under MIN_RUN_NOTES collapsed notes are discarded (null).
+ * - A full-length run (collapsed length, Together pairs counting once, reaches expectedLength on a tonic note) does not
+ *   finish at once: that final tonic may be the first note of an octave pair, and the partner must stay in the run.
+ *   It finishes when the partner arrives (included), when any other note arrives (that note is handled fresh), or on
+ *   tick after PAIR_WINDOW_MS of quiet. The hand is classified only at finish, with the partner counted.
+ * - A run also finishes on tick after RUN_END_SILENCE_MS of silence, and when a note arrives that long after the last
+ *   one, or a tonic arrives RUN_START_SILENCE_MS or more after it (that tonic starts the next run).
+ * - Runs under MIN_RUN_NOTES collapsed notes are discarded (null); a note that closes one can still start the next.
  * - After any finish or discard the detector is fresh. A new start is allowed at once after a finish-by-tonic, not
  *   only after RUN_START_SILENCE_MS of quiet, because Chris often goes straight into the next rep.
- * - Together: the final tonic is an octave pair, and its first note alone already reaches the length. A run that
- *   reads as Together so far therefore waits for the partner (or PAIR_WINDOW_MS of quiet) before finishing.
  */
 export function createRunDetector(opts: { tonicPc: number; expectedLength: number }): RunDetector {
   let notes: PlayedNote[] = []
-  let pending = false // Together run at full length, waiting to see whether the final pair's partner arrives.
+  let pending = false // Full-length run waiting to see whether the final tonic's octave partner arrives.
 
   const isTonic = (n: PlayedNote): boolean => ((n.midi % 12) + 12) % 12 === opts.tonicPc
 
@@ -72,15 +73,15 @@ export function createRunDetector(opts: { tonicPc: number; expectedLength: numbe
   const last = (): PlayedNote => notes[notes.length - 1] as PlayedNote
 
   const push = (n: PlayedNote): FinishedRun | null => {
-    let closed: FinishedRun | null = null
+    if (notes.length > 0 && pending && pairsWith(last(), n)) {
+      notes.push(n)
+      return finish()
+    }
 
+    let closed: FinishedRun | null = null
     if (notes.length > 0) {
       const gap = n.t - last().t
-      if (pending && !pairsWith(last(), n)) {
-        closed = finish()
-      } else if (gap >= RUN_END_SILENCE_MS || (gap >= RUN_START_SILENCE_MS && isTonic(n))) {
-        closed = finish()
-      }
+      if (pending || gap >= RUN_END_SILENCE_MS || (gap >= RUN_START_SILENCE_MS && isTonic(n))) closed = finish()
     }
 
     if (notes.length === 0) {
@@ -89,14 +90,7 @@ export function createRunDetector(opts: { tonicPc: number; expectedLength: numbe
     }
 
     notes.push(n)
-    if (pending) return finish() // n is the partner of the final pair.
-    if (isTonic(n) && collapsePairs(notes).length >= opts.expectedLength) {
-      if (classifyHand(notes) === 'together') {
-        pending = true
-        return null
-      }
-      return finish()
-    }
+    if (isTonic(n) && collapsePairs(notes).length >= opts.expectedLength) pending = true
     return null
   }
 

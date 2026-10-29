@@ -16,17 +16,36 @@ const lower = (midis: number[]) => midis.map((m) => m - 12)
 function feed(d: ReturnType<typeof createRunDetector>, notes: PlayedNote[]): (FinishedRun | null)[] {
   return notes.map((n) => d.push(n))
 }
+/** Feed a whole run, then let the final-tonic wait (PAIR_WINDOW_MS) pass; returns what the detector finishes. */
+function playOut(d: ReturnType<typeof createRunDetector>, notes: PlayedNote[]): FinishedRun | null {
+  const pushed = feed(d, notes)
+  expect(pushed.every((r) => r === null)).toBe(true)
+  return d.tick((notes[notes.length - 1] as PlayedNote).t + PAIR_WINDOW_MS)
+}
 const detector = () => createRunDetector({ tonicPc: G, expectedLength: 15 })
 
 describe('createRunDetector', () => {
-  it('a clean 15-note run finishes on the final G and reads as right hand', () => {
+  it('a clean 15-note run ends on the final G (after the pair window) and reads as right hand', () => {
     const d = detector()
     const notes = run(G_UP_DOWN)
     const out = feed(d, notes)
-    expect(out.slice(0, 14).every((r) => r === null)).toBe(true)
-    const finished = out[14] as FinishedRun
+    // The final G waits PAIR_WINDOW_MS in case it is half of an octave pair.
+    expect(out.every((r) => r === null)).toBe(true)
+    const lastT = (notes[14] as PlayedNote).t
+    expect(d.tick(lastT + PAIR_WINDOW_MS - 1)).toBeNull()
+    const finished = d.tick(lastT + PAIR_WINDOW_MS) as FinishedRun
     expect(finished.hand).toBe('rh')
     expect(finished.notes).toEqual(notes)
+  })
+
+  it('the next note closes a full-length run without waiting for tick', () => {
+    const d = detector()
+    const notes = run(G_UP_DOWN)
+    feed(d, notes)
+    const closed = d.push({ midi: 57, t: (notes[14] as PlayedNote).t + PAIR_WINDOW_MS + 1 }) as FinishedRun
+    expect(closed.notes).toEqual(notes)
+    // The late A is not a tonic, so nothing starts.
+    expect(d.tick(100_000)).toBeNull()
   })
 
   it('the same run with no final G finishes on tick after 2000 ms of silence', () => {
@@ -52,8 +71,7 @@ describe('createRunDetector', () => {
     const d = detector()
     feed(d, run([55, 57, 59]))
     expect(d.tick(10_000)).toBeNull()
-    const out = feed(d, run(G_UP_DOWN, 11_000))
-    expect((out[14] as FinishedRun).notes).toHaveLength(15)
+    expect((playOut(d, run(G_UP_DOWN, 11_000)) as FinishedRun).notes).toHaveLength(15)
   })
 
   it('notes before the first tonic are ignored', () => {
@@ -61,8 +79,7 @@ describe('createRunDetector', () => {
     const stray = run([57, 59, 62], 0)
     const real = run(G_UP_DOWN, 1000)
     feed(d, stray)
-    const out = feed(d, real)
-    const finished = out[14] as FinishedRun
+    const finished = playOut(d, real) as FinishedRun
     expect(finished.notes).toEqual(real)
     expect((finished.notes[0] as PlayedNote).midi % 12).toBe(G)
   })
@@ -77,8 +94,7 @@ describe('createRunDetector', () => {
     // The first G of the second run closes the first run (14 notes, no final G) and starts the next.
     const closed = d.push(second[0] as PlayedNote) as FinishedRun
     expect(closed.notes).toEqual(first)
-    const out = feed(d, second.slice(1))
-    const finished = out[13] as FinishedRun
+    const finished = playOut(d, second.slice(1)) as FinishedRun
     expect(finished.notes).toEqual(second)
   })
 
@@ -86,8 +102,13 @@ describe('createRunDetector', () => {
     const d = detector()
     const first = run(G_UP_DOWN.slice(0, 7))
     feed(d, first)
-    const stray = d.push({ midi: 55, t: (first[6] as PlayedNote).t + RUN_START_SILENCE_MS - 1 })
-    expect(stray).toBeNull()
+    const stray: PlayedNote = { midi: 55, t: (first[6] as PlayedNote).t + RUN_START_SILENCE_MS - 1 }
+    expect(d.push(stray)).toBeNull()
+    // The run carries on and finishes with the stray G still in it (15 notes: 7 + stray + 7).
+    const rest = run(G_UP_DOWN.slice(8), stray.t + STEP, STEP)
+    const finished = playOut(d, rest) as FinishedRun
+    expect(finished.notes).toHaveLength(15)
+    expect(finished.notes[7]).toEqual(stray)
   })
 
   it('a note arriving after 2000 ms of silence closes the old run even if tick never ran', () => {
@@ -102,8 +123,7 @@ describe('createRunDetector', () => {
 
   it('a run an octave lower (MIDI 43-55) reads as left hand', () => {
     const d = detector()
-    const out = feed(d, run(lower(G_UP_DOWN)))
-    expect((out[14] as FinishedRun).hand).toBe('lh')
+    expect((playOut(d, run(lower(G_UP_DOWN))) as FinishedRun).hand).toBe('lh')
   })
 
   it('octave-paired notes read as together and finish on the final pair', () => {
@@ -143,9 +163,8 @@ describe('createRunDetector', () => {
     })
     feed(d, notes)
     // Fresh again: the next rep starts on a new tonic with no wait.
-    const next = run(G_UP_DOWN, notes[29]!.t + 300)
-    const out = feed(d, next)
-    expect((out[14] as FinishedRun).notes).toEqual(next)
+    const next = run(G_UP_DOWN, (notes[29] as PlayedNote).t + 300)
+    expect((playOut(d, next) as FinishedRun).notes).toEqual(next)
   })
 
   it('a start is allowed immediately after a run finished on its tonic', () => {
@@ -155,8 +174,11 @@ describe('createRunDetector', () => {
     // Chris goes straight into the next rep: well inside the 1500 ms start-silence.
     const second = run(G_UP_DOWN, (first[14] as PlayedNote).t + 300)
     const out = feed(d, second)
-    expect(out.slice(0, 14).every((r) => r === null)).toBe(true)
-    expect((out[14] as FinishedRun).notes).toEqual(second)
+    // The first note of the second rep closes the first rep (final G waiting) and starts the next.
+    expect((out[0] as FinishedRun).notes).toEqual(first)
+    expect(out.slice(1).every((r) => r === null)).toBe(true)
+    const finished = d.tick((second[14] as PlayedNote).t + PAIR_WINDOW_MS) as FinishedRun
+    expect(finished.notes).toEqual(second)
   })
 
   it('reset drops a run in progress', () => {
@@ -164,8 +186,64 @@ describe('createRunDetector', () => {
     feed(d, run(G_UP_DOWN.slice(0, 10)))
     d.reset()
     expect(d.tick(100_000)).toBeNull()
-    const out = feed(d, run(G_UP_DOWN, 200_000))
-    expect((out[14] as FinishedRun).notes).toHaveLength(15)
+    expect((playOut(d, run(G_UP_DOWN, 200_000)) as FinishedRun).notes).toHaveLength(15)
+  })
+
+  it('a short run closed by a later tonic returns null and the tonic still starts the next run', () => {
+    const d = detector()
+    feed(d, run([55, 57, 59]))
+    const second = run(G_UP_DOWN, 2 * RUN_START_SILENCE_MS)
+    expect(d.push(second[0] as PlayedNote)).toBeNull()
+    const finished = playOut(d, second.slice(1)) as FinishedRun
+    expect(finished.notes).toEqual(second)
+  })
+
+  it('a full-length run closed by a non-partner tonic is returned and that tonic starts the next run', () => {
+    const d = detector()
+    const first = run(G_UP_DOWN)
+    feed(d, first)
+    const next = run(G_UP_DOWN, (first[14] as PlayedNote).t + PAIR_WINDOW_MS + 1)
+    expect((d.push(next[0] as PlayedNote) as FinishedRun).notes).toEqual(first)
+    const finished = playOut(d, next.slice(1)) as FinishedRun
+    expect(finished.notes).toEqual(next)
+  })
+
+  it('a pending run closed by a non-partner, non-tonic note is returned and nothing starts', () => {
+    const d = detector()
+    const first = run(G_UP_DOWN)
+    feed(d, first)
+    const closed = d.push({ midi: 62, t: (first[14] as PlayedNote).t + 50 }) as FinishedRun
+    expect(closed.notes).toEqual(first)
+    expect(d.tick(100_000)).toBeNull()
+  })
+
+  it('together near the ratio: a final pair keeps its partner even though the run reads as rh without it', () => {
+    // 6 octave pairs + 8 single notes + a final pair: 12/21 = 0.571 without the partner, 14/22 = 0.636 with it.
+    const d = detector()
+    const notes: PlayedNote[] = []
+    let t = 0
+    G_UP_DOWN.forEach((m, i) => {
+      if (i < 6) notes.push({ midi: m - 12, t }, { midi: m, t: t + 20 })
+      else notes.push({ midi: m, t })
+      t += STEP
+    })
+    const partner: PlayedNote = { midi: 67, t: t - STEP + 20 }
+    expect(classifyHand(notes)).not.toBe('together')
+    const probe = [...notes, partner]
+    expect(classifyHand(probe)).toBe('together')
+
+    expect(feed(d, notes).every((r) => r === null)).toBe(true)
+    const finished = d.push(partner) as FinishedRun
+    expect(finished.notes).toEqual(probe)
+    expect(finished.hand).toBe('together')
+
+    // The next rep starts clean: no phantom run from a leftover partner.
+    const next = run(G_UP_DOWN, partner.t + 300)
+    const pushed = feed(d, next)
+    expect(pushed.every((r) => r === null)).toBe(true)
+    const second = d.tick((next[14] as PlayedNote).t + PAIR_WINDOW_MS) as FinishedRun
+    expect(second.notes).toEqual(next)
+    expect(second.hand).toBe('rh')
   })
 
   it('does not finish on a non-tonic note even when long enough', () => {
