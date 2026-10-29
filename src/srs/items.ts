@@ -13,6 +13,8 @@ export interface Settings {
   droneOn: boolean
   droneVolumeDb: number
   metronomeOn: boolean
+  midiEnabled: boolean
+  keyboardSound: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -23,6 +25,8 @@ export const DEFAULT_SETTINGS: Settings = {
   droneOn: true,
   droneVolumeDb: -12,
   metronomeOn: false,
+  midiEnabled: false,
+  keyboardSound: true,
 }
 
 // Ids use tonal's ASCII spelling for roots (F#, Bb), never the display glyphs.

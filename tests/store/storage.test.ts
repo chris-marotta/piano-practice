@@ -245,6 +245,24 @@ describe('export / import', () => {
   })
 })
 
+describe('MIDI settings', () => {
+  it('defaults: midiEnabled false, keyboardSound true', () => {
+    expect(emptyState().settings).toMatchObject({ midiEnabled: false, keyboardSound: true })
+  })
+
+  it('wrong-typed values fall back per field', () => {
+    const stored = { ...populated(), settings: { midiEnabled: 'yes', keyboardSound: 0 } }
+    const r = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify(stored) }))
+    expect(r.state.settings).toMatchObject({ midiEnabled: false, keyboardSound: true })
+  })
+
+  it('valid booleans round-trip', () => {
+    const stored = { ...populated(), settings: { midiEnabled: true, keyboardSound: false } }
+    const r = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify(stored) }))
+    expect(r.state.settings).toMatchObject({ midiEnabled: true, keyboardSound: false })
+  })
+})
+
 describe('validation hardening', () => {
   const badSettings = { sessionMinutes: 7, octaves: '2', startTempo: 'fast', minorForms: { harmonic: 'yes' }, bogus: 1 }
   const expectDefaults = (settings: AppState['settings']) => {
@@ -272,7 +290,7 @@ describe('validation hardening', () => {
       return r.state.settings
     }
     const ok = mk({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

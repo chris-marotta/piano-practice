@@ -29,6 +29,8 @@ describe('defaults', () => {
       droneOn: true,
       droneVolumeDb: -12,
       metronomeOn: false,
+      midiEnabled: false,
+      keyboardSound: true,
     })
   })
 })

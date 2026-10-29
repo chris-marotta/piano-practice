@@ -85,6 +85,8 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
     droneOn: bool(stored.droneOn, d.droneOn),
     droneVolumeDb: isNum(stored.droneVolumeDb) ? stored.droneVolumeDb : d.droneVolumeDb,
     metronomeOn: bool(stored.metronomeOn, d.metronomeOn),
+    midiEnabled: bool(stored.midiEnabled, d.midiEnabled),
+    keyboardSound: bool(stored.keyboardSound, d.keyboardSound),
   }
 }
 
