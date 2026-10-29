@@ -14,20 +14,43 @@ Progress is stored in the browser's `localStorage`.
   scale steps (recall gate, four support levels from full keyboard to name only, Peek,
   rep checklist, Play, Nailed / Shaky / Lost), and chord steps (block or broken, inversions,
   voice-led cadence at higher levels).
+- Play tab: a free-play keyboard with a scale or chord target. Free shows right and wrong notes
+  and names the chord you hold; Guided walks you note by note with hand colours and fingering;
+  Check is a from-memory run that reports slips in plain language, evenness, and tempo.
+- Keyboard input (Chrome on a computer): plug in a MIDI keyboard and the app plays its notes
+  live, marks the on-screen keys, and auto-checks scale reps and chords in a session
+  (suggesting a rating; you still tap it).
 - Progress: mastery grid (box and support level per scale), streak, minutes, 8-week calendar.
 - Library: scales with fingering, chords, chords in a key, and a "What's this chord?" detector.
 - Settings: minor forms (natural, harmonic, melodic), octaves, start tempo, drone and
-  metronome, JSON export and import, redo placement.
+  metronome, MIDI keyboard connect and keyboard sound, JSON export and import, redo placement.
 - Installable PWA that works offline once cached (piano samples included).
 
 Built with Preact, TypeScript, Vite, Tone.js, and tonal.
+
+## MIDI keyboard
+
+Web MIDI input works in Chrome on a computer (it is not available on iPad Safari, so the iPad
+runs the app without a keyboard and everything else works as before).
+
+1. Plug the Roli Piano into the Mac with USB (it shows up as a MIDI input named "ROLI...").
+2. Open the app in Chrome, go to Settings, Keyboard, and press **Connect keyboard**. Allow MIDI
+   when Chrome asks. The connection is remembered and re-attempted on the next launch.
+3. Tap or click the page once. Browsers keep audio off until a gesture, so the keyboard stays
+   silent (the screen says "Tap anywhere to turn on sound") until you do.
+4. Open the **Play** tab, or start a session: scale steps tick the Right hand, Left hand, and
+   Together tiles from what you play, and chord steps tick a chord once you hold it.
+
+Settings, Keyboard sound turns the app's live piano off (for example when another app already
+plays the keyboard). Thresholds for run detection live in `src/play/thresholds.ts` and are guesses until
+tuned on the real keyboard.
 
 ## Commands
 
 ```
 npm i
 npm run dev     # http://localhost:5230
-npm test        # vitest (pure modules: theory, data, srs, session, store)
+npm test        # vitest (pure modules: theory, data, srs, session, store, midi, play)
 npm run build   # typecheck + production build to dist/
 ```
 
