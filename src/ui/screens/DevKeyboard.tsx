@@ -23,8 +23,42 @@ function handsTogether(ref: ScaleRef, octaves: 1 | 2, rhOct: number, lhOct: numb
 
 const E_MAJOR: ScaleRef = { root: 'E', form: 'major' }
 
+/** Phase 2 key states on D major (C4..B5): target outlines, right / wrong / neutral presses, a guided note. */
+function stateMarks(pressed: Set<number>): KeyMark[] {
+  const dMajor = scaleSequence({ root: 'D', form: 'major' }, 1, 4).ascending
+  const inTarget = new Set(dMajor.map((n) => noteMidi(n) % 12))
+  const sample: KeyMark[] = [
+    ...dMajor.map((n) => ({ midi: noteMidi(n), hand: 'none' as const, state: 'target' as const })),
+    { midi: 62, hand: 'none', state: 'good', label: 'D' }, // white, right, with a label
+    { midi: 66, hand: 'none', state: 'good' }, // black, right
+    { midi: 65, hand: 'none', state: 'bad' }, // white, wrong
+    { midi: 63, hand: 'none', state: 'bad', label: 'E♭' }, // black, wrong, with a label
+    { midi: 67, hand: 'rh', finger: 3 }, // guided next note (hand colour + finger)
+    { midi: 74, hand: 'none', state: 'pressed' }, // pressed with no target
+    { midi: 76, hand: 'none', state: 'pressed', label: 'E' },
+  ]
+  // Live presses (mouse / touch on this keyboard) judged against D major by pitch class.
+  const live: KeyMark[] = [...pressed].map((midi) => ({
+    midi,
+    hand: 'none',
+    state: inTarget.has(midi % 12) ? 'good' : 'bad',
+  }))
+  return [...sample, ...live]
+}
+
 export function DevKeyboard() {
   const [tapped, setTapped] = useState<string>('none yet')
+  const [pressed, setPressed] = useState<Set<number>>(new Set())
+  const [pressLog, setPressLog] = useState<string>('none yet')
+  const onKeyPress = (midi: number, down: boolean) => {
+    setPressLog(`${midi} ${down ? 'down' : 'up'}`)
+    setPressed((prev) => {
+      const next = new Set(prev)
+      if (down) next.add(midi)
+      else next.delete(midi)
+      return next
+    })
+  }
   const marks = handsTogether(E_MAJOR, 2, 4, 3)
   const { low, high } = keyboardRange(marks.map((m) => m.midi))
   const rhNotes = scaleSequence(E_MAJOR, 1, 4).ascending
@@ -38,6 +72,14 @@ export function DevKeyboard() {
       </div>
       <FingerRow notes={rhNotes} fingers={fingeringSequence(E_MAJOR, 1, 'rh', 'up')} hand="rh" />
       <RatingBar options={['nailed', 'shaky', 'lost']} onRate={(r) => setTapped(r)} disabledNailed />
+      <h2 class="screen__title">Key states (phase 2)</h2>
+      <p class="muted">
+        D major target outlined. ✓ D, F♯ · × F, E♭ · G guided (RH 3) · D5, E5 pressed (no target). Press a key: last{' '}
+        {pressLog}.
+      </p>
+      <div class="stage">
+        <Keyboard low={60} high={83} marks={stateMarks(pressed)} reserveRows="rh" onKeyPress={onKeyPress} />
+      </div>
     </section>
   )
 }

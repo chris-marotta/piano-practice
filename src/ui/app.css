@@ -257,6 +257,40 @@ p {
   fill: var(--mark-none-deep);
 }
 
+.key.key--good {
+  fill: var(--good);
+}
+
+.key.key--bad {
+  fill: var(--bad);
+}
+
+.key.key--pressed {
+  fill: var(--pressed);
+}
+
+/* Target: a 3-unit outline inset inside the key (the rect is inset 1.5), no fill. */
+.key-target {
+  fill: none;
+  stroke: var(--good);
+  stroke-width: 3;
+  pointer-events: none;
+}
+
+/* ✓ / × in the label slot, drawn as strokes so they don't depend on font coverage. */
+.key-glyph {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.key-glyph--black {
+  stroke-width: 2.5;
+}
+
 .key--piece {
   stroke: none;
 }
@@ -328,6 +362,59 @@ p {
 
 .badge__stem--lh {
   stroke: var(--lh);
+}
+
+/* ---- MIDI status chip ---- */
+
+.midi-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
+}
+
+.midi-chip__status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--tap);
+  min-width: 0;
+  padding: var(--s-1) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.midi-chip__dot {
+  color: var(--success);
+}
+
+.midi-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Blocked / no keyboard: something for Chris to fix, marked like other warnings. */
+.midi-chip--denied .midi-chip__status,
+.midi-chip--no-device .midi-chip__status {
+  border-left: 4px solid var(--warn);
+  font-weight: 400;
+}
+
+.midi-chip--unsupported .midi-chip__status {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.midi-chip__prompt {
+  flex-basis: 100%;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 /* ---- finger row (L1) ---- */

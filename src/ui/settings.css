@@ -120,6 +120,14 @@
   line-height: 1;
 }
 
+.settings__midi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
 .settings__actions {
   display: flex;
   flex-wrap: wrap;

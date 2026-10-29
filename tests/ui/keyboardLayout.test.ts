@@ -9,6 +9,7 @@ import {
   minRenderWidth,
   verticalLayout,
   keyRects,
+  keyLooks,
   keyboardRange,
   whiteKeys,
   type KeyMark,
@@ -201,5 +202,73 @@ describe('keyAriaLabel', () => {
   it('adds the label when it differs from the plain name', () => {
     expect(keyAriaLabel(64, 'E')).toBe('E4')
     expect(keyAriaLabel(63, 'E♭')).toBe('D♯4, E♭')
+  })
+})
+
+describe('keyLooks (per-key fill, target outline, glyph)', () => {
+  it('a mark with a state keeps its midi and is not dropped by range filtering', () => {
+    const looks = keyLooks([{ midi: 64, hand: 'none', state: 'good' }], 60, 71)
+    expect([...looks.keys()]).toEqual([64])
+    expect(looks.get(64)).toEqual({ fill: 'good', target: false, glyph: 'good', label: undefined })
+  })
+  it('drops marks outside [low, high] and keeps both ends', () => {
+    const looks = keyLooks(
+      [
+        { midi: 59, hand: 'none', state: 'bad' },
+        { midi: 60, hand: 'none', state: 'bad' },
+        { midi: 71, hand: 'none', state: 'pressed' },
+        { midi: 72, hand: 'rh' },
+      ],
+      60,
+      71,
+    )
+    expect([...looks.keys()].sort((a, b) => a - b)).toEqual([60, 71])
+  })
+  it('good / bad / pressed fills override hand fills; the finger mark is otherwise untouched', () => {
+    const marks: KeyMark[] = [
+      { midi: 64, hand: 'rh', finger: 3, label: 'E' },
+      { midi: 64, hand: 'none', state: 'bad' },
+      { midi: 65, hand: 'lh', state: 'pressed' },
+    ]
+    const looks = keyLooks(marks, 60, 71)
+    expect(looks.get(64)).toEqual({ fill: 'bad', target: false, glyph: 'bad', label: 'E' })
+    expect(looks.get(65)).toEqual({ fill: 'pressed', target: false, glyph: null, label: undefined })
+    // Badges still come from hand + finger.
+    expect(badgeSlots(marks, 60).rh.map((s) => s.midi)).toEqual([64])
+  })
+  it('target is an outline with no fill', () => {
+    expect(keyLooks([{ midi: 62, hand: 'none', state: 'target' }], 60, 71).get(62)).toEqual({
+      fill: null,
+      target: true,
+      glyph: null,
+      label: undefined,
+    })
+  })
+  it('one look per key, by the spec priority: good > bad > pressed > hand colour > target', () => {
+    const at = (marks: KeyMark[]) => keyLooks(marks, 60, 71).get(60)
+    const s = (state: KeyMark['state']): KeyMark => ({ midi: 60, hand: 'none', state })
+    expect(at([s('target'), s('pressed'), s('bad'), s('good')])).toMatchObject({ fill: 'good', glyph: 'good' })
+    expect(at([s('target'), s('bad'), s('pressed')])).toMatchObject({ fill: 'bad', glyph: 'bad' })
+    expect(at([s('target'), s('pressed')])).toMatchObject({ fill: 'pressed', target: false })
+    expect(at([s('target'), { midi: 60, hand: 'rh', finger: 1 }])).toMatchObject({ fill: 'rh', target: false })
+  })
+  it('without states, fills match the hand rules (rh, lh, split, none)', () => {
+    const looks = keyLooks(
+      [
+        { midi: 60, hand: 'rh' },
+        { midi: 62, hand: 'lh' },
+        { midi: 64, hand: 'rh' },
+        { midi: 64, hand: 'lh' },
+        { midi: 65, hand: 'none' },
+      ],
+      60,
+      71,
+    )
+    expect([60, 62, 64, 65].map((m) => looks.get(m)!.fill)).toEqual(['rh', 'lh', 'split', 'none'])
+    expect([...looks.values()].every((l) => !l.target && l.glyph === null)).toBe(true)
+  })
+  it('keeps the first label for a key', () => {
+    const looks = keyLooks([{ midi: 63, hand: 'rh', label: 'E♭' }, { midi: 63, hand: 'none', label: 'D♯', state: 'good' }], 60, 71)
+    expect(looks.get(63)!.label).toBe('E♭')
   })
 })

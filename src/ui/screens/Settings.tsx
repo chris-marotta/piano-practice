@@ -1,7 +1,9 @@
 import type { ComponentChildren } from 'preact'
 import { useRef, useState } from 'preact/hooks'
+import { disconnectMidi, midiStatus } from '../../midi/access'
 import { exportState, parseImport, type AppState } from '../../store/storage'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { MidiChip } from '../components/MidiChip'
 import { Segmented } from '../components/Segmented'
 import { app, currentSession, navigate, today, update } from '../state'
 import {
@@ -98,6 +100,7 @@ type Pending = { kind: 'redo' } | { kind: 'import'; state: AppState }
 /** Session preferences, redo placement, export / import, and credits. */
 export function Settings() {
   const { settings } = app.value
+  const midiKind = midiStatus.value.kind
   const [pending, setPending] = useState<Pending | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [exported, setExported] = useState<string | null>(null)
@@ -174,6 +177,11 @@ export function Settings() {
     navigate(routeAfterImport(state))
   }
 
+  const disconnect = () => {
+    disconnectMidi()
+    set({ midiEnabled: false })
+  }
+
   const summary = pending?.kind === 'import' ? importSummary(pending.state) : null
 
   return (
@@ -241,6 +249,26 @@ export function Settings() {
                 +
               </button>
             </div>
+          </Row>
+
+          <h2 class="settings__heading">Keyboard</h2>
+          <Row label="MIDI keyboard">
+            <div class="settings__midi">
+              <MidiChip />
+              {(midiKind === 'connected' || midiKind === 'no-device') && (
+                <button type="button" class="btn" onClick={disconnect}>
+                  Disconnect
+                </button>
+              )}
+            </div>
+          </Row>
+          <Row label="Keyboard sound" hint="Plays the piano as you play the keyboard.">
+            <Segmented
+              options={ON_OFF}
+              value={onOff(settings.keyboardSound)}
+              onChange={(v) => set({ keyboardSound: v === 'on' })}
+              label="Keyboard sound"
+            />
           </Row>
         </div>
 

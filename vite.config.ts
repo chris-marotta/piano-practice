@@ -39,6 +39,6 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     // Contrast tests read the shipped stylesheets with ?raw (CSS is stubbed out otherwise).
-    css: { include: [/src\/ui\/(tokens|progress)\.css/] },
+    css: { include: [/src\/ui\/(tokens|progress|app)\.css/] },
   },
 })

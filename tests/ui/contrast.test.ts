@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, mixSrgb, parseHex } from '../../src/ui/contrast'
 // The real stylesheets, so the test checks what ships rather than a copy of the numbers.
+import appCss from '../../src/ui/app.css?raw'
 import progressCss from '../../src/ui/progress.css?raw'
 import tokensCss from '../../src/ui/tokens.css?raw'
 
@@ -51,10 +52,10 @@ function colour(value: string): RGB {
   return resolve(value)
 }
 
-/** Declarations of the first rule whose selector list is exactly `selector`. */
-function rule(selector: string): Record<string, string> {
+/** Declarations of the first rule whose selector list is exactly `selector` (in progress.css unless `css` is given). */
+function rule(selector: string, css: string = progressCss): Record<string, string> {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const m = new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`).exec(progressCss)
+  const m = new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`).exec(css)
   if (!m) throw new Error(`no rule ${selector}`)
   const decls: Record<string, string> = {}
   for (const d of (m[1] as string).split(';')) {
@@ -93,5 +94,52 @@ describe('mastery grid contrast (shipped CSS)', () => {
   it('the five fills get lighter box by box', () => {
     const lum = [1, 2, 3, 4, 5].map((n) => contrastRatio(step(n).fill, [0, 0, 0]))
     expect([...lum].sort((a, b) => a - b)).toEqual(lum)
+  })
+})
+
+describe('key state marks contrast (shipped CSS)', () => {
+  const white = resolve('var(--key-white)')
+  const black = resolve('var(--key-black)')
+  const fill = (state: string): RGB => colour(rule(`.key.key--${state}`, appCss).fill as string)
+
+  it('--good and --bad are their own colours, not RH amber or LH teal', () => {
+    for (const t of ['good', 'bad']) {
+      const v = (TOKENS[t] as string).toLowerCase()
+      expect(v).toMatch(/^#[0-9a-f]{6}$/)
+      expect(v).not.toBe('#f2a541')
+      expect(v).not.toBe('#3fb8af')
+      expect(v).not.toBe((TOKENS.rh as string).toLowerCase())
+      expect(v).not.toBe((TOKENS.lh as string).toLowerCase())
+    }
+    expect(TOKENS.good).not.toBe(TOKENS.bad)
+  })
+
+  it('good and bad fills use the tokens', () => {
+    expect(rule('.key.key--good', appCss).fill).toBe('var(--good)')
+    expect(rule('.key.key--bad', appCss).fill).toBe('var(--bad)')
+  })
+
+  it.each(['good', 'bad', 'pressed'])('%s fill is at least 3:1 against white keys and black keys', (state) => {
+    expect(contrastRatio(fill(state), white)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(fill(state), black)).toBeGreaterThanOrEqual(3)
+  })
+
+  it.each(['good', 'bad'])('the ✓/× glyph is at least 4.5:1 on the %s fill', (state) => {
+    const glyph = colour(rule('.key-glyph', appCss).stroke as string)
+    expect(contrastRatio(glyph, fill(state))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it.each(['good', 'bad', 'pressed'])('a note label is at least 4.5:1 on the %s fill', (state) => {
+    const label = colour(rule('.key-label--marked', appCss).fill as string)
+    expect(contrastRatio(label, fill(state))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('the target outline is --good, 3 units wide, at least 3:1 on white and black keys', () => {
+    const r = rule('.key-target', appCss)
+    expect(r.stroke).toBe('var(--good)')
+    expect(r['stroke-width']).toBe('3')
+    expect(r.fill).toBe('none')
+    expect(contrastRatio(colour(r.stroke as string), white)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(colour(r.stroke as string), black)).toBeGreaterThanOrEqual(3)
   })
 })

@@ -1,10 +1,14 @@
 // Pure keyboard geometry (no DOM) in SVG user units. Keyboard.tsx renders it.
 
+/** Live-play states (phase 2). good / bad / pressed fill the key over any hand colour; target is an outline. */
+export type KeyState = 'good' | 'bad' | 'pressed' | 'target'
+
 export interface KeyMark {
   midi: number
   hand: 'rh' | 'lh' | 'none'
   finger?: number
   label?: string
+  state?: KeyState
 }
 
 /** White key 40 wide; black keys ~60% width and ~62% length, as on a real piano. */
@@ -111,6 +115,61 @@ export function badgeSlots(marks: KeyMark[], low: number): BadgeLayout {
   const rh = build('rh')
   const lh = build('lh')
   return { rh, lh, rhRows: rows(rh), lhRows: rows(lh) }
+}
+
+// ---- per-key look ----
+
+export type KeyFill = 'rh' | 'lh' | 'none' | 'split' | 'good' | 'bad' | 'pressed'
+
+export interface KeyLook {
+  fill: KeyFill | null
+  /** Outline in --good with no fill (lowest priority: only on an otherwise unmarked key). */
+  target: boolean
+  /** ✓ for good, × for bad, drawn in the label slot. */
+  glyph: 'good' | 'bad' | null
+  /** First label given for the key. */
+  label: string | undefined
+}
+
+/** Spec §4.3 priority among states; a hand colour sits between 'pressed' and 'target'. */
+const STATE_ORDER: Exclude<KeyState, 'target'>[] = ['good', 'bad', 'pressed']
+
+/**
+ * One look per key in [low, high] (marks outside the range are dropped). A mark with a state
+ * contributes that state, not its hand colour; its finger badge is unaffected (see badgeSlots).
+ * Priority: good > bad > pressed > hand colour (rh / lh / split / none) > target outline.
+ */
+export function keyLooks(marks: KeyMark[], low: number, high: number): Map<number, KeyLook> {
+  const byKey = new Map<number, KeyMark[]>()
+  for (const m of marks) {
+    if (m.midi < low || m.midi > high) continue
+    const list = byKey.get(m.midi)
+    if (list) list.push(m)
+    else byKey.set(m.midi, [m])
+  }
+  const out = new Map<number, KeyLook>()
+  for (const [midi, list] of byKey) {
+    const label = list.find((m) => m.label !== undefined)?.label
+    const states = new Set(list.map((m) => m.state))
+    const state = STATE_ORDER.find((s) => states.has(s))
+    if (state) {
+      out.set(midi, { fill: state, target: false, glyph: state === 'pressed' ? null : state, label })
+      continue
+    }
+    const hands = new Set(list.filter((m) => m.state === undefined).map((m) => m.hand))
+    const fill: KeyFill | null =
+      hands.has('rh') && hands.has('lh')
+        ? 'split'
+        : hands.has('rh')
+          ? 'rh'
+          : hands.has('lh')
+            ? 'lh'
+            : hands.has('none')
+              ? 'none'
+              : null
+    out.set(midi, { fill, target: fill === null && states.has('target'), glyph: null, label })
+  }
+  return out
 }
 
 // ---- vertical layout ----

@@ -13,10 +13,21 @@ interface Props {
   onKeyTap?: (midi: number) => void
   maxKeyPx?: number
   toggle?: boolean
+  onKeyPress?: (midi: number, down: boolean) => void
 }
 
 /** <Keyboard reserveRows> that, when it has to scroll sideways, starts scrolled to the first marked key. */
-export function ScrollKeyboard({ low, high, marks, firstMidi, reserveRows = true, onKeyTap, maxKeyPx, toggle }: Props) {
+export function ScrollKeyboard({
+  low,
+  high,
+  marks,
+  firstMidi,
+  reserveRows = true,
+  onKeyTap,
+  maxKeyPx,
+  toggle,
+  onKeyPress,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const scroller = ref.current?.querySelector<HTMLElement>('.keyboard-scroll')
@@ -29,7 +40,16 @@ export function ScrollKeyboard({ low, high, marks, firstMidi, reserveRows = true
   }, [low, high, firstMidi])
   return (
     <div class="stage" ref={ref}>
-      <Keyboard low={low} high={high} marks={marks} reserveRows={reserveRows} onKeyTap={onKeyTap} maxKeyPx={maxKeyPx} toggle={toggle} />
+      <Keyboard
+        low={low}
+        high={high}
+        marks={marks}
+        reserveRows={reserveRows}
+        onKeyTap={onKeyTap}
+        maxKeyPx={maxKeyPx}
+        toggle={toggle}
+        onKeyPress={onKeyPress}
+      />
     </div>
   )
 }
