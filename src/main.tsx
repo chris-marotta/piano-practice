@@ -16,6 +16,7 @@ import { App } from './App'
 import { startLiveSound } from './audio/live'
 import { connectMidi } from './midi/access'
 import { app } from './ui/state'
+import { armUnlockOnTap } from './ui/unlockOnTap'
 
 // Ask the browser not to evict localStorage under storage pressure (progress lives only here).
 // Feature-detected; the answer doesn't change anything, so it is ignored.
@@ -29,7 +30,8 @@ try {
 startLiveSound(() => app.value.settings.keyboardSound)
 
 // Connected before (spec §3.1): reconnect without a click. Chrome remembers the MIDI permission;
-// audio stays locked until the first tap, which the status chip asks for.
+// audio stays locked until the first tap, which the status chip asks for and armUnlockOnTap catches on any screen.
 if (app.value.settings.midiEnabled) void connectMidi()
+armUnlockOnTap()
 
 render(<App />, document.getElementById('app')!)
