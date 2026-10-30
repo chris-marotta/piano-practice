@@ -121,7 +121,7 @@ export function Wheel({ highlight, minor, steps = 0, accidental = '', onSelect }
               cy={round(cy)}
               r={r}
               role="button"
-              tabIndex={0}
+              tabindex={0}
               aria-label={name}
               aria-pressed={i === highlight}
               onClick={() => onSelect(i)}

@@ -363,7 +363,7 @@
 
 .wheel__hit:focus-visible {
   outline: none;
-  stroke: var(--accent);
+  stroke: var(--text); /* --accent would vanish on the lit key's accent fill */
   stroke-width: 2;
 }
 
