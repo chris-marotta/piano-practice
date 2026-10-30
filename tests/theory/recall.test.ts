@@ -162,8 +162,24 @@ describe('recall why: pinned examples', () => {
       .toBe('The flat is B♭ and the sharp is C♯; every other note is natural.')
     expect(recallCard('spell', { root: 'G', form: 'harmonic' }).whyText)
       .toBe('The flats are B♭ E♭ and the sharp is F♯; every other note is natural.')
-    expect(recallCard('spell', { root: 'G', form: 'melodic' }).whyText)
-      .toBe('The flat is B♭ and the sharp is F♯; every other note is natural.')
+    expect(recallCard('spell', { root: 'G', form: 'melodic' }).whyText).toBe(
+      'Going up, the flat is B♭ and the sharp is F♯; every other note is natural. '
+      + 'Coming down, the flats are B♭ E♭; every other note is natural.')
+  })
+
+  it('spell for melodic minor names the up line, then the natural-minor down line', () => {
+    expect(recallCard('spell', { root: 'A', form: 'melodic' }).whyText).toBe(
+      'Going up, the sharps are F♯ G♯; every other note is natural. '
+      + 'Coming down, no sharps or flats: all natural notes.')
+    expect(recallCard('spell', { root: 'C', form: 'melodic' }).whyText).toBe(
+      'Going up, the flat is E♭; every other note is natural. '
+      + 'Coming down, the flats are B♭ E♭ A♭; every other note is natural.')
+    expect(recallCard('spell', { root: 'Eb', form: 'melodic' }).whyText).toBe(
+      'Going up, the flats are B♭ E♭ A♭ G♭; every other note is natural. '
+      + 'Coming down, the flats are B♭ E♭ A♭ D♭ G♭ C♭; every other note is natural.')
+    expect(recallCard('spell', { root: 'G#', form: 'melodic' }).whyText).toBe(
+      'Going up, the sharps are C♯ G♯ D♯ A♯ E♯ F𝄪; every other note is natural. '
+      + 'Coming down, the sharps are F♯ C♯ G♯ D♯ A♯; every other note is natural.')
   })
 
   it('spell for melodic minor carries the descending line', () => {
@@ -215,6 +231,14 @@ describe('recall why: every enabled scale', () => {
       const own = scaleNotes(ref).filter((n) => /[#b]/.test(n))
       expect([...scale.accidentals].sort()).toEqual([...own].sort())
       expect(scale.notes).toEqual([...scaleNotes(ref), ref.root])
+      const spellText = recallCard('spell', ref).whyText
+      if (ref.form === 'melodic') {
+        expect(scale.descending).toEqual([ref.root, ...scaleNotes({ root: ref.root, form: 'natural' }).slice(1).reverse(), ref.root])
+        expect(spellText).toMatch(/^Going up, .+ Coming down, .+\.$/)
+      } else {
+        expect(scale).not.toHaveProperty('descending')
+        expect(spellText).not.toMatch(/Going up|Coming down/)
+      }
 
       const thumbs = whyOf(recallCard('thumb', ref).why, 'thumbs')
       expect(thumbs.thumbs).toEqual(thumbNotes(ref, 'rh'))

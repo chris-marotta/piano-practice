@@ -71,9 +71,9 @@ function scaleAccidentals(ref: ScaleRef): string[] {
   return [...inSig, ...own.filter((n) => !inSig.includes(n))]
 }
 
-/** "The sharps are F♯ C♯ G♯", "The flat is B♭". A scale with both names each group in turn. */
-function accidentalsText(accidentals: string[]): string {
-  if (accidentals.length === 0) return 'No sharps or flats: all natural notes.'
+/** "the sharps are F♯ C♯ G♯; …", "the flat is B♭; …". Lowercase so it can follow "Going up, ". A scale with both names each group in turn. */
+function accidentalsClause(accidentals: string[]): string {
+  if (accidentals.length === 0) return 'no sharps or flats: all natural notes.'
   const groups: { word: string; notes: string[] }[] = []
   for (const n of accidentals) {
     const word = n.includes('#') ? 'sharp' : 'flat'
@@ -82,25 +82,31 @@ function accidentalsText(accidentals: string[]): string {
     else groups.push({ word, notes: [n] })
   }
   const parts = groups.map((g) => (g.notes.length === 1 ? `the ${g.word} is` : `the ${g.word}s are`) + ` ${spaced(g.notes)}`)
-  const sentence = parts.join(' and ')
-  return `${sentence[0]?.toUpperCase()}${sentence.slice(1)}; every other note is natural.`
+  return `${parts.join(' and ')}; every other note is natural.`
 }
+
+const capitalised = (s: string): string => `${s[0]?.toUpperCase() ?? ''}${s.slice(1)}`
 
 function spellCard(ref: ScaleRef): RecallCard {
   const up = [...scaleNotes(ref), ref.root]
   const accidentals = scaleAccidentals(ref)
   let answer: string
   let why: RecallWhy
+  let whyText: string
   if (ref.form === 'melodic') {
     // Descending melodic minor is natural minor: tonic, 7th, 6th ... 2nd, tonic.
     const down = [ref.root, ...scaleNotes({ root: ref.root, form: 'natural' }).slice(1).reverse(), ref.root]
     answer = `Up: ${spaced(up)} · Down: ${spaced(down)}`
     why = { kind: 'scale', notes: up, accidentals, descending: down }
+    // The down line is natural minor, so its accidentals are the natural minor's.
+    const downAccidentals = scaleAccidentals({ root: ref.root, form: 'natural' })
+    whyText = `Going up, ${accidentalsClause(accidentals)} Coming down, ${accidentalsClause(downAccidentals)}`
   } else {
     answer = spaced(up)
     why = { kind: 'scale', notes: up, accidentals }
+    whyText = capitalised(accidentalsClause(accidentals))
   }
-  return { type: 'spell', prompt: `${formatScale(ref)} — spell the scale.`, answer, why, whyText: accidentalsText(accidentals) }
+  return { type: 'spell', prompt: `${formatScale(ref)} — spell the scale.`, answer, why, whyText }
 }
 
 const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
