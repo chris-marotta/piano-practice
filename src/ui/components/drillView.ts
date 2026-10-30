@@ -99,9 +99,17 @@ export function whyText(q: Question, s: AnswerState): string {
   return route
 }
 
-/** "Level {n} unlocked" shows when the level is higher than at the start of the last round. */
+/**
+ * "Level {n} unlocked" shows when the level is above the highest one reached before. drillLevel never returns less
+ * than that, so this is true exactly when the boxes alone have unlocked a new level.
+ */
 export function levelRose(level: number, lastLevel: number): boolean {
   return level > lastLevel
+}
+
+/** The highest level reached, to store as `lastDrillLevel`: it only ever rises. */
+export function raisedLevel(level: 1 | 2 | 3 | 4, lastLevel: 1 | 2 | 3 | 4): 1 | 2 | 3 | 4 {
+  return Math.max(level, lastLevel) as 1 | 2 | 3 | 4
 }
 
 /** The button under an answer: Next, and on the last question the caller's finish label. */

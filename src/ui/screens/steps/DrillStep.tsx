@@ -6,7 +6,7 @@ import type { Step } from '../../../session/builder'
 import { stateFor } from '../../../srs/items'
 import type { Rating } from '../../../srs/scheduler'
 import { DrillRound } from '../../components/DrillRound'
-import { NEXT_LABEL, levelRose } from '../../components/drillView'
+import { NEXT_LABEL, levelRose, raisedLevel } from '../../components/drillView'
 import { app, today, update } from '../../state'
 
 type DrillStepData = Extract<Step, { kind: 'drill' }>
@@ -42,10 +42,11 @@ export function DrillStep({ step, onRate, onDone }: Props) {
     })
     return { questions, level, unlocked: levelRose(level, settings.lastDrillLevel) }
   })
-  // Remember this round's level, so the banner shows once (and again only after a later rise).
+  // Remember the highest level reached, so the banner shows once and the level is sticky. It only ever rises.
   useEffect(() => {
-    const level = setup.level
-    if (app.peek().settings.lastDrillLevel !== level) update((s) => ({ ...s, settings: { ...s.settings, lastDrillLevel: level } }))
+    const last = app.peek().settings.lastDrillLevel
+    const level = raisedLevel(setup.level, last)
+    if (level > last) update((s) => ({ ...s, settings: { ...s.settings, lastDrillLevel: raisedLevel(level, s.settings.lastDrillLevel) } }))
   }, [])
   // Keys already answered this round: a key that comes round again (small pools cycle) is not graded twice.
   const answered = useRef(new Set<string>())

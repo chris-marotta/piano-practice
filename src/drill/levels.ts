@@ -23,6 +23,8 @@ export const DRILL_LEVEL_UNLOCK_BOX = 3
 /**
  * The highest unlocked level. Level n+1 unlocks when every key of levels 1..n is at box 3 or more;
  * level 4 unlocks when all 12 are. A key with no stored state is at box 1.
+ * Levels are sticky (ruling R-T11d): never below `settings.lastDrillLevel`, the highest level already reached,
+ * so one lost key doesn't shrink the pool back to C and F.
  */
 export function drillLevel(items: Record<string, ItemState>, today: string, settings: Settings): 1 | 2 | 3 | 4 {
   const known = (pc: number): boolean => stateFor(keyId(pc), items, today, settings).box >= DRILL_LEVEL_UNLOCK_BOX
@@ -31,5 +33,5 @@ export function drillLevel(items: Record<string, ItemState>, today: string, sett
     if (!LEVEL_KEYS[n].every(known)) break
     level = (n + 1) as 2 | 3 | 4
   }
-  return level
+  return Math.max(level, settings.lastDrillLevel) as 1 | 2 | 3 | 4
 }

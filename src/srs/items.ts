@@ -19,7 +19,7 @@ export interface Settings {
   midiEnabled: boolean
   keyboardSound: boolean
   playLabels: PlayLabels
-  /** The drill level at the start of the last round, so "Level {n} unlocked" shows once, the round after it rose. */
+  /** The highest drill level reached. drillLevel never goes below it (sticky levels), and "Level {n} unlocked" shows once. */
   lastDrillLevel: 1 | 2 | 3 | 4
 }
 

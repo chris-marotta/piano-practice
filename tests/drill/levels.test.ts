@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DRILL_LEVEL_UNLOCK_BOX, LEVEL_KEYS, LEVEL_NAMES, drillLevel } from '../../src/drill/levels'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
+import type { Settings } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 
 const TODAY = '2026-10-30'
@@ -72,5 +73,33 @@ describe('drillLevel', () => {
     for (let pc = 0; pc < 12; pc++) boxes[pc] = 3
     boxes[6] = 2
     expect(level(itemsAt(boxes))).toBe(3)
+  })
+})
+
+describe('drillLevel is sticky (ruling R-T11d)', () => {
+  const allAt3 = (): Record<string, ItemState> => {
+    const boxes: Record<number, ItemState['box']> = {}
+    for (let pc = 0; pc < 12; pc++) boxes[pc] = 3
+    return itemsAt(boxes)
+  }
+  const reached = (lastDrillLevel: Settings['lastDrillLevel']): Settings => ({ ...DEFAULT_SETTINGS, lastDrillLevel })
+
+  it('all 12 keys at box 3 or more → 4', () => {
+    expect(drillLevel(allAt3(), TODAY, reached(1))).toBe(4)
+  })
+
+  it('then C lost (box 1), with lastDrillLevel 4 → still 4', () => {
+    const items = { ...allAt3(), [keyId(0)]: keyState(0, 1) }
+    expect(drillLevel(items, TODAY, reached(1))).toBe(1) // what the boxes alone say
+    expect(drillLevel(items, TODAY, reached(4))).toBe(4)
+  })
+
+  it('a fresh state with lastDrillLevel 1 → 1', () => {
+    expect(drillLevel({}, TODAY, reached(1))).toBe(1)
+  })
+
+  it('a reached level holds on a fresh state; boxes above it still raise it', () => {
+    expect(drillLevel({}, TODAY, reached(3))).toBe(3)
+    expect(drillLevel(allAt3(), TODAY, reached(2))).toBe(4)
   })
 })
