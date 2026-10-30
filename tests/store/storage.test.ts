@@ -260,6 +260,21 @@ describe('playLabels setting', () => {
   })
 })
 
+describe('lastDrillLevel setting', () => {
+  const load = (settings: object) =>
+    loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings }) })).state.settings
+  it('defaults to 1, also for state saved before phase 3', () => {
+    expect(emptyState().settings.lastDrillLevel).toBe(1)
+    expect(load({}).lastDrillLevel).toBe(1)
+  })
+  it('a missing or invalid value becomes 1', () => {
+    for (const bad of [undefined, 0, 5, 2.5, '2', null, true]) expect(load({ lastDrillLevel: bad }).lastDrillLevel).toBe(1)
+  })
+  it('1 to 4 round-trip', () => {
+    for (const v of [1, 2, 3, 4]) expect(load({ lastDrillLevel: v }).lastDrillLevel).toBe(v)
+  })
+})
+
 describe('MIDI settings', () => {
   it('defaults: midiEnabled false, keyboardSound true', () => {
     expect(emptyState().settings).toMatchObject({ midiEnabled: false, keyboardSound: true })
@@ -315,7 +330,7 @@ describe('validation hardening', () => {
       return r.state.settings
     }
     const ok = mk({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', lastDrillLevel: 1, minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

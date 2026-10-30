@@ -34,6 +34,7 @@ describe('defaults', () => {
       midiEnabled: false,
       keyboardSound: true,
       playLabels: 'names',
+      lastDrillLevel: 1,
     })
   })
 })

@@ -1,5 +1,6 @@
 import { useMemo } from 'preact/hooks'
 import { sessionChanges } from '../../session/changes'
+import { KEY_IDS } from '../../srs/items'
 import { streak } from '../../store/streak'
 import { app, currentSession, route, today, type CurrentSession } from '../state'
 import { streakLabel } from './todayView'
@@ -19,7 +20,13 @@ export function Done({ session }: Props) {
   const day = today()
   const changes = useMemo(() => {
     const ids = session.steps.flatMap((s) =>
-      s.kind === 'freeplay' ? [] : s.kind === 'deck' ? s.cards.map((c) => c.itemId) : [s.itemId],
+      s.kind === 'freeplay'
+        ? []
+        : s.kind === 'drill'
+          ? KEY_IDS // the round is built on the step, so any key may have moved; unmoved keys list nothing
+          : s.kind === 'deck'
+            ? s.cards.map((c) => c.itemId)
+            : [s.itemId],
     )
     return sessionChanges(ids, session.before, items, day, settings)
   }, [session, items, day, settings])

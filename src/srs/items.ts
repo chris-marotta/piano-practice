@@ -19,6 +19,8 @@ export interface Settings {
   midiEnabled: boolean
   keyboardSound: boolean
   playLabels: PlayLabels
+  /** The drill level at the start of the last round, so "Level {n} unlocked" shows once, the round after it rose. */
+  lastDrillLevel: 1 | 2 | 3 | 4
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   midiEnabled: false,
   keyboardSound: true,
   playLabels: 'names',
+  lastDrillLevel: 1,
 }
 
 // Ids use tonal's ASCII spelling for roots (F#, Bb), never the display glyphs.

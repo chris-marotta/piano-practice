@@ -1,0 +1,233 @@
+/* Name-that-key round (phase 3 §6): the session's first step, and Play's Keys mode. Tokens live in tokens.css. */
+
+.step--drill {
+  align-items: center;
+}
+
+.drill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  width: min(100%, 1080px);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+/* ---- level ladder + unlock banner (above the first question) ---- */
+
+.drill__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.drill__unlocked {
+  align-self: flex-start;
+  padding: var(--s-1) var(--s-3);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.drill-ladder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* "Level 1  Landmarks" on one line, the hint under it: short enough to leave the keyboard its room at 820 px. */
+.drill-ladder__step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+.drill-ladder__step--done {
+  color: var(--text);
+}
+
+.drill-ladder__step--current {
+  border-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.drill-ladder__num,
+.drill-ladder__hint {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.drill-ladder__name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.drill-ladder__hint {
+  grid-column: 1 / -1;
+}
+
+/* ---- question ---- */
+
+.drill__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.drill__ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+}
+
+.drill__prompt {
+  font-size: var(--fs-prompt);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.drill__name {
+  color: var(--accent);
+}
+
+.drill__listening {
+  padding: 2px var(--s-2);
+  border: 1px solid var(--success);
+  border-radius: 6px;
+  color: var(--success);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+/* Level 4: the 3 s a key runs out left to right; it stops where it was on an answer. */
+.drill__timer {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.drill__timer-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: drill-countdown 3000ms linear forwards;
+}
+
+.drill__timer-fill.is-stopped {
+  animation-play-state: paused;
+}
+
+/* Timed out: empty, even where the animation was throttled (a background tab). */
+.drill__timer-fill.is-out {
+  animation: none;
+  transform: scaleX(0);
+}
+
+@keyframes drill-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.drill__board .keyboard {
+  max-height: 280px;
+}
+
+/* Format A: the asked key lights in the chrome accent (a hand-free 'none' mark, recoloured only here). */
+.drill__board--ask .key.key--none {
+  fill: var(--accent);
+}
+
+/* ---- name choices (format A) ---- */
+
+.drill-choices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.drill-choice {
+  min-height: var(--tap-lg);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.drill-choice:not([aria-disabled='true']):hover {
+  border-color: var(--accent);
+}
+
+.drill-choice[aria-disabled='true'] {
+  cursor: default;
+}
+
+.drill-choice--right {
+  border-color: var(--good);
+  background: color-mix(in srgb, var(--good) 22%, var(--surface));
+}
+
+.drill-choice--wrong {
+  border-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 22%, var(--surface));
+}
+
+.drill-choice--other {
+  color: var(--muted);
+}
+
+/* ---- after an answer: why + Next ---- */
+
+.drill__after {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-3);
+  min-height: var(--tap-lg);
+}
+
+.drill__why {
+  flex: 1;
+  align-self: center;
+  padding: var(--s-3) var(--s-4);
+  border-left: 4px solid var(--good);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+
+.drill__why--wrong {
+  border-left-color: var(--bad);
+}
+
+.drill__next {
+  min-width: 200px;
+}

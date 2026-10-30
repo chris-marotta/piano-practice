@@ -8,20 +8,27 @@ import type { RecallCard, RecallType } from '../theory/recall'
 import type { ScaleRef } from '../theory/scales'
 
 export type Step =
+  /** Name-that-key: `count` questions. The round itself is built when the step mounts, so the MIDI state is current. */
+  | { kind: 'drill'; count: number }
   /** The warm-up: every recall card picked today, in pick order, as one flip deck. Each card is rated on its own id. */
   | { kind: 'deck'; cards: { itemId: string; card: RecallCard }[] }
   | { kind: 'scale'; itemId: string; ref: ScaleRef; support: 0 | 1 | 2 | 3; tempo: number }
   | { kind: 'chords'; itemId: string; ref: ScaleRef; chords: DiatonicChord[]; includeInversions: boolean }
   | { kind: 'freeplay'; ref: ScaleRef; seconds: number }
 
-export const SESSION_SIZES: Record<5 | 10 | 15 | 20, { cards: number; scales: number; chordSets: number; freeplaySeconds: number }> = {
-  5: { cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
-  10: { cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
-  15: { cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
-  20: { cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
+/** `keys`: drill questions (phase 3 §6.1, ASSUMED). */
+export const SESSION_SIZES: Record<
+  5 | 10 | 15 | 20,
+  { keys: number; cards: number; scales: number; chordSets: number; freeplaySeconds: number }
+> = {
+  5: { keys: 4, cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
+  10: { keys: 8, cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
+  15: { keys: 8, cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
+  20: { keys: 8, cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
 }
 
-// ASSUMED estimates (spec §4.5).
+// ASSUMED estimates (spec §4.5; the drill's from phase 3 §6.1).
+const DRILL_QUESTION_SECONDS = 7
 const RECALL_SECONDS = 15
 const SCALE_SECONDS = 180
 const CHORDS_SECONDS = 90
@@ -46,7 +53,7 @@ const refKey = (ref: ScaleRef): string => `${ref.root}:${ref.form}`
  * today is excluded from every pool, and ties break by catalog order.
  *
  * Returns [] exactly when every enabled scale has been rated today (a scale not
- * rated today is always pickable). Recall cards alone never make a session.
+ * rated today is always pickable). Recall cards alone never make a session, nor does the drill.
  */
 export function buildSession(items: Record<string, ItemState>, settings: Settings, today: string): Step[] {
   const size = SESSION_SIZES[settings.sessionMinutes]
@@ -124,8 +131,9 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     ...recallPool.filter(notYetDue).sort(bySoonest),
   ].slice(0, size.cards)
 
-  // 7. Order: the deck (today's recall cards, when there are any) → each scale followed by its chord set → free play.
-  const steps: Step[] = []
+  // 7. Order: the drill → the deck (today's recall cards, when there are any) → each scale followed by its chord set
+  //    → free play. Only reached with at least one scale, so the drill never makes a session on its own.
+  const steps: Step[] = [{ kind: 'drill', count: size.keys }]
   if (recallPicks.length > 0) {
     steps.push({ kind: 'deck', cards: recallPicks.map((c) => ({ itemId: c.id, card: recallCard(c.recallType, c.ref) })) })
   }
@@ -157,7 +165,8 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
 export function estimateSeconds(steps: Step[]): number {
   let total = 0
   for (const s of steps) {
-    if (s.kind === 'deck') total += RECALL_SECONDS * s.cards.length
+    if (s.kind === 'drill') total += DRILL_QUESTION_SECONDS * s.count
+    else if (s.kind === 'deck') total += RECALL_SECONDS * s.cards.length
     else if (s.kind === 'scale') total += SCALE_SECONDS
     else if (s.kind === 'chords') total += CHORDS_SECONDS
     else total += s.seconds

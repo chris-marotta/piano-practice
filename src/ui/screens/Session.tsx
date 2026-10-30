@@ -9,6 +9,7 @@ import { useWakeLock } from '../useWakeLock'
 import { Done } from './Done'
 import { ChordStep } from './steps/ChordStep'
 import { DeckStep } from './steps/DeckStep'
+import { DrillStep } from './steps/DrillStep'
 import { FreeplayStep } from './steps/FreeplayStep'
 import { ScaleStep } from './steps/ScaleStep'
 import { progressLabel } from './steps/stepView'
@@ -78,7 +79,9 @@ export function Session() {
   const settings = app.value.settings
 
   let body
-  if (step.kind === 'deck')
+  if (step.kind === 'drill')
+    body = <DrillStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
+  else if (step.kind === 'deck')
     body = <DeckStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
   else if (step.kind === 'scale')
     body = <ScaleStep key={i} step={step} settings={settings} onRate={(r, o) => rate(i, step.itemId, r, o)} />

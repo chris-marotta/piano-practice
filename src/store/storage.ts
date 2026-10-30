@@ -87,6 +87,7 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
     midiEnabled: bool(stored.midiEnabled, d.midiEnabled),
     keyboardSound: bool(stored.keyboardSound, d.keyboardSound),
     playLabels: oneOf(stored.playLabels, ['off', 'names', 'degrees'] as const, d.playLabels),
+    lastDrillLevel: oneOf(stored.lastDrillLevel, [1, 2, 3, 4] as const, d.lastDrillLevel),
   }
 }
 
