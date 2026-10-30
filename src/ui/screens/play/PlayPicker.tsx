@@ -38,16 +38,34 @@ function setChordType(type: ChordTypeId): void {
 }
 
 /** Random: a new scale (major or an enabled minor form) or chord, never the current one; octaves stay as picked. */
-function pickRandom(): void {
+export function pickRandom(): void {
   if (targetKind.peek() === 'chord') chordSel.value = randomChord(chordSel.peek(), Math.random)
   else scaleSel.value = randomScale(scaleSel.peek(), app.peek().settings.minorForms, Math.random)
 }
 
-function RandomButton() {
+export function RandomButton() {
   return (
     <button type="button" class="btn play-random" onClick={pickRandom}>
       Random
     </button>
+  )
+}
+
+/** The picker folded to one line (spec 4.3): the summary opens it again; Restart and Random stay in reach. */
+export function PickerSummary(props: { summary: string; canRandom: boolean; onExpand: () => void; onRestart: () => void }) {
+  return (
+    <div class="play-picker play-picker--collapsed">
+      <button type="button" class="play-summary" aria-expanded={false} onClick={props.onExpand}>
+        <span class="play-summary__text">{props.summary}</span>
+        <span class="play-summary__caret" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      <button type="button" class="btn play-restart" onClick={props.onRestart}>
+        Restart
+      </button>
+      {props.canRandom && <RandomButton />}
+    </div>
   )
 }
 

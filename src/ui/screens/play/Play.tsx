@@ -12,15 +12,29 @@ import { ScrollKeyboard } from '../steps/ScrollKeyboard'
 import { withSettings } from '../settingsView'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
-import { PlayPicker } from './PlayPicker'
-import { fitted, hand, keyWindow, mode, playHand, playMode, playTarget, resetWindow, toggles } from './playState'
+import { PickerSummary, PlayPicker } from './PlayPicker'
+import {
+  fitted,
+  hand,
+  keyWindow,
+  mode,
+  octavesSel,
+  pickerCollapsed,
+  playHand,
+  playMode,
+  playTarget,
+  resetWindow,
+  toggles,
+} from './playState'
 import {
   checkAvailable,
   chordReadout,
   effectiveToggles,
+  fitHand,
   followsNotes,
   guideAvailable,
   guidedStatus,
+  pickerSummary,
   playMarks,
   reserveRowsFor,
   shiftWindow,
@@ -112,14 +126,17 @@ export function Play() {
   useDrone(rootOf(target), droneOn, app.value.settings.droneVolumeDb)
 
   useEffect(() => {
+    pickerCollapsed.value = false
     // A note off screen moves the window by whole octaves (the Roli's octave buttons); a guided scale follows its lock.
     const off = onKeyboard((e) => {
+      if (e.type === 'on') pickerCollapsed.value = true
       if (e.type === 'on' && followsNotes(playMode.peek(), playTarget.peek())) {
         keyWindow.value = shiftWindow(keyWindow.peek(), e.midi)
       }
     })
     return () => {
       off()
+      pickerCollapsed.value = false
       clearKeyboard()
       stopAll()
     }
@@ -144,6 +161,7 @@ export function Play() {
     again()
     resetWindow()
   }
+  const collapsed = pickerCollapsed.value
 
   return (
     <section class="screen play">
@@ -167,7 +185,16 @@ export function Play() {
         </div>
       </header>
 
-      <PlayPicker />
+      {collapsed ? (
+        <PickerSummary
+          summary={pickerSummary(target, octavesSel.value, m, fitHand(m, target, hand.value))}
+          canRandom={target.kind !== 'none'}
+          onExpand={() => (pickerCollapsed.value = false)}
+          onRestart={restart}
+        />
+      ) : (
+        <PlayPicker />
+      )}
 
       <div class="play-row play-controls">
         {m === 'guided' && target.kind === 'scale' && (
@@ -220,7 +247,7 @@ export function Play() {
               )}
               <div class="play-status__side">
                 {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
-                {m !== 'free' && (
+                {m !== 'free' && !collapsed && (
                   <button type="button" class="btn play-restart" onClick={restart}>
                     Restart
                   </button>

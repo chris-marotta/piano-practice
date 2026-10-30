@@ -32,6 +32,11 @@ export const chordSel = signal<PlayChordSel>({ root: 'C', type: 'M', inversion: 
 export const mode = signal<PlayMode>('free')
 export const hand = signal<PlayHand>('rh')
 export const toggles = signal<PlayToggles>(DEFAULT_TOGGLES)
+/**
+ * Spec 4.3: the first note played (any mode) folds the picker to one summary line; tapping the line opens it again and
+ * the next note folds it again. Play resets it to open on the way in and out, so leaving the tab never leaves it folded.
+ */
+export const pickerCollapsed = signal(false)
 
 /** A new object only when the selection changes (guide.ts caches per target object). */
 export const playTarget = computed<PlayTarget>(() => {

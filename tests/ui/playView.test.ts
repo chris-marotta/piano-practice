@@ -10,6 +10,7 @@ import {
   fitHand,
   fittedWindow,
   followsNotes,
+  pickerSummary,
   guideAvailable,
   degreeLabel,
   playMarks,
@@ -662,5 +663,46 @@ describe('playMarks: labels and root dots', () => {
     const ms = marks({ mode: 'guided', target: D_MAJOR, labels: 'degrees', held: [64] })
     expect(stateAt(ms, 64)).toBe('good')
     expect(labelAt(ms, 64)).toBe('2')
+  })
+})
+
+describe('pickerSummary: the one line the picker collapses to', () => {
+  const D_MAJOR: PlayTarget = { kind: 'scale', ref: { root: 'D', form: 'major' }, octaves: 1 }
+  const A_HARMONIC: PlayTarget = { kind: 'scale', ref: { root: 'A', form: 'harmonic' }, octaves: 2 }
+
+  it('a guided scale names its hand', () => {
+    expect(pickerSummary(D_MAJOR, 1, 'guided', 'rh')).toBe('D major · 1 oct · Guided RH')
+    expect(pickerSummary(D_MAJOR, 1, 'guided', 'lh')).toBe('D major · 1 oct · Guided LH')
+  })
+
+  it('a checked scale names its hand', () => {
+    expect(pickerSummary(A_HARMONIC, 2, 'check', 'together')).toBe('A harmonic minor · 2 oct · Check Together')
+  })
+
+  it('Free has no hand', () => {
+    expect(pickerSummary(D_MAJOR, 1, 'free', 'rh')).toBe('D major · 1 oct · Free')
+  })
+
+  it('the octaves argument is the one shown', () => {
+    expect(pickerSummary(D_MAJOR, 2, 'free', 'rh')).toBe('D major · 2 oct · Free')
+  })
+
+  it('a chord has no octaves and no hand', () => {
+    expect(pickerSummary(C_CHORD, 1, 'free', 'rh')).toBe('C major chord · Free')
+    expect(pickerSummary(C_CHORD, 1, 'guided', 'rh')).toBe('C major chord · Guided')
+  })
+
+  it('a chord names its inversion, as the Library does', () => {
+    expect(pickerSummary({ ...C_CHORD, inversion: 1 }, 1, 'guided', 'rh')).toBe('C major chord, 1st inversion · Guided')
+    expect(pickerSummary({ ...C_CHORD, inversion: 2 }, 1, 'free', 'rh')).toBe('C major chord, 2nd inversion · Free')
+  })
+
+  it('spells accidentals with the display glyphs', () => {
+    const t: PlayTarget = { kind: 'scale', ref: { root: 'Bb', form: 'major' }, octaves: 1 }
+    expect(pickerSummary(t, 1, 'free', 'rh')).toBe('B♭ major · 1 oct · Free')
+  })
+
+  it('nothing picked is just free play', () => {
+    expect(pickerSummary(NONE, 1, 'free', 'rh')).toBe('Free play')
   })
 })

@@ -396,9 +396,29 @@ export function targetTitle(target: PlayTarget): string {
 }
 
 const INVERSION_NAMES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion']
+const MODE_WORD: Record<PlayMode, string> = { free: 'Free', guided: 'Guided', check: 'Check' }
+const HAND_SHORT: Record<PlayHand, string> = { rh: 'RH', lh: 'LH', together: 'Together' }
 const HAND_WORD = { rh: 'Right hand', lh: 'Left hand', together: 'Hands together' } as const
 const plain = (name: string): string => formatNote(name.replace(/-?\d+$/, ''))
 const slipWord = (n: number): string => `${n} slip${n === 1 ? '' : 's'}`
+
+/**
+ * The one line the picker collapses to once Chris plays: "D major · 1 oct · Guided RH", "A harmonic minor · 2 oct ·
+ * Check Together", "C major chord, 1st inversion · Guided". Only a scale in Guided or Check names a hand (`hand`: the
+ * one in force, see fitHand); a chord has no octaves; the chord's name and inversion are the Library's (chordPanel).
+ */
+export function pickerSummary(target: PlayTarget, octaves: 1 | 2, mode: PlayMode, hand: PlayHand): string {
+  if (target.kind === 'none') return 'Free play'
+  const modeWord = MODE_WORD[mode]
+  if (target.kind === 'chord') {
+    // chordPanel's name is "C major · 1st inversion": the root position is left unsaid here.
+    const [name] = chordPanel(target.root, target.type, target.inversion).name.split(' · ') as [string]
+    const inversion = target.inversion > 0 ? `, ${INVERSION_NAMES[target.inversion]}` : ''
+    return `${name} chord${inversion} · ${modeWord}`
+  }
+  const withHand = mode === 'free' ? modeWord : `${modeWord} ${HAND_SHORT[hand]}`
+  return `${formatScale(target.ref)} · ${octaves} oct · ${withHand}`
+}
 
 export interface GuidedStatus {
   headline: string
