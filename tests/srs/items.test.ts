@@ -30,6 +30,7 @@ describe('defaults', () => {
       metronomeOn: false,
       midiEnabled: false,
       keyboardSound: true,
+      playLabels: 'names',
     })
   })
 })

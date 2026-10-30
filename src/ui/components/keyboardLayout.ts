@@ -158,6 +158,8 @@ export interface KeyLook {
 /** Spec §4.3 priority among states; a hand colour sits between 'pressed' and the glows ('target' > 'played'). */
 const STATE_ORDER: Exclude<KeyState, 'target' | 'played'>[] = ['good', 'bad', 'pressed']
 
+const isRootCarrier = (m: KeyMark): boolean => m.root === true && m.hand === 'none' && m.finger === undefined
+
 /**
  * One look per key in [low, high] (marks outside the range are dropped). A mark with a state
  * contributes that state, not its hand colour; its finger badge is unaffected (see badgeSlots).
@@ -180,7 +182,8 @@ export function keyLooks(marks: KeyMark[], low: number, high: number): Map<numbe
       out.set(midi, { fill: state, glow: null, glyph: state === 'pressed' ? null : state, label })
       continue
     }
-    const hands = new Set(list.filter((m) => m.state === undefined).map((m) => m.hand))
+    // A root-only mark ({hand: 'none', root} and nothing else) carries the dot and its label; it adds no fill of its own.
+    const hands = new Set(list.filter((m) => m.state === undefined && !isRootCarrier(m)).map((m) => m.hand))
     const fill: KeyFill | null =
       hands.has('rh') && hands.has('lh')
         ? 'split'

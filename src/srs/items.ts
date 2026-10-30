@@ -5,6 +5,9 @@ import type { ScaleForm, ScaleRef } from '../theory/scales'
 import { TEMPO_START } from './scheduler'
 import type { ItemState } from './scheduler'
 
+/** Play's key labels: none, note names, or degrees (1 3 5 / scale position). */
+export type PlayLabels = 'off' | 'names' | 'degrees'
+
 export interface Settings {
   sessionMinutes: 5 | 10 | 15 | 20
   minorForms: { natural: boolean; harmonic: boolean; melodic: boolean }
@@ -14,6 +17,7 @@ export interface Settings {
   metronomeOn: boolean
   midiEnabled: boolean
   keyboardSound: boolean
+  playLabels: PlayLabels
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   metronomeOn: false,
   midiEnabled: false,
   keyboardSound: true,
+  playLabels: 'names',
 }
 
 // Ids use tonal's ASCII spelling for roots (F#, Bb), never the display glyphs.

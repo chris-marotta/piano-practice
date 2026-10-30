@@ -66,7 +66,7 @@ function isLogEntry(v: unknown): boolean {
 }
 
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback)
-const oneOf = <T extends number>(v: unknown, allowed: readonly T[], fallback: T): T =>
+const oneOf = <T extends string | number>(v: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(v as T) ? (v as T) : fallback
 
 /** Builds settings from DEFAULT_SETTINGS's keys only; each field falls back to its default if wrongly typed. */
@@ -86,6 +86,7 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
     metronomeOn: bool(stored.metronomeOn, d.metronomeOn),
     midiEnabled: bool(stored.midiEnabled, d.midiEnabled),
     keyboardSound: bool(stored.keyboardSound, d.keyboardSound),
+    playLabels: oneOf(stored.playLabels, ['off', 'names', 'degrees'] as const, d.playLabels),
   }
 }
 

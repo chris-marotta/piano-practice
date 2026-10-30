@@ -25,6 +25,11 @@ function rootPositionNotes(root: string, type: ChordTypeId, octave: number): str
   return Chord.getChord(type, `${root}${octave}`).notes
 }
 
+/** Each chord tone's number above the root, low to high in root position: 1 3 5 7 for a seventh, 1 2 5 for sus2, 1 3 5 9 for add9. */
+export function chordDegrees(type: ChordTypeId): number[] {
+  return Chord.getChord(type, 'C4').intervals.map((i) => parseInt(i, 10))
+}
+
 /** 3rd inversion only where there is a 7th (spec 3.3); triads, 6 and add9 stop at 2nd. */
 const MAX_INVERSION: Record<ChordTypeId, number> = {
   M: 2, m: 2, dim: 2, aug: 2, sus2: 2, sus4: 2,

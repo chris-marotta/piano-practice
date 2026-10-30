@@ -67,6 +67,18 @@
   flex: 0 0 300px;
 }
 
+.play-labels {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.play-labels__title {
+  color: var(--muted);
+  font-size: 16px;
+}
+.play-labels .seg {
+  flex: 0 0 auto;
+}
 .play-toggles {
   display: flex;
   flex-wrap: wrap;

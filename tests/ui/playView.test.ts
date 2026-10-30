@@ -11,12 +11,14 @@ import {
   fittedWindow,
   followsNotes,
   guideAvailable,
+  degreeLabel,
   playMarks,
   reserveRowsFor,
   shiftWindow,
   showConnectHint,
   shownWindow,
   targetPitchClasses,
+  type PlayLabels,
   type PlayMode,
   type PlayTarget,
   type PlayToggles,
@@ -37,6 +39,7 @@ function marks(opts: {
   held?: number[]
   next?: GuideNext
   flash?: number | null
+  labels?: PlayLabels
 }): KeyMark[] {
   return playMarks({
     mode: opts.mode ?? 'free',
@@ -46,6 +49,7 @@ function marks(opts: {
     next: opts.next ?? null,
     window: DEFAULT_WINDOW,
     flash: opts.flash ?? null,
+    labels: opts.labels ?? 'names',
   })
 }
 
@@ -130,7 +134,7 @@ describe('playMarks: guided next note', () => {
   it('P14: a guided chord step follows a window shifted up by the octave buttons', () => {
     const next: GuideNext = { chord: { pcs: [0, 4, 7], bassPc: 0, inversion: 0 } }
     const w = { low: 72, high: 120 }
-    const ms = playMarks({ mode: 'guided', target: C_CHORD, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+    const ms = playMarks({ mode: 'guided', target: C_CHORD, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w, labels: 'names' })
     const guided = ms.filter((m) => m.state === undefined)
     expect(guided.every((m) => m.midi >= w.low && m.midi <= w.high)).toBe(true)
   })
@@ -180,6 +184,7 @@ describe('playMarks: guided scale glows its own run, one leg at a time', () => {
       mode: 'guided',
       target,
       toggles: { ...DEFAULT_TOGGLES, ...toggles },
+      labels: 'off',
       held: new Set(),
       next: null,
       window: DEFAULT_WINDOW,
@@ -239,6 +244,7 @@ describe('playMarks: guided scale glows its own run, one leg at a time', () => {
       mode: 'guided',
       target: C_CHORD,
       toggles: DEFAULT_TOGGLES,
+      labels: 'off',
       held: new Set(),
       next,
       window: DEFAULT_WINDOW,
@@ -362,7 +368,7 @@ describe('fittedWindow (keyboard zoomed to the run)', () => {
           const w = { low: f.low + shift, high: f.high + shift }
           for (let inv = 0; inv <= maxInversion(id); inv++) {
             const next: GuideNext = { chord: { pcs: [], bassPc: 0, inversion: inv } }
-            const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+            const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w, labels: 'off' })
             const midis = ms.filter((m) => m.state === undefined).map((m) => m.midi)
             expect(midis.length).toBeGreaterThan(0)
             if (midis.some((m) => m < w.low || m > w.high)) off.push(`${root}${id}/${inv}${shift}`)
@@ -380,7 +386,7 @@ describe('fittedWindow (keyboard zoomed to the run)', () => {
         const w = fittedWindow(t, 'rh')
         for (let inv = 0; inv <= maxInversion(id); inv++) {
           const next: GuideNext = { chord: { pcs: [], bassPc: 0, inversion: inv } }
-          const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w })
+          const ms = playMarks({ mode: 'guided', target: t, toggles: DEFAULT_TOGGLES, held: new Set(), next, window: w, labels: 'off' })
           const midis = ms.filter((m) => m.state === undefined).map((m) => m.midi)
           const below = whiteKeys(w.low, Math.min(...midis) - 1).length
           const above = whiteKeys(Math.max(...midis) + 1, w.high).length
@@ -511,5 +517,115 @@ describe('showConnectHint', () => {
     expect(showConnectHint({ kind: 'connected', name: 'Roli' })).toBe(false)
     // iPad: the chip already says keyboard input needs Chrome on a computer.
     expect(showConnectHint({ kind: 'unsupported' })).toBe(false)
+  })
+})
+
+describe('degreeLabel', () => {
+  const D_MAJOR: PlayTarget = { kind: 'scale', ref: { root: 'D', form: 'major' }, octaves: 1 }
+  const A_MELODIC: PlayTarget = { kind: 'scale', ref: { root: 'A', form: 'melodic' }, octaves: 1 }
+  const G7 = (inversion: number): PlayTarget => ({ kind: 'chord', root: 'G', type: '7', inversion })
+
+  it('numbers a scale by position, the tonic as 1', () => {
+    // D E F# G A B C#
+    const pcs = [2, 4, 6, 7, 9, 11, 1]
+    expect(pcs.map((pc) => degreeLabel(D_MAJOR, pc))).toEqual(['1', '2', '3', '4', '5', '6', '7'])
+  })
+  it('melodic minor: the raised and the natural 6th and 7th share a position number', () => {
+    expect([5, 6].map((pc) => degreeLabel(A_MELODIC, pc))).toEqual(['6', '6']) // F, F#
+    expect([7, 8].map((pc) => degreeLabel(A_MELODIC, pc))).toEqual(['7', '7']) // G, G#
+  })
+  it('chords: 1 3 5 and 7 on sevenths, in every inversion', () => {
+    for (let inv = 0; inv <= 3; inv++) {
+      expect([7, 11, 2, 5].map((pc) => degreeLabel(G7(inv), pc))).toEqual(['1', '3', '5', '7'])
+    }
+  })
+  it('chords that are not 1 3 5 keep their real numbers (sus2, sus4, 6, add9)', () => {
+    const c = (type: 'sus2' | 'sus4' | '6' | 'add9'): PlayTarget => ({ kind: 'chord', root: 'C', type, inversion: 0 })
+    expect([0, 2, 7].map((pc) => degreeLabel(c('sus2'), pc))).toEqual(['1', '2', '5'])
+    expect([0, 5, 7].map((pc) => degreeLabel(c('sus4'), pc))).toEqual(['1', '4', '5'])
+    expect([0, 4, 7, 9].map((pc) => degreeLabel(c('6'), pc))).toEqual(['1', '3', '5', '6'])
+    expect([0, 4, 7, 2].map((pc) => degreeLabel(c('add9'), pc))).toEqual(['1', '3', '5', '9'])
+  })
+  it('null outside the target, and with no target', () => {
+    expect(degreeLabel(D_MAJOR, 0)).toBeNull() // C natural
+    expect(degreeLabel(G7(0), 0)).toBeNull()
+    expect(degreeLabel(NONE, 2)).toBeNull()
+  })
+})
+
+describe('playMarks: labels and root dots', () => {
+  const D_MAJOR: PlayTarget = { kind: 'scale', ref: { root: 'D', form: 'major' }, octaves: 1 }
+  const labelAt = (ms: KeyMark[], midi: number) => at(ms, midi).find((m) => m.label !== undefined)?.label
+  const rootAt = (ms: KeyMark[], midi: number) => at(ms, midi).some((m) => m.root)
+  // D4 62 .. D5 74
+  const DEGREES: [number, string][] = [[62, '1'], [64, '2'], [66, '3'], [67, '4'], [69, '5'], [71, '6'], [73, '7'], [74, '1']]
+
+  it('degrees: D major, with the top tonic as 1', () => {
+    const ms = marks({ target: D_MAJOR, labels: 'degrees' })
+    for (const [midi, deg] of DEGREES) expect(labelAt(ms, midi), `midi ${midi}`).toBe(deg)
+  })
+  it('names: note names on target keys, spelled for the key', () => {
+    const ms = marks({ target: D_MAJOR, labels: 'names' })
+    expect(labelAt(ms, 66)).toBe('F♯')
+    expect(labelAt(ms, 73)).toBe('C♯')
+    expect(labelAt(ms, 62)).toBe('D')
+    expect(labelAt(ms, 63)).toBeUndefined() // D# is not in D major
+    const flats = marks({ target: { kind: 'scale', ref: { root: 'Eb', form: 'major' }, octaves: 1 } })
+    expect(labelAt(flats, 70)).toBe('B♭')
+  })
+  it('chords: degrees 1 3 5 7 (G7), names by chord spelling', () => {
+    const g7: PlayTarget = { kind: 'chord', root: 'G', type: '7', inversion: 1 }
+    const d = marks({ target: g7, labels: 'degrees' })
+    expect([67, 71, 74, 65].map((m) => labelAt(d, m))).toEqual(['1', '3', '5', '7'])
+    const n = marks({ target: g7, labels: 'names' })
+    expect([67, 71, 74, 65].map((m) => labelAt(n, m))).toEqual(['G', 'B', 'D', 'F'])
+  })
+  it('off: no mark has a label, root marks are still set', () => {
+    for (const mode of ['free', 'guided', 'check'] as const) {
+      const ms = marks({ mode, target: D_MAJOR, labels: 'off', held: [62, 65] })
+      expect(ms.filter((m) => m.label !== undefined), mode).toEqual([])
+      expect(rootAt(ms, 62), mode).toBe(true)
+      expect(rootAt(ms, 74), mode).toBe(true)
+    }
+  })
+  it('a wrong pressed key has no label in any setting; a flashed wrong key neither', () => {
+    for (const labels of ['off', 'names', 'degrees'] as const) {
+      const ms = marks({ target: D_MAJOR, labels, held: [65] }) // F natural
+      expect(stateAt(ms, 65)).toBe('bad')
+      expect(labelAt(ms, 65), labels).toBeUndefined()
+      const flash = marks({ mode: 'guided', target: D_MAJOR, labels, flash: 64, toggles: { highlight: false } })
+      expect(labelAt(flash, 64), labels).toBeUndefined()
+    }
+  })
+  it('keys outside the target never get a label, in any setting', () => {
+    for (const labels of ['names', 'degrees'] as const) {
+      const ms = marks({ target: D_MAJOR, labels })
+      for (const m of ms) if (!targetPitchClasses(D_MAJOR).has(m.midi % 12)) expect(m.label).toBeUndefined()
+    }
+  })
+  it('the root dot is on every root key in the window, with the highlight off too', () => {
+    const ms = marks({ target: D_MAJOR, toggles: { highlight: false }, labels: 'degrees' })
+    const roots = ms.filter((m) => m.root).map((m) => m.midi)
+    expect(new Set(roots)).toEqual(new Set([38, 50, 62, 74]))
+    expect(labelAt(ms, 62)).toBe('1')
+    expect(labelAt(ms, 64)).toBeUndefined() // highlight off: only the root shows its label
+    // The dot carrier adds no fill or glow of its own.
+    expect(at(ms, 62).every((m) => m.state === undefined && m.hand === 'none')).toBe(true)
+  })
+  it('a chord root gets the dot; no target means no dot', () => {
+    const ms = marks({ target: C_CHORD, labels: 'names' })
+    expect(new Set(ms.filter((m) => m.root).map((m) => m.midi))).toEqual(new Set([36, 48, 60, 72, 84]))
+    expect(marks({ target: NONE }).some((m) => m.root || m.label !== undefined)).toBe(false)
+  })
+  it('Check shows no more than the dot: the root key only, even with labels on', () => {
+    const ms = marks({ mode: 'check', target: D_MAJOR, labels: 'degrees', held: [64, 65] })
+    expect(ms.filter((m) => m.label !== undefined).every((m) => m.root)).toBe(true)
+    expect(labelAt(ms, 64)).toBeUndefined()
+    expect(stateAt(ms, 64)).toBe('pressed')
+  })
+  it('a pressed key that is right takes the label', () => {
+    const ms = marks({ mode: 'guided', target: D_MAJOR, labels: 'degrees', held: [64] })
+    expect(stateAt(ms, 64)).toBe('good')
+    expect(labelAt(ms, 64)).toBe('2')
   })
 })

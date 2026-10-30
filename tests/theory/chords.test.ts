@@ -8,6 +8,7 @@ import {
   detectChord,
   nameChord,
   diatonicChords,
+  chordDegrees,
   maxInversion,
   progression,
 } from '../../src/theory/chords'
@@ -164,5 +165,18 @@ describe('nameChord (R17: detect with sharp and flat black keys, spell from the 
   })
   it('null when nothing matches', () => {
     expect(nameChord([60, 64])).toBeNull()
+  })
+})
+
+describe('chordDegrees', () => {
+  it('gives each tone its number above the root', () => {
+    expect(chordDegrees('M')).toEqual([1, 3, 5])
+    expect(chordDegrees('dim7')).toEqual([1, 3, 5, 7])
+    expect(chordDegrees('7')).toEqual([1, 3, 5, 7])
+    expect(chordDegrees('9')).toEqual([1, 3, 5, 7, 9])
+    expect(chordDegrees('sus4')).toEqual([1, 4, 5])
+  })
+  it('has one degree per chord note for every type', () => {
+    for (const { id } of CHORD_TYPES) expect(chordDegrees(id)).toHaveLength(chordNotes('C', id, 0).length)
   })
 })

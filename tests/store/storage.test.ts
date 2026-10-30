@@ -245,6 +245,21 @@ describe('export / import', () => {
   })
 })
 
+describe('playLabels setting', () => {
+  const load = (settings: object) =>
+    loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings }) })).state.settings
+  it('defaults to names', () => {
+    expect(emptyState().settings.playLabels).toBe('names')
+    expect(load({}).playLabels).toBe('names')
+  })
+  it('a missing or invalid value becomes names', () => {
+    for (const bad of [undefined, 'bogus', 3, null, true, '']) expect(load({ playLabels: bad }).playLabels).toBe('names')
+  })
+  it('off, names and degrees round-trip', () => {
+    for (const v of ['off', 'names', 'degrees']) expect(load({ playLabels: v }).playLabels).toBe(v)
+  })
+})
+
 describe('MIDI settings', () => {
   it('defaults: midiEnabled false, keyboardSound true', () => {
     expect(emptyState().settings).toMatchObject({ midiEnabled: false, keyboardSound: true })
@@ -300,7 +315,7 @@ describe('validation hardening', () => {
       return r.state.settings
     }
     const ok = mk({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

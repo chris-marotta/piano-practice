@@ -2,12 +2,14 @@
 import type { MidiStatus } from '../../../midi/access'
 import { guideRun, type GuideNext, type GuideState } from '../../../play/guide'
 import { expectedRun, type Expected } from '../../../play/sequence'
-import { CHORD_TYPES, chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
+import type { PlayLabels } from '../../../srs/items'
+import { CHORD_TYPES, chordDegrees, chordFingering, chordNotes, maxInversion, type ChordTypeId } from '../../../theory/chords'
 import { formatNote, formatScale } from '../../../theory/format'
 import { chroma, keySignature, noteMidi, scaleNotes, type ScaleForm, type ScaleRef } from '../../../theory/scales'
 import { isBlack, whiteKeys, type KeyMark, type ReserveRows } from '../../components/keyboardLayout'
 import { chordPanel, detection, pickerKeys, type PickerContext } from '../library/libraryView'
 
+export type { PlayLabels }
 export type PlayMode = 'free' | 'guided' | 'check'
 export type PlayHand = 'rh' | 'lh' | 'together'
 
@@ -173,10 +175,53 @@ export function chordReadout(held: ReadonlySet<number>): string {
   return d.status === 'match' ? (d.names[0] as string) : '—'
 }
 
+/** The target's root as a pitch class, or null with no target. */
+function rootPitchClass(target: PlayTarget): number | null {
+  return target.kind === 'scale' ? chroma(target.ref.root) : target.kind === 'chord' ? chroma(target.root) : null
+}
+
+/**
+ * Pitch class to degree, as scale position (1-based) or chord-tone number. Melodic minor adds the natural form's 6th and
+ * 7th at the same positions, so F and F♯ in A melodic both read 6.
+ */
+function degreeMap(target: PlayTarget): Map<number, string> {
+  const out = new Map<number, string>()
+  if (target.kind === 'chord') {
+    const degrees = chordDegrees(target.type)
+    chordNotes(target.root, target.type, 0).forEach((n, i) => out.set(chroma(n), String(degrees[i])))
+  } else if (target.kind === 'scale') {
+    const forms: ScaleRef[] = [target.ref]
+    if (target.ref.form === 'melodic') forms.push({ root: target.ref.root, form: 'natural' })
+    for (const ref of forms) scaleNotes(ref).forEach((n, i) => out.set(chroma(n), String(i + 1)))
+  }
+  return out
+}
+
+/** Pitch class to note name, spelled as the scale or chord spells it. */
+function nameMap(target: PlayTarget): Map<number, string> {
+  const out = new Map<number, string>()
+  const names =
+    target.kind === 'chord'
+      ? chordNotes(target.root, target.type, 0).map((n) => n.replace(/-?\d+$/, ''))
+      : target.kind === 'scale'
+        ? scaleNotes(target.ref)
+        : []
+  if (target.kind === 'scale' && target.ref.form === 'melodic') names.push(...scaleNotes({ root: target.ref.root, form: 'natural' }))
+  for (const n of names) if (!out.has(chroma(n))) out.set(chroma(n), formatNote(n))
+  return out
+}
+
+/** The degree label for a pitch class of the target (scale position 1-7, or chord tone 1 3 5 7), null if it isn't in it. */
+export function degreeLabel(target: PlayTarget, pc: number): string | null {
+  return degreeMap(target).get(((pc % 12) + 12) % 12) ?? null
+}
+
 interface MarksArgs {
   mode: PlayMode
   target: PlayTarget
   toggles: PlayToggles
+  /** Key labels on target keys: none, note names or degrees. Wrong and out-of-target keys never get one. */
+  labels: PlayLabels
   held: ReadonlySet<number>
   next: GuideNext
   window: KeyWindow
@@ -234,6 +279,8 @@ function legMarks(g: GuideState): KeyMark[] {
  * order; this gives each pressed key exactly one state. In Guided the wrong-note flash is the guide's verdict, so it
  * shows bad even on a key that is in the scale (a right note in the wrong place). The glow is every target pitch
  * class in the window, except in a guided scale: only the run's own notes, leg by leg (legMarks).
+ * Labels (spec 4.1) go on the target's own marks (glow, the guide's next note, a right key), never on a wrong or plain
+ * pressed key. Every root key gets `root`, with a mark of its own where it has none (the dot shows in every setting).
  */
 export function playMarks(a: MarksArgs): KeyMark[] {
   const t = effectiveToggles(a.mode, a.toggles)
@@ -269,7 +316,30 @@ export function playMarks(a: MarksArgs): KeyMark[] {
       for (let m = a.window.low; m <= a.window.high; m++) if (pcs.has(m % 12)) marks.push({ midi: m, hand: 'none', state: 'target' })
     }
   }
-  return marks
+  return withLabelsAndRoots(marks, a)
+}
+
+/** The root dot on every root key in the window, and the label on the target's marks (see playMarks). */
+function withLabelsAndRoots(marks: KeyMark[], a: MarksArgs): KeyMark[] {
+  const rootPc = rootPitchClass(a.target)
+  if (rootPc === null) return marks
+  const names = a.labels === 'names' ? nameMap(a.target) : a.labels === 'degrees' ? degreeMap(a.target) : null
+  const labelFor = (midi: number): string | undefined => names?.get(midi % 12)
+  // 'pressed' and 'bad' say nothing about the target: no label there (Check, or Right / wrong off, would give it away).
+  const labelled = (m: KeyMark): KeyMark => {
+    const isRoot = m.midi % 12 === rootPc
+    const label = m.state === 'bad' || m.state === 'pressed' ? undefined : labelFor(m.midi)
+    return label === undefined && !isRoot ? m : { ...m, ...(label === undefined ? {} : { label }), ...(isRoot ? { root: true } : {}) }
+  }
+  const out = marks.map(labelled)
+  const marked = new Set(marks.map((m) => m.midi))
+  for (let midi = a.window.low; midi <= a.window.high; midi++) {
+    if (midi % 12 === rootPc && !marked.has(midi)) {
+      const label = labelFor(midi)
+      out.push({ midi, hand: 'none', root: true, ...(label === undefined ? {} : { label }) })
+    }
+  }
+  return out
 }
 
 /** Badge rows to keep free so the keys don't jump while a run goes on (none where no finger can show). */

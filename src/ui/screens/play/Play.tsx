@@ -7,8 +7,9 @@ import { formatNote, formatScale } from '../../../theory/format'
 import { keyboardBox, keyboardFitVars } from '../../components/keyboardLayout'
 import { MidiChip } from '../../components/MidiChip'
 import { Segmented } from '../../components/Segmented'
-import { app } from '../../state'
+import { app, update } from '../../state'
 import { ScrollKeyboard } from '../steps/ScrollKeyboard'
+import { withSettings } from '../settingsView'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
 import { PlayPicker } from './PlayPicker'
@@ -27,6 +28,7 @@ import {
   shownWindow,
   targetTitle,
   type PlayHand,
+  type PlayLabels,
   type PlayMode,
   type PlayTarget,
   type PlayToggles,
@@ -44,6 +46,12 @@ const HANDS: { value: PlayHand; label: string }[] = [
   { value: 'rh', label: 'RH' },
   { value: 'lh', label: 'LH' },
   { value: 'together', label: 'Together' },
+]
+
+const LABELS: { value: PlayLabels; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'names', label: 'Names' },
+  { value: 'degrees', label: 'Degrees' },
 ]
 
 const EMPTY_STATE = 'Connect a keyboard for the full experience.'
@@ -96,6 +104,7 @@ export function Play() {
   const forced = effectiveToggles(m, t)
   const shown = target.kind === 'none' ? { ...forced, highlight: false, colours: false, fingers: false } : forced
   const held = heldNotes.value.held
+  const playLabels = app.value.settings.playLabels
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
   const guide = run?.guide() ?? null
   const win = shownWindow({ mode: m, target, fitted: fitted.value, follow: keyWindow.value, guide })
@@ -126,7 +135,7 @@ export function Play() {
   ]
   const hint = modeHint(target)
   const marksLocked = m === 'check' || target.kind === 'none'
-  const marks = playMarks({ mode: m, target, toggles: t, held, next: run?.next() ?? null, window: win, flash, guide })
+  const marks = playMarks({ mode: m, target, toggles: t, labels: playLabels, held, next: run?.next() ?? null, window: win, flash, guide })
   const reserve = reserveRowsFor(m, target, h)
   const fit = keyboardFitVars(keyboardBox(win.low, win.high, marks, reserve), PLAY_KEY_PX)
   const status = m === 'guided' && guide ? guidedStatus(target, h, guide) : null
@@ -169,6 +178,15 @@ export function Play() {
           <Toggle label="Right / wrong" on={shown.colours} onChange={setToggle('colours')} disabled={marksLocked} />
           <Toggle label="Fingers" on={shown.fingers} onChange={setToggle('fingers')} disabled={marksLocked} />
           <Toggle label="Drone" on={droneOn} onChange={setToggle('drone')} disabled={target.kind === 'none'} />
+        </div>
+        <div class="play-labels">
+          <span class="play-labels__title">Labels</span>
+          <Segmented
+            options={LABELS}
+            value={playLabels}
+            onChange={(v) => update((st) => withSettings(st, { playLabels: v }))}
+            label="Labels"
+          />
         </div>
       </div>
 

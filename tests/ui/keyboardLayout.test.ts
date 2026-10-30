@@ -240,6 +240,17 @@ describe('keyAriaLabel', () => {
   })
 })
 
+describe('keyLooks: a root-only mark', () => {
+  it('carries the label and adds no fill or glow', () => {
+    const looks = keyLooks([{ midi: 62, hand: 'none', root: true, label: '1' }], 60, 71)
+    expect(looks.get(62)).toEqual({ fill: null, glow: null, glyph: null, label: '1' })
+  })
+  it('does not hide a hand fill on the same key', () => {
+    const looks = keyLooks([{ midi: 62, hand: 'rh', root: true }], 60, 71)
+    expect(looks.get(62)?.fill).toBe('rh')
+  })
+})
+
 describe('keyLooks (per-key fill, target / played glow, glyph)', () => {
   it('a mark with a state keeps its midi and is not dropped by range filtering', () => {
     const looks = keyLooks([{ midi: 64, hand: 'none', state: 'good' }], 60, 71)
