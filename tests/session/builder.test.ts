@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   chordsId,
   enabledScales,
+  KEY_IDS,
   placeItems,
   recallId,
   scaleId,
@@ -90,6 +91,13 @@ describe('buildSession: sizes', () => {
   it('is deterministic: same inputs → identical output', () => {
     const items = allSolid()
     expect(buildSession(items, withMinutes(20), TODAY)).toEqual(buildSession(items, withMinutes(20), TODAY))
+  })
+
+  it('ignores key items in stored state (drill items never enter sessions)', () => {
+    const items = allDue(allSolid(), TODAY)
+    const withKeys = { ...items }
+    for (const id of KEY_IDS) withKeys[id] = { ...(items[Object.keys(items)[0] as string] as ItemState), id }
+    expect(buildSession(withKeys, withMinutes(20), TODAY)).toEqual(buildSession(items, withMinutes(20), TODAY))
   })
 
   it('ties (same due, same box) break by catalog order', () => {

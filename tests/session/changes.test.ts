@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sessionChanges } from '../../src/session/changes'
-import { chordsId, DEFAULT_SETTINGS, placeItems, recallId, scaleId } from '../../src/srs/items'
+import { chordsId, DEFAULT_SETTINGS, keyId, placeItems, recallId, scaleId, stateFor } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 
 const TODAY = '2026-10-20'
@@ -73,5 +73,20 @@ describe('sessionChanges', () => {
     const after = set(base, scaleId(E), { box: 4 })
     const ref = { root: 'A', form: 'harmonic' as const }
     expect(sessionChanges([scaleId(E), scaleId(E), scaleId(ref)], base, after, TODAY, DEFAULT_SETTINGS)).toHaveLength(1)
+  })
+
+  it('names a key change "Key {label}", and sorts keys after recall cards', () => {
+    const after = set(set(base, recallId('keysig', E), { box: 4 }), scaleId(E), { box: 4 })
+    const keys = {
+      ...after,
+      [keyId(4)]: { ...stateFor(keyId(4), {}, TODAY, DEFAULT_SETTINGS), box: 2 as const },
+      [keyId(8)]: { ...stateFor(keyId(8), {}, TODAY, DEFAULT_SETTINGS), box: 2 as const },
+    }
+    const out = sessionChanges([keyId(8), keyId(4), recallId('keysig', E), scaleId(E)], base, keys, TODAY, DEFAULT_SETTINGS)
+    expect(out.map((c) => c.id)).toEqual([scaleId(E), recallId('keysig', E), keyId(8), keyId(4)])
+    const e = out.find((c) => c.id === keyId(4))
+    expect(e?.name).toBe('Key E')
+    expect(e?.text).toBe('Key E ↑ box 1 → 2')
+    expect(out.find((c) => c.id === keyId(8))?.text).toBe('Key G♯ / A♭ ↑ box 1 → 2')
   })
 })

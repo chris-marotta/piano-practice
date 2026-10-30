@@ -4,7 +4,10 @@ import {
   chordsId,
   enabledScales,
   idsForScale,
+  KEY_IDS,
+  keyId,
   parseId,
+  parseKeyId,
   placeItems,
   recallId,
   scaleId,
@@ -91,6 +94,31 @@ describe('ids', () => {
     ]) {
       expect(() => parseId(bad), bad).toThrow()
     }
+  })
+})
+
+describe('key ids', () => {
+  it('builds ids from the pitch class, in ASCII sharps', () => {
+    expect(keyId(0)).toBe('key:C')
+    expect(keyId(6)).toBe('key:F#')
+    expect(KEY_IDS).toHaveLength(12)
+    expect(KEY_IDS[0]).toBe('key:C')
+    expect(KEY_IDS[11]).toBe('key:B')
+  })
+
+  it('parses a key id back to its pitch class', () => {
+    expect(parseKeyId('key:F#')).toBe(6)
+    for (let pc = 0; pc < 12; pc++) expect(parseKeyId(keyId(pc))).toBe(pc)
+  })
+
+  it('returns null for anything that is not a key id', () => {
+    for (const other of ['scale:C:major', 'recall:thumb:C:major', 'chords:C:major', 'key:H', 'key:Db', 'key:', 'key', '']) {
+      expect(parseKeyId(other), other).toBeNull()
+    }
+  })
+
+  it('leaves parseId strict: key ids are not a parseId kind', () => {
+    expect(() => parseId('key:C')).toThrow()
   })
 })
 

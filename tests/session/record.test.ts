@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../src/session/record'
-import { chordsId, idsForScale, placeItems, recallId, scaleId } from '../../src/srs/items'
+import { chordsId, idsForScale, keyId, placeItems, recallId, scaleId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 import { emptyState, type AppState } from '../../src/store/storage'
 import { streak } from '../../src/store/streak'
@@ -94,6 +94,31 @@ describe('rateItem', () => {
     expect(item(next, chordsId(E)).introduced).toBe(true)
     expect(item(next, scaleId(E)).introduced).toBe(false)
     expect(item(next, recallId('spell', E)).introduced).toBe(false)
+  })
+})
+
+describe('rateItem on key items', () => {
+  it('rates a key id without throwing: new item to box 2, introduced', () => {
+    const s = emptyState()
+    const next = rateItem(s, keyId(4), 'nailed', TODAY)
+    expect(item(next, 'key:E')).toMatchObject({ box: 2, introduced: true, due: '2026-10-22' })
+    expect(item(next, 'key:E').history).toEqual([{ date: TODAY, rating: 'nailed' }])
+    expect(item(next, 'key:E').tempo).toBeUndefined()
+  })
+
+  it('touches no other item and does not mutate the input', () => {
+    const s = placed({ [scaleId(E)]: 'solid' })
+    const copy = structuredClone(s)
+    const next = rateItem(s, keyId(4), 'lost', TODAY)
+    expect(s).toEqual(copy)
+    expect(Object.keys(next.items)).toEqual([...Object.keys(s.items), 'key:E'])
+    expect(item(next, scaleId(E))).toEqual(item(s, scaleId(E)))
+  })
+
+  it('works on a saved state that has no key items yet', () => {
+    const s = placed({ [scaleId(E)]: 'shaky' })
+    expect(s.items['key:E']).toBeUndefined()
+    expect(() => rateItem(s, 'key:E', 'shaky', TODAY)).not.toThrow()
   })
 })
 

@@ -1,5 +1,6 @@
 import { RECALL_TYPES } from '../theory/recall'
 import type { RecallType } from '../theory/recall'
+import { PC_ASCII } from '../theory/keyNames'
 import { MAJOR_ROOTS, MINOR_ROOTS } from '../theory/scales'
 import type { ScaleForm, ScaleRef } from '../theory/scales'
 import { TEMPO_START } from './scheduler'
@@ -36,6 +37,17 @@ export const DEFAULT_SETTINGS: Settings = {
 export const scaleId = (ref: ScaleRef): string => `scale:${ref.root}:${ref.form}`
 export const recallId = (type: RecallType, ref: ScaleRef): string => `recall:${type}:${ref.root}:${ref.form}`
 export const chordsId = (ref: ScaleRef): string => `chords:${ref.root}:${ref.form}`
+
+/** Name-that-key items, one per pitch class: `key:C`, `key:F#`. Not a `parseId` kind; use `parseKeyId`. */
+export const keyId = (pc: number): string => `key:${PC_ASCII[pc]}`
+export const KEY_IDS: string[] = PC_ASCII.map((_, pc) => keyId(pc))
+
+/** The pitch class of a key id, or null for anything else (never throws). */
+export function parseKeyId(id: string): number | null {
+  if (!id.startsWith('key:')) return null
+  const pc = PC_ASCII.indexOf(id.slice(4))
+  return pc === -1 ? null : pc
+}
 
 const FORMS: ScaleForm[] = ['major', 'natural', 'harmonic', 'melodic']
 
