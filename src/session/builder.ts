@@ -8,7 +8,8 @@ import type { RecallCard, RecallType } from '../theory/recall'
 import type { ScaleRef } from '../theory/scales'
 
 export type Step =
-  | { kind: 'recall'; itemId: string; card: RecallCard }
+  /** The warm-up: every recall card picked today, in pick order, as one flip deck. Each card is rated on its own id. */
+  | { kind: 'deck'; cards: { itemId: string; card: RecallCard }[] }
   | { kind: 'scale'; itemId: string; ref: ScaleRef; support: 0 | 1 | 2 | 3; tempo: number }
   | { kind: 'chords'; itemId: string; ref: ScaleRef; chords: DiatonicChord[]; includeInversions: boolean }
   | { kind: 'freeplay'; ref: ScaleRef; seconds: number }
@@ -123,12 +124,11 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     ...recallPool.filter(notYetDue).sort(bySoonest),
   ].slice(0, size.cards)
 
-  // 7. Order: recall → each scale followed by its chord set → free play.
-  const steps: Step[] = recallPicks.map((c) => ({
-    kind: 'recall',
-    itemId: c.id,
-    card: recallCard(c.recallType, c.ref),
-  }))
+  // 7. Order: the deck (today's recall cards, when there are any) → each scale followed by its chord set → free play.
+  const steps: Step[] = []
+  if (recallPicks.length > 0) {
+    steps.push({ kind: 'deck', cards: recallPicks.map((c) => ({ itemId: c.id, card: recallCard(c.recallType, c.ref) })) })
+  }
   for (const s of chosen) {
     steps.push({
       kind: 'scale',
@@ -157,7 +157,7 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
 export function estimateSeconds(steps: Step[]): number {
   let total = 0
   for (const s of steps) {
-    if (s.kind === 'recall') total += RECALL_SECONDS
+    if (s.kind === 'deck') total += RECALL_SECONDS * s.cards.length
     else if (s.kind === 'scale') total += SCALE_SECONDS
     else if (s.kind === 'chords') total += CHORDS_SECONDS
     else total += s.seconds

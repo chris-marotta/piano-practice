@@ -8,8 +8,8 @@ import { app, currentSession, route, today, update } from '../state'
 import { useWakeLock } from '../useWakeLock'
 import { Done } from './Done'
 import { ChordStep } from './steps/ChordStep'
+import { DeckStep } from './steps/DeckStep'
 import { FreeplayStep } from './steps/FreeplayStep'
-import { RecallStep } from './steps/RecallStep'
 import { ScaleStep } from './steps/ScaleStep'
 import { progressLabel } from './steps/stepView'
 
@@ -27,11 +27,18 @@ function advance(from: number): void {
   currentSession.value = { ...s, index: next, minutes }
 }
 
+/** Save a rating while staying on step `from` (each deck card; ignored once the session has moved on). */
+function rateInStep(from: number, id: string, rating: Rating, opts?: { peeked?: boolean }): void {
+  const s = currentSession.peek()
+  if (!s || s.index !== from) return
+  update((st) => rateItem(st, id, rating, today(), opts))
+}
+
 /** Every rating is saved at once, so a session closed part-way keeps what was rated (spec §4.7). */
 function rate(from: number, id: string, rating: Rating, opts?: { peeked?: boolean }): void {
   const s = currentSession.peek()
   if (!s || s.index !== from) return
-  update((st) => rateItem(st, id, rating, today(), opts))
+  rateInStep(from, id, rating, opts)
   advance(from)
 }
 
@@ -71,7 +78,8 @@ export function Session() {
   const settings = app.value.settings
 
   let body
-  if (step.kind === 'recall') body = <RecallStep key={i} step={step} onRate={(r) => rate(i, step.itemId, r)} />
+  if (step.kind === 'deck')
+    body = <DeckStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
   else if (step.kind === 'scale')
     body = <ScaleStep key={i} step={step} settings={settings} onRate={(r, o) => rate(i, step.itemId, r, o)} />
   else if (step.kind === 'chords') body = <ChordStep key={i} step={step} onRate={(r) => rate(i, step.itemId, r)} />

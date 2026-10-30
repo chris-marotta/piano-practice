@@ -18,7 +18,9 @@ export function Done({ session }: Props) {
   const { items, log, settings } = app.value
   const day = today()
   const changes = useMemo(() => {
-    const ids = session.steps.flatMap((s) => (s.kind === 'freeplay' ? [] : [s.itemId]))
+    const ids = session.steps.flatMap((s) =>
+      s.kind === 'freeplay' ? [] : s.kind === 'deck' ? s.cards.map((c) => c.itemId) : [s.itemId],
+    )
     return sessionChanges(ids, session.before, items, day, settings)
   }, [session, items, day, settings])
   const days = streak(log, day)

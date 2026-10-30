@@ -65,7 +65,7 @@ export function todaySummary(
     streakLabel: streakLabel(days),
     minutes: Math.ceil(estimateSeconds(steps) / 60),
     scales,
-    recallCards: steps.filter((s) => s.kind === 'recall').length,
+    recallCards: steps.reduce((n, s) => n + (s.kind === 'deck' ? s.cards.length : 0), 0),
     chordSets: chordKeys.size,
     freeplayMinutes: Math.ceil(freeplaySeconds / 60),
   }

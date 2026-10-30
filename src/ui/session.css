@@ -117,10 +117,6 @@
   letter-spacing: -0.01em;
 }
 
-.step--recall .step__prompt {
-  margin-top: var(--s-6);
-}
-
 .step__answer {
   font-size: 44px;
   font-weight: 700;

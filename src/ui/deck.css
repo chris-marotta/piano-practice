@@ -1,0 +1,229 @@
+/* Warm-up deck (phase 3 §5.1): one card at a time, flipped to its answer and why picture.
+   A 300 ms 3D flip (ASSUMED); reduced motion gets a 150 ms cross-fade. Tokens live in tokens.css. */
+
+.step--deck {
+  align-items: center;
+  justify-content: center;
+}
+
+.deck {
+  width: min(100%, 780px);
+  perspective: 1800px;
+  padding-bottom: var(--s-5); /* room for the stacked-deck shadow */
+}
+
+/* The static card: carries the stack shadow while more cards remain, so the shadow never flips. */
+.deck__card {
+  border-radius: 16px;
+}
+
+.deck__card--stacked {
+  box-shadow:
+    0 8px 0 -3px var(--line),
+    0 16px 0 -7px var(--surface-2);
+}
+
+.deck__flipper {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 300ms cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+
+.is-flipped .deck__flipper {
+  transform: rotateY(180deg);
+}
+
+/* Both faces share one grid cell, so the card is as tall as its taller face and doesn't jump on the flip. */
+.deck__face {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.deck__face--back {
+  background: var(--surface-2);
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck__flipper,
+  .is-flipped .deck__flipper {
+    transition: none;
+    transform: none;
+  }
+
+  .deck__face {
+    transition: opacity 150ms ease;
+  }
+
+  .deck__face--back {
+    transform: none;
+    opacity: 0;
+  }
+
+  .is-flipped .deck__face--front {
+    opacity: 0;
+  }
+
+  .is-flipped .deck__face--back {
+    opacity: 1;
+  }
+}
+
+/* ---- face content ---- */
+
+.deck__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.deck__dots {
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deck__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+
+.deck__dot--current {
+  border-color: var(--accent);
+}
+
+.deck__dot--done {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.deck__prompt {
+  margin-top: var(--s-4);
+  font-size: var(--fs-prompt);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.deck__hint {
+  font-size: var(--fs-body);
+  color: var(--muted);
+}
+
+/* The tap area grows to fill the front, so it is as tall as the back's content allows. */
+.deck__flip {
+  flex: 1;
+  min-height: 160px;
+  margin-top: var(--s-4);
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 26px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.deck__flip:hover,
+.deck__flip:focus-visible {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.deck__answer {
+  font-size: var(--fs-prompt);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.deck__why {
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+
+.deck__rate {
+  margin-top: auto;
+  padding-top: var(--s-2);
+}
+
+/* ---- why picture ---- */
+
+.why-picture {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.why-keys {
+  width: 100%;
+}
+
+.why-keys__title {
+  margin-bottom: var(--s-1);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.why-picture .keyboard {
+  max-height: 230px;
+}
+
+.why-keys-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  width: 100%;
+}
+
+.why-keys-pair .keyboard {
+  max-height: 170px;
+}
+
+.why-wheel {
+  width: 320px;
+  max-width: 100%;
+}
+
+.why-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.why-chips__label {
+  font-weight: 700;
+}
+
+.why-chip {
+  padding: 2px var(--s-2);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--accent);
+  font-weight: 700;
+}

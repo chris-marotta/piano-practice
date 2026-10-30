@@ -44,8 +44,13 @@ const set = (items: Record<string, ItemState>, id: string, patch: Partial<ItemSt
 const ofKind = <K extends Step['kind']>(steps: Step[], kind: K): Extract<Step, { kind: K }>[] =>
   steps.filter((s): s is Extract<Step, { kind: K }> => s.kind === kind)
 
+/** The deck's cards, in deck order (empty when there is no deck step). */
+const deckCards = (steps: Step[]) => ofKind(steps, 'deck').flatMap((d) => d.cards)
+
 const scaleRefs = (steps: Step[]): ScaleRef[] => ofKind(steps, 'scale').map((s) => s.ref)
-const itemIds = (steps: Step[]): string[] => steps.flatMap((s) => ('itemId' in s ? [s.itemId] : []))
+/** Every item id in session order, the deck's cards included. */
+const itemIds = (steps: Step[]): string[] =>
+  steps.flatMap((s) => (s.kind === 'deck' ? s.cards.map((c) => c.itemId) : 'itemId' in s ? [s.itemId] : []))
 
 const C: ScaleRef = { root: 'C', form: 'major' }
 const G: ScaleRef = { root: 'G', form: 'major' }
@@ -74,7 +79,8 @@ describe('buildSession: sizes', () => {
   ] as const) {
     it(`${min} min → ${c} cards / ${s} scales / ${ch} chord sets / ${fp} free play`, () => {
       const steps = buildSession(items, withMinutes(min), TODAY)
-      expect(steps.filter((x) => x.kind === 'recall')).toHaveLength(c)
+      expect(ofKind(steps, 'deck')).toHaveLength(1)
+      expect(deckCards(steps)).toHaveLength(c)
       expect(steps.filter((x) => x.kind === 'scale')).toHaveLength(s)
       expect(steps.filter((x) => x.kind === 'chords')).toHaveLength(ch)
       expect(steps.filter((x) => x.kind === 'freeplay')).toHaveLength(fp)
@@ -141,7 +147,7 @@ describe('buildSession: weakest first (ruling R19)', () => {
       items[recallId(t, C)] = applyRating(items[recallId(t, C)] as ItemState, 'nailed', TODAY)
     set(items, recallId('keysig', G), { box: 3, due: '2026-09-01' })
     set(items, recallId('spell', F), { box: 1, due: TODAY })
-    const recalls = ofKind(buildSession(items, withMinutes(5), TODAY), 'recall').map((s) => s.itemId)
+    const recalls = deckCards(buildSession(items, withMinutes(5), TODAY)).map((s) => s.itemId)
     expect(recalls.slice(0, 2)).toEqual([recallId('spell', F), recallId('keysig', G)])
   })
 })
@@ -165,12 +171,11 @@ describe('buildSession: distinct roots (rule 2)', () => {
 
 describe('buildSession: step order (rule 7)', () => {
   for (const min of [15, 20] as const) {
-    it(`${min} min: recall steps first, then scale/chords pairs; each chords ref equals the preceding scale's ref`, () => {
+    it(`${min} min: the deck first, then scale/chords pairs; each chords ref equals the preceding scale's ref`, () => {
       const steps = buildSession(allSolid(), withMinutes(min), TODAY)
-      const firstNonRecall = steps.findIndex((s) => s.kind !== 'recall')
-      expect(firstNonRecall).toBe(SESSION_SIZES[min].cards)
-      expect(steps.slice(firstNonRecall).some((s) => s.kind === 'recall')).toBe(false)
-      expect(steps[firstNonRecall]?.kind).toBe('scale')
+      expect(steps[0]?.kind).toBe('deck')
+      expect(steps.slice(1).some((s) => s.kind === 'deck')).toBe(false)
+      expect(steps[1]?.kind).toBe('scale')
       steps.forEach((s, i) => {
         if (s.kind !== 'chords') return
         const prev = steps[i - 1]
@@ -206,9 +211,9 @@ describe('buildSession: step contents', () => {
     ])
   })
 
-  it('recall step card = recallCard(type, ref)', () => {
-    const recalls = ofKind(buildSession(allSolid(), withMinutes(5), TODAY), 'recall')
-    expect(recalls[0]).toEqual({ kind: 'recall', itemId: 'recall:keysig:C:major', card: recallCard('keysig', C) })
+  it('deck card = recallCard(type, ref)', () => {
+    const recalls = deckCards(buildSession(allSolid(), withMinutes(5), TODAY))
+    expect(recalls[0]).toEqual({ itemId: 'recall:keysig:C:major', card: recallCard('keysig', C) })
     for (const r of recalls) {
       const [, type, root, form] = r.itemId.split(':')
       expect(r.card).toEqual(recallCard(type as never, { root: root as string, form: form as never }))
@@ -223,7 +228,8 @@ describe('buildSession: chord sets (rule 5)', () => {
     const steps = buildSession(items, withMinutes(15), TODAY)
     expect(scaleRefs(steps)).toEqual([C, G, D])
     expect(ofKind(steps, 'chords').map((s) => s.ref)).toEqual([G, D])
-    expect(steps.slice(SESSION_SIZES[15].cards).map((s) => s.kind + ':' + ('ref' in s ? s.ref.root : ''))).toEqual([
+    expect(steps[0]?.kind).toBe('deck')
+    expect(steps.slice(1).map((s) => s.kind + ':' + ('ref' in s ? s.ref.root : ''))).toEqual([
       'scale:C',
       'scale:G',
       'chords:G',
@@ -242,7 +248,7 @@ describe('buildSession: chord sets (rule 5)', () => {
 
 describe('buildSession: recall cards (rule 6)', () => {
   it("prefer today's keys", () => {
-    const recalls = ofKind(buildSession(allSolid(), withMinutes(10), TODAY), 'recall')
+    const recalls = deckCards(buildSession(allSolid(), withMinutes(10), TODAY))
     expect(recalls.map((s) => s.itemId)).toEqual([
       recallId('keysig', C),
       recallId('spell', C),
@@ -262,7 +268,7 @@ describe('buildSession: recall cards (rule 6)', () => {
     set(items, recallId('keysig', F), { due: '2026-09-01' })
     const steps = buildSession(items, withMinutes(5), TODAY)
     expect(scaleRefs(steps)).toEqual([C])
-    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual([
+    expect(deckCards(steps).map((s) => s.itemId)).toEqual([
       recallId('relative', C),
       recallId('thumb', C),
       recallId('keysig', F),
@@ -279,7 +285,7 @@ describe('buildSession: non-introduced cards of today\'s scales (R12)', () => {
     for (const id of freshCards(C)) set(items, id, { introduced: false })
     const steps = buildSession(items, withMinutes(5), TODAY)
     expect(scaleRefs(steps)).toEqual([C])
-    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual(freshCards(C))
+    expect(deckCards(steps).map((s) => s.itemId)).toEqual(freshCards(C))
   })
 
   it("today's due introduced cards come before today's non-introduced cards", () => {
@@ -287,7 +293,7 @@ describe('buildSession: non-introduced cards of today\'s scales (R12)', () => {
     for (const id of freshCards(C)) set(items, id, { introduced: false })
     const steps = buildSession(items, withMinutes(10), TODAY)
     expect(scaleRefs(steps)).toEqual([C, G])
-    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual([...freshCards(G), recallId('keysig', C), recallId('spell', C)])
+    expect(deckCards(steps).map((s) => s.itemId)).toEqual([...freshCards(G), recallId('keysig', C), recallId('spell', C)])
   })
 
   it("non-introduced cards of scales NOT in today's session stay out", () => {
@@ -314,10 +320,7 @@ describe('buildSession: non-introduced cards of today\'s scales (R12)', () => {
     const introduced = (): ScaleRef[] => refs.filter((r) => state.items[scaleId(r)]?.introduced)
     let day = PLACED
     for (let d = 1; d <= 45; d++) {
-      for (const step of buildSession(state.items, settings, day)) {
-        if (step.kind === 'freeplay') continue
-        state = rateItem(state, step.itemId, 'nailed', day)
-      }
+      for (const id of itemIds(buildSession(state.items, settings, day))) state = rateItem(state, id, 'nailed', day)
       day = addDays(day, 1)
       if (d === 12) expect(introduced()).toHaveLength(24)
       if (d === 30) expect(neverRated(refs)).toEqual([])
@@ -342,7 +345,7 @@ describe('buildSession: new items (rule 4 cap)', () => {
   it("all 'unknown' → every step belongs to the one new scale; its recall cards are used", () => {
     const items = placeItems({}, DEFAULT_SETTINGS, PLACED)
     const steps = buildSession(items, withMinutes(10), TODAY)
-    expect(ofKind(steps, 'recall').map((s) => s.itemId)).toEqual([
+    expect(deckCards(steps).map((s) => s.itemId)).toEqual([
       recallId('keysig', C),
       recallId('spell', C),
       recallId('relative', C),
@@ -406,7 +409,7 @@ describe('buildSession: never empty (rule 4 fill)', () => {
     for (const min of [5, 10, 15, 20] as const) {
       const steps = buildSession(items, withMinutes(min), TODAY)
       expect(ofKind(steps, 'scale')).toHaveLength(SESSION_SIZES[min].scales)
-      expect(ofKind(steps, 'recall')).toHaveLength(SESSION_SIZES[min].cards)
+      expect(deckCards(steps)).toHaveLength(SESSION_SIZES[min].cards)
       expect(ofKind(steps, 'chords')).toHaveLength(SESSION_SIZES[min].chordSets)
     }
     expect(scaleRefs(buildSession(items, withMinutes(10), TODAY))).toEqual([G, C])
@@ -440,7 +443,7 @@ describe('buildSession: rated today (Review Focus 3)', () => {
     const steps = buildSession(items, withMinutes(20), TODAY)
     expect(scaleRefs(steps)[0]).toEqual(C) // the scale itself was not rated today
     for (const id of ratedToday) expect(itemIds(steps)).not.toContain(id)
-    expect(ofKind(steps, 'recall')).toHaveLength(10)
+    expect(deckCards(steps)).toHaveLength(10)
   })
 
   it('every enabled scale rated today → empty session, even though recall cards are still due (R11)', () => {
@@ -510,7 +513,49 @@ describe('buildSession: settings change after placement (Review Focus 4)', () =>
   })
 })
 
+describe('buildSession: the warm-up deck (phase 3 §5.1)', () => {
+  it('6 recall picks → exactly one deck step, first, holding the same 6 ids in the old order', () => {
+    const steps = buildSession(allSolid(), withMinutes(10), TODAY)
+    const decks = ofKind(steps, 'deck')
+    expect(decks).toHaveLength(1)
+    expect(steps[0]).toBe(decks[0])
+    expect(steps[1]?.kind).toBe('scale')
+    // The order the phase-2 builder produced as six recall steps.
+    expect(decks[0]?.cards.map((c) => c.itemId)).toEqual([
+      'recall:keysig:C:major',
+      'recall:spell:C:major',
+      'recall:relative:C:major',
+      'recall:thumb:C:major',
+      'recall:keysig:G:major',
+      'recall:spell:G:major',
+    ])
+    expect(steps.some((s) => (s.kind as string) === 'recall')).toBe(false)
+  })
+
+  it('no recall picks → no deck step', () => {
+    const items = allSolid()
+    for (const id of Object.keys(items)) {
+      if (id.startsWith('recall:')) items[id] = applyRating(items[id] as ItemState, 'nailed', TODAY)
+    }
+    const steps = buildSession(items, withMinutes(10), TODAY)
+    expect(steps.length).toBeGreaterThan(0)
+    expect(ofKind(steps, 'deck')).toEqual([])
+    expect(steps[0]?.kind).toBe('scale')
+  })
+})
+
 describe('estimateSeconds', () => {
+  it('counts 15 s per deck card, as it did per recall step', () => {
+    for (const min of [5, 10, 15, 20] as const) {
+      const steps = buildSession(allSolid(), withMinutes(min), TODAY)
+      const size = SESSION_SIZES[min]
+      expect(estimateSeconds(steps)).toBe(
+        deckCards(steps).length * 15 + size.scales * 180 + ofKind(steps, 'chords').length * 90 + size.freeplaySeconds,
+      )
+      expect(deckCards(steps)).toHaveLength(size.cards)
+    }
+  })
+
   it('default session = 6×15 + 2×180 + 1×90', () => {
     expect(estimateSeconds(buildSession(allSolid(), DEFAULT_SETTINGS, TODAY))).toBe(6 * 15 + 2 * 180 + 1 * 90)
   })
