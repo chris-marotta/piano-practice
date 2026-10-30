@@ -70,9 +70,12 @@ export function withMinorForm(state: AppState, form: MinorForm, on: boolean): Ap
 
 export const REDO_MESSAGE = 'This resets all scale progress. Your practice log and streak are kept.'
 
-/** Redo placement: scale progress cleared, log and settings kept. */
+/**
+ * Redo placement: all progress cleared (key names too), log and settings kept. The sticky drill level goes back to 1
+ * with the key boxes, so the drill restarts at Landmarks (Review Focus 1).
+ */
 export function resetPlacement(state: AppState): AppState {
-  return { ...state, placedAt: null, items: {} }
+  return { ...state, placedAt: null, items: {}, settings: { ...state.settings, lastDrillLevel: 1 } }
 }
 
 export function exportFilename(today: string): string {

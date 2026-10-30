@@ -17,7 +17,8 @@ import {
   withMinorForm,
   withSettings,
 } from '../../src/ui/screens/settingsView'
-import { DEFAULT_SETTINGS, enabledScales, placeItems, scaleId } from '../../src/srs/items'
+import { drillLevel } from '../../src/drill/levels'
+import { DEFAULT_SETTINGS, enabledScales, keyId, placeItems, scaleId } from '../../src/srs/items'
 import { emptyState, exportState, parseImport } from '../../src/store/storage'
 import type { AppState } from '../../src/store/storage'
 import { buildSession } from '../../src/session/builder'
@@ -148,6 +149,20 @@ describe('resetPlacement', () => {
     expect(after.log).toEqual(before.log)
     expect(after.settings).toEqual(before.settings)
     expect(Object.keys(before.items).length).toBeGreaterThan(0) // input untouched
+  })
+
+  it('also resets the sticky drill level: lastDrillLevel 4 → 1, and the drill starts at level 1', () => {
+    const before = placed()
+    for (let pc = 0; pc < 12; pc++) {
+      before.items[keyId(pc)] = { id: keyId(pc), introduced: true, box: 4, support: 0, levelStreak: 0, due: TODAY, history: [] }
+    }
+    before.settings = { ...before.settings, lastDrillLevel: 4 }
+    expect(drillLevel(before.items, TODAY, before.settings)).toBe(4)
+    const after = resetPlacement(before)
+    expect(after.settings.lastDrillLevel).toBe(1)
+    expect(drillLevel(after.items, TODAY, after.settings)).toBe(1)
+    expect(after.settings).toEqual({ ...before.settings, lastDrillLevel: 1 }) // every other setting kept
+    expect(before.settings.lastDrillLevel).toBe(4) // input untouched
   })
 })
 
