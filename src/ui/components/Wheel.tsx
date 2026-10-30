@@ -10,6 +10,8 @@ interface Props {
   steps?: number
   /** Which way the steps go: '#' clockwise, 'b' anticlockwise. '' (or 0 steps) draws no arc. */
   accidental?: '#' | 'b' | ''
+  /** Makes every key tappable (the Library's circle page): both rings of a position report its CIRCLE index. */
+  onSelect?: (index: number) => void
 }
 
 /** viewBox geometry: outer disc, inner disc, label radii, step-arc radii (just outside each ring's labels). */
@@ -41,7 +43,7 @@ function arcPath(steps: number, sign: 1 | -1, r: number): string {
  * The circle of fifths: majors outside, relative minors inside, one key lit. Self-contained SVG coloured with the
  * app's tokens (inline styles, so it needs no stylesheet), sized by its container's width.
  */
-export function Wheel({ highlight, minor, steps = 0, accidental = '' }: Props) {
+export function Wheel({ highlight, minor, steps = 0, accidental = '', onSelect }: Props) {
   const sign = accidental === 'b' ? -1 : 1
   const arcR = minor ? R_ARC_MINOR : R_ARC_MAJOR
   const showArc = steps > 0 && accidental !== ''
@@ -52,7 +54,7 @@ export function Wheel({ highlight, minor, steps = 0, accidental = '' }: Props) {
       class="wheel"
       viewBox="-104 -104 208 208"
       width="100%"
-      role="img"
+      role={onSelect ? 'group' : 'img'}
       aria-label={`Circle of fifths, ${label} lit${showArc ? `, ${steps} ${steps === 1 ? 'step' : 'steps'} ${sign === 1 ? 'clockwise' : 'anticlockwise'}` : ''}`}
       style={{ display: 'block', fontFamily: 'var(--font)', fontWeight: 700 }}
     >
@@ -107,6 +109,37 @@ export function Wheel({ highlight, minor, steps = 0, accidental = '' }: Props) {
           </g>
         )
       })}
+      {onSelect &&
+        CIRCLE.map((e, i) => {
+          const outer = at(i, R_MAJOR)
+          const inner = at(i, R_MINOR)
+          const target = (cx: number, cy: number, r: number, name: string, ring: string) => (
+            <circle
+              key={ring}
+              class="wheel__hit"
+              cx={round(cx)}
+              cy={round(cy)}
+              r={r}
+              role="button"
+              tabIndex={0}
+              aria-label={name}
+              aria-pressed={i === highlight}
+              onClick={() => onSelect(i)}
+              onKeyDown={(ev) => {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                  ev.preventDefault()
+                  onSelect(i)
+                }
+              }}
+            />
+          )
+          return (
+            <g key={e.major}>
+              {target(outer.x, outer.y, HIT_MAJOR, `${formatNote(e.major)} major`, 'major')}
+              {target(inner.x, inner.y, HIT_MINOR, `${formatNote(e.minor)} minor`, 'minor')}
+            </g>
+          )
+        })}
     </svg>
   )
 }

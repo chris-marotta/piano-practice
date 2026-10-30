@@ -12,6 +12,7 @@ import {
   type ChordTypeId,
   type DiatonicChord,
 } from '../../../theory/chords'
+import { CIRCLE } from '../../../theory/circle'
 import { formatChordName, formatNote, formatScale } from '../../../theory/format'
 import {
   MAJOR_ROOTS,
@@ -176,6 +177,51 @@ export function scalePanel(ref: ScaleRef, octaves: 1 | 2, direction: Direction):
 export function libraryTempo(items: Record<string, ItemState>, ref: ScaleRef, startTempo: number): number {
   const source = sessionScaleFor(ref)
   return (source && items[scaleId(source)]?.tempo) || startTempo
+}
+
+// ---- circle of fifths ----
+
+export interface CirclePanel {
+  /** 'A major · F♯ minor', display glyphs. */
+  title: string
+  major: ScaleRef
+  /** 'E♭ minor': the relative minor's name. */
+  minorName: string
+  /** The circle's relative minor (natural), in the circle's spelling: E♭ at index 6, where relativeKey spells D♯. */
+  minor: ScaleRef
+  /** The major's key signature, display glyphs. Empty for C major. */
+  chips: string[]
+  /** The minor's own key signature. Same as `chips` except at index 6 (F♯ major sharps, E♭ minor flats). */
+  minorChips: string[]
+  /** One octave of the major scale, tonic to tonic (8 marks), the tonic marked `root`. Same range for every key. */
+  keyboard: KeyboardView
+}
+
+const chipsFor = (ref: ScaleRef): string[] => keySignature(ref).notes.map(formatNote)
+
+/** What the circle's key at `index` (0 = C / A minor, clockwise) shows when tapped: its major, relative minor and scale. */
+export function circlePanel(index: number): CirclePanel {
+  const entry = CIRCLE[((index % CIRCLE.length) + CIRCLE.length) % CIRCLE.length] as (typeof CIRCLE)[number]
+  const major: ScaleRef = { root: entry.major, form: 'major' }
+  const minor: ScaleRef = { root: entry.minor, form: 'natural' }
+  const minorName = `${formatNote(minor.root)} minor`
+  const notes = scaleSequence(major, 1, 4).ascending
+  const marks: KeyMark[] = notes.map((n, i) => ({
+    midi: noteMidi(n),
+    hand: 'rh',
+    label: formatNote(pitchClass(n)),
+    ...(i === 0 || i === notes.length - 1 ? { root: true } : {}),
+  }))
+  const midis = marks.map((m) => m.midi)
+  return {
+    title: `${formatScale(major)} · ${minorName}`,
+    major,
+    minorName,
+    minor,
+    chips: chipsFor(major),
+    minorChips: chipsFor(minor),
+    keyboard: { ...keyboardRange(midis), marks, firstMidi: Math.min(...midis) },
+  }
 }
 
 // ---- chords ----

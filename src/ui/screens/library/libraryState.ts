@@ -5,7 +5,7 @@ import type { ChordTypeId } from '../../../theory/chords'
 import type { ScaleRef } from '../../../theory/scales'
 import type { Direction } from '../steps/scaleView'
 
-export type Segment = 'scales' | 'chords' | 'key' | 'what'
+export type Segment = 'scales' | 'chords' | 'key' | 'what' | 'circle'
 
 export interface ChordSel {
   root: string
@@ -18,6 +18,8 @@ export const scaleSel = signal<ScaleRef>({ root: 'C', form: 'major' })
 export const scaleDir = signal<Direction>('up')
 export const chordSel = signal<ChordSel>({ root: 'C', type: 'M', inversion: 0 })
 export const keySel = signal<ScaleRef>({ root: 'C', form: 'major' })
+/** CIRCLE index of the key open on the Circle of fifths page (0 = C / A minor). */
+export const circleSel = signal<number>(0)
 export const whatSel = signal<number[]>([])
 
 /** Open a chord in the Chords segment (from Chords in a key). */

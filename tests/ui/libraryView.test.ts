@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { familyOf, fingeringSequence } from '../../src/data/fingerings'
+import { CIRCLE } from '../../src/theory/circle'
 import { noteMidi, type ScaleRef } from '../../src/theory/scales'
 import {
   chordPanel,
+  circlePanel,
   clampInversion,
   detection,
   inversionOptions,
@@ -305,5 +307,57 @@ describe('every reachable spelling renders', () => {
           for (const t of ['M', 'm', 'dim', 'aug', 'sus2', 'sus4', 'maj7', '7', 'm7', 'm7b5', 'dim7', '6', 'add9', '9'] as const)
             for (const o of inversionOptions(t)) expect(chordPanel(c.root, t, o.value).notes.length).toBeGreaterThan(2)
         }
+  })
+})
+
+describe('circlePanel (circle of fifths, tapped key)', () => {
+  it('A major / F♯ minor: three sharps and one octave of A major with the tonic marked', () => {
+    const p = circlePanel(3)
+    expect(p.major).toEqual({ root: 'A', form: 'major' })
+    expect(p.minor).toEqual({ root: 'F#', form: 'natural' })
+    expect(p.chips).toEqual(['F♯', 'C♯', 'G♯'])
+    expect(p.minorChips).toEqual(['F♯', 'C♯', 'G♯'])
+    expect(p.keyboard.marks).toHaveLength(8)
+    expect(p.keyboard.marks.map((m) => m.label)).toEqual(['A', 'B', 'C♯', 'D', 'E', 'F♯', 'G♯', 'A'])
+    expect(p.keyboard.marks.map((m) => m.midi)).toEqual([69, 71, 73, 74, 76, 78, 80, 81])
+    expect(p.keyboard.marks.filter((m) => m.root).map((m) => m.label)).toEqual(['A', 'A'])
+    expect(p.keyboard.firstMidi).toBe(69)
+  })
+
+  it('C major / A minor has no chips', () => {
+    const p = circlePanel(0)
+    expect(p.major).toEqual({ root: 'C', form: 'major' })
+    expect(p.minor).toEqual({ root: 'A', form: 'natural' })
+    expect(p.chips).toEqual([])
+    expect(p.minorChips).toEqual([])
+  })
+
+  it('index 6 shows the circle spelling: F♯ major (sharps) with E♭ minor (its own flats)', () => {
+    const p = circlePanel(6)
+    expect(p.major).toEqual({ root: 'F#', form: 'major' })
+    expect(p.minor).toEqual({ root: 'Eb', form: 'natural' })
+    expect(p.chips).toEqual(['F♯', 'C♯', 'G♯', 'D♯', 'A♯', 'E♯'])
+    expect(p.minorChips).toEqual(['B♭', 'E♭', 'A♭', 'D♭', 'G♭', 'C♭'])
+  })
+
+  it('flat keys use their flats; every key has 8 marks, 2 root marks on the tonic, and one keyboard range', () => {
+    expect(circlePanel(11).chips).toEqual(['B♭'])
+    expect(circlePanel(8).chips).toEqual(['B♭', 'E♭', 'A♭', 'D♭'])
+    for (let i = 0; i < CIRCLE.length; i++) {
+      const p = circlePanel(i)
+      expect(p.chips).toHaveLength(CIRCLE[i]?.count as number)
+      expect(p.keyboard.marks).toHaveLength(8)
+      expect(p.keyboard.marks.filter((m) => m.root)).toHaveLength(2)
+      expect(p.keyboard.marks[0]?.root).toBe(true)
+      expect(p.keyboard.marks[7]?.root).toBe(true)
+      expect(p.keyboard.marks[7]?.midi).toBe((p.keyboard.marks[0]?.midi as number) + 12)
+      expect([p.keyboard.low, p.keyboard.high]).toEqual([60, 83])
+    }
+  })
+
+  it('titles name both keys in display glyphs', () => {
+    expect(circlePanel(1).title).toBe('G major · E minor')
+    expect(circlePanel(6).title).toBe('F♯ major · E♭ minor')
+    expect(circlePanel(6).minorName).toBe('E♭ minor')
   })
 })

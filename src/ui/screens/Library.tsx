@@ -1,5 +1,6 @@
 import { Segmented } from '../components/Segmented'
 import { ChordsPanel } from './library/ChordsPanel'
+import { CirclePanel } from './library/CirclePanel'
 import { KeyChordsPanel } from './library/KeyChordsPanel'
 import { segment, type Segment } from './library/libraryState'
 import { ScalesPanel } from './library/ScalesPanel'
@@ -10,9 +11,10 @@ const SEGMENTS: { value: Segment; label: string }[] = [
   { value: 'chords', label: 'Chords' },
   { value: 'key', label: 'Chords in a key' },
   { value: 'what', label: "What's this chord?" },
+  { value: 'circle', label: 'Circle of fifths' },
 ]
 
-/** Look up any scale or chord on any root, a key's diatonic chords, or name a chord from tapped keys. */
+/** Look up any scale or chord on any root, a key's diatonic chords, name a chord from tapped keys, or tap round the circle of fifths. */
 export function Library() {
   const s = segment.value
   return (
@@ -25,6 +27,7 @@ export function Library() {
       {s === 'chords' && <ChordsPanel />}
       {s === 'key' && <KeyChordsPanel />}
       {s === 'what' && <WhatChordPanel />}
+      {s === 'circle' && <CirclePanel />}
     </section>
   )
 }
