@@ -131,6 +131,22 @@ describe('whyChips', () => {
     expect(whyChips(recallCard('thumb', A).why)).toBeNull()
   })
 
+  it('melodic spell (R-T7b): one row per line; up from why.accidentals, down in signature order', () => {
+    const Cm: ScaleRef = { root: 'C', form: 'melodic' }
+    expect(whyChips(recallCard('spell', Cm).why, 'up')).toEqual({ label: 'Sharps and flats', notes: ['Eb'] })
+    expect(whyChips(recallCard('spell', Cm).why, 'down')).toEqual({ label: 'Sharps and flats', notes: ['Bb', 'Eb', 'Ab'] })
+    expect(whyChips(recallCard('spell', Am).why, 'up')).toEqual({ label: 'Sharps and flats', notes: ['F#', 'G#'] })
+    // No accidentals coming down: an empty row, which renders the shared "no sharps or flats" text.
+    expect(whyChips(recallCard('spell', Am).why, 'down')).toEqual({ label: 'Sharps and flats', notes: [] })
+  })
+
+  it('non-melodic spell cards are unchanged: the line argument is ignored', () => {
+    const Ah: ScaleRef = { root: 'A', form: 'harmonic' }
+    expect(whyChips(recallCard('spell', Ah).why, 'down')).toEqual(whyChips(recallCard('spell', Ah).why))
+    expect(whyChips(recallCard('spell', Ah).why)).toEqual({ label: 'Sharps and flats', notes: ['G#'] })
+    expect(whyChips(recallCard('spell', C).why, 'down')).toBeNull()
+  })
+
   it('every card type has a kicker', () => {
     for (const t of RECALL_TYPES) expect(kickerFor(t)).toMatch(/^WARM-UP · /)
   })

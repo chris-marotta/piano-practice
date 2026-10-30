@@ -74,8 +74,22 @@ export function whyKeyboard(why: RecallWhy): { low: number; high: number; marks:
   return { ...tightRange(marks.map((m) => m.midi)), marks }
 }
 
-/** The chips under a why picture: the shared signature (relative), the accidentals in order (key signature), the scale's own sharps and flats (spell). */
-export function whyChips(why: RecallWhy): { label: string; notes: string[] } | null {
+/**
+ * The sharps and flats of a melodic down line (natural minor), in signature order as the why sentence names them:
+ * those in the tonic's natural-minor signature first, then any others.
+ */
+function downLineAccidentals(descending: string[]): string[] {
+  const own = [...new Set(descending.filter((n) => /[#b]/.test(n)))]
+  const inSig = keySignature({ root: descending[0] as string, form: 'natural' }).notes.filter((n) => own.includes(n))
+  return [...inSig, ...own.filter((n) => !inSig.includes(n))]
+}
+
+/**
+ * The chips under a why picture: the shared signature (relative), the accidentals in order (key signature), the
+ * scale's own sharps and flats (spell). A melodic spell card has a row per line (ruling R-T7b): `line` picks it, and
+ * both rows always come back (an empty one renders "no sharps or flats"). Other cards ignore `line`.
+ */
+export function whyChips(why: RecallWhy, line: 'up' | 'down' = 'up'): { label: string; notes: string[] } | null {
   switch (why.kind) {
     case 'steps': {
       // Walking down starts on a major; walking up starts on a minor (relative minors share the natural minor's signature).
@@ -85,6 +99,9 @@ export function whyChips(why: RecallWhy): { label: string; notes: string[] } | n
     case 'wheel':
       return why.notes.length > 0 ? { label: 'In order', notes: why.notes } : null
     case 'scale':
+      if (why.descending) {
+        return { label: 'Sharps and flats', notes: line === 'up' ? why.accidentals : downLineAccidentals(why.descending) }
+      }
       return why.accidentals.length > 0 ? { label: 'Sharps and flats', notes: why.accidentals } : null
     case 'thumbs':
       return null

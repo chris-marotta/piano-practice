@@ -6,8 +6,8 @@ import { Keyboard } from './Keyboard'
 import { Wheel } from './Wheel'
 
 /** Note chips ("Same key signature: F♯ C♯ G♯"); "none" when the list is empty. */
-function Chips({ why }: { why: RecallWhy }) {
-  const chips = whyChips(why)
+function Chips({ why, line = 'up' }: { why: RecallWhy; line?: 'up' | 'down' }) {
+  const chips = whyChips(why, line)
   if (!chips) return null
   return (
     <p class="why-chips">
@@ -61,10 +61,18 @@ export function WhyPicture({ why }: { why: RecallWhy }) {
     // Melodic minor: the up line and the down line (read low to high, so it lands on the same keys).
     picture = (
       <div class="why-keys-pair">
-        <WhyKeys why={why} title="Going up" />
-        <WhyKeys why={{ kind: 'scale', notes: [...why.descending].reverse(), accidentals: [] }} title="Coming down" />
+        <div class="why-line">
+          <WhyKeys why={why} title="Going up" />
+          <Chips why={why} line="up" />
+        </div>
+        <div class="why-line">
+          <WhyKeys why={{ kind: 'scale', notes: [...why.descending].reverse(), accidentals: [] }} title="Coming down" />
+          <Chips why={why} line="down" />
+        </div>
       </div>
     )
+    // Each line carries its own chip row (ruling R-T7b), so there is no shared row underneath.
+    return <div class="why-picture why-picture--scale">{picture}</div>
   } else {
     picture = <WhyKeys why={why} />
   }
