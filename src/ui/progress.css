@@ -93,6 +93,49 @@
   color: var(--ink);
 }
 
+.keys-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.keys-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.keys-row__title {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.keys-row__strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+
+/* A key cell is a mastery cell with the key's name centred; a black key's two names stack. */
+.kcell {
+  justify-content: center;
+  height: 40px;
+  padding: 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.keys-row__level {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
 .legend {
   display: flex;
   flex-direction: column;

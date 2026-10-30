@@ -13,6 +13,7 @@ import { withSettings } from '../settingsView'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
 import { PickerSummary, PlayPicker } from './PlayPicker'
+import { PlayKeys } from './PlayKeys'
 import {
   fitted,
   hand,
@@ -54,6 +55,7 @@ const MODES: { value: PlayMode; label: string }[] = [
   { value: 'free', label: 'Free' },
   { value: 'guided', label: 'Guided' },
   { value: 'check', label: 'Check' },
+  { value: 'keys', label: 'Keys' },
 ]
 
 const HANDS: { value: PlayHand; label: string }[] = [
@@ -78,7 +80,8 @@ const TAP_VELOCITY = 80
  */
 const PLAY_KEY_PX = 80
 
-function modeHint(target: PlayTarget): string | null {
+function modeHint(mode: PlayMode, target: PlayTarget): string | null {
+  if (mode === 'keys') return null
   if (target.kind === 'none') return 'Pick a scale or chord for Guided and Check'
   if (!checkAvailable(target)) return 'Check works with scales'
   return null
@@ -122,7 +125,8 @@ export function Play() {
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
   const guide = run?.guide() ?? null
   const win = shownWindow({ mode: m, target, fitted: fitted.value, follow: keyWindow.value, guide })
-  const droneOn = t.drone && target.kind !== 'none'
+  const keys = m === 'keys'
+  const droneOn = t.drone && target.kind !== 'none' && !keys
   useDrone(rootOf(target), droneOn, app.value.settings.droneVolumeDb)
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export function Play() {
     ...(guideAvailable(target) ? [] : (['guided'] as const)),
     ...(checkAvailable(target) ? [] : (['check'] as const)),
   ]
-  const hint = modeHint(target)
+  const hint = modeHint(m, target)
   const marksLocked = m === 'check' || target.kind === 'none'
   const marks = playMarks({ mode: m, target, toggles: t, labels: playLabels, held, next: run?.next() ?? null, window: win, flash, guide })
   const reserve = reserveRowsFor(m, target, h)
@@ -185,91 +189,97 @@ export function Play() {
         </div>
       </header>
 
-      {collapsed ? (
-        <PickerSummary
-          summary={pickerSummary(target, octavesSel.value, m, fitHand(m, target, hand.value))}
-          canRandom={target.kind !== 'none'}
-          onExpand={() => (pickerCollapsed.value = false)}
-          onRestart={restart}
-        />
+      {keys ? (
+        <PlayKeys />
       ) : (
-        <PlayPicker />
-      )}
-
-      <div class="play-row play-controls">
-        {m === 'guided' && target.kind === 'scale' && (
-          <Segmented options={HANDS} value={hand.value} onChange={(v) => (hand.value = v)} label="Hand" />
-        )}
-        <div class="play-toggles">
-          <Toggle label="Highlight" on={shown.highlight} onChange={setToggle('highlight')} disabled={marksLocked} />
-          <Toggle label="Right / wrong" on={shown.colours} onChange={setToggle('colours')} disabled={marksLocked} />
-          <Toggle label="Fingers" on={shown.fingers} onChange={setToggle('fingers')} disabled={marksLocked} />
-          <Toggle label="Drone" on={droneOn} onChange={setToggle('drone')} disabled={target.kind === 'none'} />
-        </div>
-        <div class="play-labels">
-          <span class="play-labels__title">Labels</span>
-          <Segmented
-            options={LABELS}
-            value={playLabels}
-            onChange={(v) => update((st) => withSettings(st, { playLabels: v }))}
-            label="Labels"
-          />
-        </div>
-      </div>
-
-      {/* The keyboard grows to the column width or the room left (play.css); the band takes the rest. */}
-      <div class="play-stage">
-        {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
-        <div class="play-band" aria-live="polite">
-          {outcome ? (
-            <RunResult outcome={outcome} onAgain={restart} />
+        <>
+          {collapsed ? (
+            <PickerSummary
+              summary={pickerSummary(target, octavesSel.value, m, fitHand(m, target, hand.value))}
+              canRandom={target.kind !== 'none'}
+              onExpand={() => (pickerCollapsed.value = false)}
+              onRestart={restart}
+            />
           ) : (
-            <div class="play-status">
-              {m === 'free' && (
-                <div class="play-status__main">
-                  <span class="play-status__label">Holding</span>
-                  <p class="play-readout">{chordReadout(held)}</p>
-                </div>
-              )}
-              {status && (
-                <div class="play-status__main">
-                  <p class="play-status__headline">{status.headline}</p>
-                  <p class="play-status__detail">{status.detail}</p>
-                </div>
-              )}
-              {m === 'check' && target.kind === 'scale' && (
-                <div class="play-status__main">
-                  <p class="play-status__headline">From memory: {formatScale(target.ref)}</p>
-                  <p class="play-status__detail">
-                    Start on {formatNote(target.ref.root)}. The result shows when you finish.
-                  </p>
-                </div>
-              )}
-              <div class="play-status__side">
-                {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
-                {m !== 'free' && !collapsed && (
-                  <button type="button" class="btn play-restart" onClick={restart}>
-                    Restart
-                  </button>
-                )}
-                {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
-              </div>
-            </div>
+            <PlayPicker />
           )}
-        </div>
 
-        <div class="play-keyboard" style={fit}>
-          <ScrollKeyboard
-            low={win.low}
-            high={win.high}
-            marks={marks}
-            firstMidi={win.low}
-            reserveRows={reserve}
-            maxKeyPx={PLAY_KEY_PX}
-            onKeyPress={onKeyPress}
-          />
-        </div>
-      </div>
+          <div class="play-row play-controls">
+            {m === 'guided' && target.kind === 'scale' && (
+              <Segmented options={HANDS} value={hand.value} onChange={(v) => (hand.value = v)} label="Hand" />
+            )}
+            <div class="play-toggles">
+              <Toggle label="Highlight" on={shown.highlight} onChange={setToggle('highlight')} disabled={marksLocked} />
+              <Toggle label="Right / wrong" on={shown.colours} onChange={setToggle('colours')} disabled={marksLocked} />
+              <Toggle label="Fingers" on={shown.fingers} onChange={setToggle('fingers')} disabled={marksLocked} />
+              <Toggle label="Drone" on={droneOn} onChange={setToggle('drone')} disabled={target.kind === 'none'} />
+            </div>
+            <div class="play-labels">
+              <span class="play-labels__title">Labels</span>
+              <Segmented
+                options={LABELS}
+                value={playLabels}
+                onChange={(v) => update((st) => withSettings(st, { playLabels: v }))}
+                label="Labels"
+              />
+            </div>
+          </div>
+
+          {/* The keyboard grows to the column width or the room left (play.css); the band takes the rest. */}
+          <div class="play-stage">
+            {/* Persistent live region: the readout, guided progress and result card are announced as they change. */}
+            <div class="play-band" aria-live="polite">
+              {outcome ? (
+                <RunResult outcome={outcome} onAgain={restart} />
+              ) : (
+                <div class="play-status">
+                  {m === 'free' && (
+                    <div class="play-status__main">
+                      <span class="play-status__label">Holding</span>
+                      <p class="play-readout">{chordReadout(held)}</p>
+                    </div>
+                  )}
+                  {status && (
+                    <div class="play-status__main">
+                      <p class="play-status__headline">{status.headline}</p>
+                      <p class="play-status__detail">{status.detail}</p>
+                    </div>
+                  )}
+                  {m === 'check' && target.kind === 'scale' && (
+                    <div class="play-status__main">
+                      <p class="play-status__headline">From memory: {formatScale(target.ref)}</p>
+                      <p class="play-status__detail">
+                        Start on {formatNote(target.ref.root)}. The result shows when you finish.
+                      </p>
+                    </div>
+                  )}
+                  <div class="play-status__side">
+                    {m === 'free' && <p class="play-status__target">{targetTitle(target)}</p>}
+                    {m !== 'free' && !collapsed && (
+                      <button type="button" class="btn play-restart" onClick={restart}>
+                        Restart
+                      </button>
+                    )}
+                    {showConnectHint(midiStatus.value) && <p class="play-empty">{EMPTY_STATE}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div class="play-keyboard" style={fit}>
+              <ScrollKeyboard
+                low={win.low}
+                high={win.high}
+                marks={marks}
+                firstMidi={win.low}
+                reserveRows={reserve}
+                maxKeyPx={PLAY_KEY_PX}
+                onKeyPress={onKeyPress}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </section>
   )
 }

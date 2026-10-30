@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildRound, gradeAnswer, shouldGrade, withRepeat } from '../../src/drill/round'
+import { buildRound, gradeAnswer, gradeFirstAnswer, shouldGrade, withRepeat } from '../../src/drill/round'
 import type { Question } from '../../src/drill/round'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
@@ -241,5 +241,44 @@ describe('shouldGrade', () => {
     const rep = q({ repeat: true })
     expect(shouldGrade(rep, state(), TODAY, 'session', false)).toBe(false)
     expect(shouldGrade(rep, state({ due: TODAY }), TODAY, 'play', false)).toBe(false)
+  })
+})
+
+describe('gradeFirstAnswer', () => {
+  const ask = (repeat = false): Question => ({ itemId: keyId(2), pc: 2, midi: 50, format: 'tap', repeat })
+  const due = keyState(2, 2, TODAY)
+
+  it('grades a key\'s first answer and remembers it', () => {
+    const seen = new Set<string>()
+    expect(gradeFirstAnswer(ask(), seen, due, TODAY, 'play', true, 1200, 1)).toBe('nailed')
+    expect(seen.has(keyId(2))).toBe(true)
+  })
+
+  it('a second question on the same key is not graded', () => {
+    const seen = new Set<string>()
+    gradeFirstAnswer(ask(), seen, due, TODAY, 'play', false, 1200, 1)
+    expect(gradeFirstAnswer(ask(), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
+  })
+
+  it('a practice repeat is never graded and does not use up the key', () => {
+    const seen = new Set<string>()
+    expect(gradeFirstAnswer(ask(true), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
+    expect(seen.size).toBe(0)
+  })
+
+  it('goes through shouldGrade: in Play a right answer on a key that is not due gives nothing', () => {
+    const later = keyState(2, 3, TOMORROW)
+    expect(gradeFirstAnswer(ask(), new Set(), later, TODAY, 'play', true, 1200, 1)).toBeNull()
+    expect(gradeFirstAnswer(ask(), new Set(), later, TODAY, 'play', false, 1200, 1)).toBe('lost')
+  })
+
+  it('uses gradeAnswer for the level: slow is shaky, and past 3 s at level 4 is lost', () => {
+    expect(gradeFirstAnswer(ask(), new Set(), due, TODAY, 'play', true, 6000, 1)).toBe('shaky')
+    expect(gradeFirstAnswer(ask(), new Set(), due, TODAY, 'play', true, 3500, 4)).toBe('lost')
+  })
+
+  it('an already-graded day (session) gives nothing', () => {
+    const done = { ...due, history: [{ date: TODAY, rating: 'nailed' as const }] }
+    expect(gradeFirstAnswer(ask(), new Set(), done, TODAY, 'session', true, 1200, 1)).toBeNull()
   })
 })

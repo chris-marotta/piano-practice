@@ -118,3 +118,23 @@ export function shouldGrade(
   if (where === 'session') return !state.history.some((h) => h.date === today)
   return !correct || state.due <= today
 }
+
+/**
+ * The rating for one answer in a round, or null when it earns none: a practice repeat, a key already answered
+ * earlier in this round (`seen` holds the first-answered key ids and is added to here), or one `shouldGrade` skips.
+ * Shared by the session's drill and Play's Keys mode so both grade the same way.
+ */
+export function gradeFirstAnswer(
+  q: Question,
+  seen: Set<string>,
+  state: ItemState,
+  today: string,
+  where: 'session' | 'play',
+  correct: boolean,
+  ms: number,
+  level: 1 | 2 | 3 | 4,
+): Rating | null {
+  if (q.repeat || seen.has(q.itemId)) return null
+  seen.add(q.itemId)
+  return shouldGrade(q, state, today, where, correct) ? gradeAnswer(correct, ms, level) : null
+}

@@ -495,6 +495,11 @@ describe('mode availability', () => {
     expect(effectiveMode('guided', NONE)).toBe('free')
     expect(effectiveMode('check', G_MAJOR)).toBe('check')
   })
+  it('Keys works with any target, or none', () => {
+    expect(effectiveMode('keys', C_CHORD)).toBe('keys')
+    expect(effectiveMode('keys', NONE)).toBe('keys')
+    expect(effectiveMode('keys', G_MAJOR)).toBe('keys')
+  })
 })
 
 describe('reserveRowsFor', () => {
@@ -695,6 +700,12 @@ describe('pickerSummary: the one line the picker collapses to', () => {
   it('a chord names its inversion, as the Library does', () => {
     expect(pickerSummary({ ...C_CHORD, inversion: 1 }, 1, 'guided', 'rh')).toBe('C major chord, 1st inversion · Guided')
     expect(pickerSummary({ ...C_CHORD, inversion: 2 }, 1, 'free', 'rh')).toBe('C major chord, 2nd inversion · Free')
+  })
+
+  it('Keys names the drill level, whatever the target', () => {
+    expect(pickerSummary(D_MAJOR, 1, 'keys', 'rh', 2)).toBe('Keys · Level 2')
+    expect(pickerSummary(C_CHORD, 1, 'keys', 'rh', 4)).toBe('Keys · Level 4')
+    expect(pickerSummary(NONE, 1, 'keys', 'rh', 1)).toBe('Keys · Level 1')
   })
 
   it('spells accidentals with the display glyphs', () => {

@@ -2,15 +2,18 @@ import { describe, expect, it } from 'vitest'
 import {
   MASTERY_LEGEND,
   calendarWeeks,
+  keyCells,
+  keysLevelText,
   formatMinutes,
   masteryColumns,
   masteryRows,
   progressStats,
 } from '../../src/ui/screens/progressView'
-import { DEFAULT_SETTINGS, enabledScales, placeItems, scaleId } from '../../src/srs/items'
+import { DEFAULT_SETTINGS, enabledScales, keyId, placeItems, scaleId } from '../../src/srs/items'
+import { rateItem } from '../../src/session/record'
+import { emptyState, type AppState, type SessionLog } from '../../src/store/storage'
 import type { Placement, Settings } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
-import type { SessionLog } from '../../src/store/storage'
 import { MAJOR_ROOTS, MINOR_ROOTS } from '../../src/theory/scales'
 
 const TODAY = '2026-10-20' // a Tuesday
@@ -175,5 +178,41 @@ describe('progressStats', () => {
       thisWeek: '0 min',
       daysPracticed: 0,
     })
+  })
+})
+
+describe('keyCells: the Keys row', () => {
+  const state = (): AppState => emptyState()
+
+  it('is 12 cells, C to B, black keys labelled with both names', () => {
+    const cells = keyCells({}, TODAY, DEFAULT_SETTINGS)
+    expect(cells.map((c) => c.pc)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    expect(cells[0]?.label).toBe('C')
+    expect(cells[8]?.label).toBe('G♯ / A♭')
+  })
+
+  it('a fresh store has no key introduced: every box is null', () => {
+    expect(keyCells({}, TODAY, DEFAULT_SETTINGS).every((c) => c.box === null)).toBe(true)
+  })
+
+  it('a key rated nailed is at box 2; the others stay null', () => {
+    const rated = rateItem(state(), keyId(4), 'nailed', TODAY)
+    const cells = keyCells(rated.items, TODAY, DEFAULT_SETTINGS)
+    expect(cells[4]?.box).toBe(2)
+    expect(cells.filter((c) => c.box !== null)).toHaveLength(1)
+  })
+
+  it('a key rated lost sits at box 1, which is not the same as not started', () => {
+    const rated = rateItem(state(), keyId(0), 'lost', TODAY)
+    expect(keyCells(rated.items, TODAY, DEFAULT_SETTINGS)[0]?.box).toBe(1)
+  })
+})
+
+describe('keysLevelText', () => {
+  it('names the level and its keys', () => {
+    expect(keysLevelText(1)).toBe('Level 1 of 4 · Landmarks')
+    expect(keysLevelText(2)).toBe('Level 2 of 4 · White keys')
+    expect(keysLevelText(3)).toBe('Level 3 of 4 · Black keys')
+    expect(keysLevelText(4)).toBe('Level 4 of 4 · Speed')
   })
 })

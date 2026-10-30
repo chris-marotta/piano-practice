@@ -1,10 +1,12 @@
 // Pure view model for the Progress screen (no Preact, no window): unit tested in node.
-import { stateFor } from '../../srs/items'
+import { LEVEL_NAMES } from '../../drill/levels'
+import { keyId, stateFor } from '../../srs/items'
 import type { Settings } from '../../srs/items'
 import type { ItemState } from '../../srs/scheduler'
 import type { SessionLog } from '../../store/storage'
 import { minutesTotals, practicedDays, streak } from '../../store/streak'
 import { formatNote } from '../../theory/format'
+import { keyLabel } from '../../theory/keyNames'
 import { formatDay, weekdayShort } from '../formatDate'
 import { placementColumns, placementRows } from './placementGrid'
 import type { GridColumn } from './placementGrid'
@@ -56,6 +58,35 @@ export function masteryRows(items: Record<string, ItemState>, settings: Settings
       }
     }),
   )
+}
+
+export interface KeyCell {
+  pc: number
+  /** 'E', or 'G♯ / A♭' for a black key. */
+  label: string
+  /** The key's Leitner box (1-5), or null for a key not introduced yet (the empty look). */
+  box: 1 | 2 | 3 | 4 | 5 | null
+  /** The cell in words, for screen readers and the tooltip. */
+  description: string
+}
+
+/** The Keys row: the 12 name-that-key items, C to B, shaded by box like the scale grid. */
+export function keyCells(items: Record<string, ItemState>, today: string, settings: Settings): KeyCell[] {
+  return Array.from({ length: 12 }, (_, pc) => {
+    const s = stateFor(keyId(pc), items, today, settings)
+    const label = keyLabel(pc)
+    return {
+      pc,
+      label,
+      box: s.introduced ? s.box : null,
+      description: s.introduced ? `Key ${label}: box ${s.box} of 5` : `Key ${label}: not started`,
+    }
+  })
+}
+
+/** The line under the Keys row: where the name-that-key ladder stands. */
+export function keysLevelText(level: 1 | 2 | 3 | 4): string {
+  return `Level ${level} of 4 · ${LEVEL_NAMES[level]}`
 }
 
 export const MASTERY_LEGEND: { shade: 1 | 2 | 3 | 4 | 5; label: string }[] = [

@@ -1,5 +1,14 @@
+import { drillLevel } from '../../drill/levels'
 import { app, resumed, today } from '../state'
-import { MASTERY_LEGEND, calendarWeeks, masteryColumns, masteryRows, progressStats } from './progressView'
+import {
+  MASTERY_LEGEND,
+  calendarWeeks,
+  keyCells,
+  keysLevelText,
+  masteryColumns,
+  masteryRows,
+  progressStats,
+} from './progressView'
 
 /** Mastery grid (box shade + support mark per scale), streak, minutes, and the last 8 weeks. */
 export function Progress() {
@@ -8,6 +17,7 @@ export function Progress() {
   const date = today()
   const columns = masteryColumns(settings)
   const rows = masteryRows(items, settings, date)
+  const keys = keyCells(items, date, settings)
   const stats = progressStats(log, date)
   const calendar = calendarWeeks(log, date)
 
@@ -46,6 +56,28 @@ export function Progress() {
               ))}
             </div>
           ))}
+        </div>
+
+        <div class="keys-row">
+          <div class="keys-row__head">
+            <h2 class="keys-row__title">Keys</h2>
+            <p class="keys-row__level">{keysLevelText(drillLevel(items, date, settings))}</p>
+          </div>
+          <div class="keys-row__cells" role="table" aria-label="Key mastery">
+            <div class="keys-row__strip" role="row">
+              {keys.map((cell) => (
+                <div
+                  key={cell.pc}
+                  class={`mcell mcell--${cell.box ?? 0} kcell`}
+                  role="cell"
+                  aria-label={cell.description}
+                  title={cell.description}
+                >
+                  <span aria-hidden="true">{cell.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div class="legend" role="group" aria-label="Key">
