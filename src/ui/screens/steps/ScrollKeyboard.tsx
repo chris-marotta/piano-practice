@@ -10,6 +10,8 @@ interface Props {
   firstMidi: number
   /** Default: both hands. */
   reserveRows?: ReserveRows
+  /** All finger badges above the keys (one hand per keyboard). */
+  badgesAbove?: boolean
   onKeyTap?: (midi: number) => void
   maxKeyPx?: number
   toggle?: boolean
@@ -23,6 +25,7 @@ export function ScrollKeyboard({
   marks,
   firstMidi,
   reserveRows = true,
+  badgesAbove,
   onKeyTap,
   maxKeyPx,
   toggle,
@@ -45,6 +48,7 @@ export function ScrollKeyboard({
         high={high}
         marks={marks}
         reserveRows={reserveRows}
+        badgesAbove={badgesAbove}
         onKeyTap={onKeyTap}
         maxKeyPx={maxKeyPx}
         toggle={toggle}

@@ -82,6 +82,8 @@ function HandPanel({ hand, panel }: { hand: 'lh' | 'rh'; panel: Panel }) {
         low={panel.low}
         high={panel.high}
         marks={panel.marks}
+        reserveRows="rh"
+        badgesAbove
         firstMidi={Math.min(...panel.marks.map((m) => m.midi))}
       />
     </section>

@@ -6,6 +6,7 @@ import {
   KEY,
   SUB_ROW,
   badgeSlots,
+  badgeSlotsAbove,
   keyAriaLabel,
   keyLooks,
   keyRects,
@@ -30,6 +31,11 @@ interface Props {
   onKeyTap?: (midi: number) => void
   /** Always reserve two badge sub-rows per hand ('rh': RH only) so the keyboard doesn't shift between scales. */
   reserveRows?: ReserveRows
+  /**
+   * Every finger badge goes above the keys whatever its hand (a keyboard that shows one hand). Pair it with
+   * reserveRows 'rh' so the keys sit at the same height on every such keyboard.
+   */
+  badgesAbove?: boolean
   /** Cap on rendered white-key width (px). Raise it where keys are tapped, so black keys reach 48px. */
   maxKeyPx?: number
   /** Keys are on/off toggles (tap to add or remove): each key reports aria-pressed = marked. */
@@ -112,6 +118,7 @@ export function Keyboard({
   marks,
   onKeyTap,
   reserveRows = false,
+  badgesAbove = false,
   maxKeyPx = MAX_KEY_PX,
   toggle = false,
   onKeyPress,
@@ -120,7 +127,8 @@ export function Keyboard({
   const whiteCount = whiteKeys(low, high).length
   const width = whiteCount * KEY.whiteW
   const badges = badgeSlots(marks, low)
-  const { keyTop, keyBottom, height } = verticalLayout(badges, reserveRows)
+  const above = badgesAbove ? badgeSlotsAbove(marks, low) : null
+  const { keyTop, keyBottom, height } = verticalLayout(above ? { rhRows: above.rows, lhRows: 0 } : badges, reserveRows)
   const viewBoxWidth = width + 4
 
   const looks = keyLooks(marks, low, high)
@@ -202,12 +210,19 @@ export function Keyboard({
     )
   }
 
-  const placed = [
-    ...badges.rh.map((b) => ({ b, hand: 'rh' as const })),
-    ...badges.lh.map((b) => ({ b, hand: 'lh' as const })),
-  ]
-  const cyOf = (b: BadgeSlot, hand: 'rh' | 'lh'): number =>
-    hand === 'rh'
+  interface Placed {
+    b: BadgeSlot
+    hand: 'rh' | 'lh'
+    above: boolean
+  }
+  const placed: Placed[] = above
+    ? above.slots.map((b) => ({ b, hand: b.hand, above: true }))
+    : [
+        ...badges.rh.map((b) => ({ b, hand: 'rh' as const, above: true })),
+        ...badges.lh.map((b) => ({ b, hand: 'lh' as const, above: false })),
+      ]
+  const cyOf = (b: BadgeSlot, isAbove: boolean): number =>
+    isAbove
       ? keyTop - BADGE_GAP - BADGE_R - b.subRow * SUB_ROW
       : keyBottom + BADGE_GAP + BADGE_R + b.subRow * SUB_ROW
 
@@ -228,23 +243,23 @@ export function Keyboard({
       >
         {/* Stems first so every badge circle paints over a neighbouring stem. */}
         <g class="keyboard__stems" aria-hidden="true">
-          {placed.map(({ b, hand }) => (
+          {placed.map(({ b, hand, above: up }) => (
             <line
               key={`${hand}-${b.midi}`}
               class={`badge__stem badge__stem--${hand}`}
               x1={b.cx}
               x2={b.cx}
-              y1={cyOf(b, hand)}
-              y2={hand === 'rh' ? keyTop : keyBottom}
+              y1={cyOf(b, up)}
+              y2={up ? keyTop : keyBottom}
             />
           ))}
         </g>
         {rects.map(renderKey)}
         <g class="keyboard__badges">
-          {placed.map(({ b, hand }) => (
+          {placed.map(({ b, hand, above: up }) => (
             <g key={`${hand}-${b.midi}`} class={`badge badge--${hand}`}>
-              <circle class="badge__dot" cx={b.cx} cy={cyOf(b, hand)} r={BADGE_R} />
-              <text class="badge__num" x={b.cx} y={cyOf(b, hand)} dy="0.35em" text-anchor="middle">
+              <circle class="badge__dot" cx={b.cx} cy={cyOf(b, up)} r={BADGE_R} />
+              <text class="badge__num" x={b.cx} y={cyOf(b, up)} dy="0.35em" text-anchor="middle">
                 {b.finger}
               </text>
             </g>

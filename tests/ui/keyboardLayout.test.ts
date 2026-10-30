@@ -4,6 +4,7 @@ import {
   KEY,
   MIN_SCALE,
   badgeSlots,
+  badgeSlotsAbove,
   isBlack,
   keyAriaLabel,
   keyboardAspect,
@@ -317,5 +318,52 @@ describe('keyLooks (per-key fill, target / played glow, glyph)', () => {
   it('keeps the first label for a key', () => {
     const looks = keyLooks([{ midi: 63, hand: 'rh', label: 'E♭' }, { midi: 63, hand: 'none', label: 'D♯', state: 'good' }], 60, 71)
     expect(looks.get(63)!.label).toBe('E♭')
+  })
+})
+
+describe('badgeSlotsAbove (every badge above the keys, whatever the hand)', () => {
+  const lhOctave: KeyMark[] = [55, 57, 59, 60, 62, 64, 66, 67].map((midi, i) => ({
+    midi,
+    hand: 'lh' as const,
+    finger: [5, 4, 3, 2, 1, 3, 2, 1][i],
+  }))
+
+  it('puts LH badges in the single row above, keeping their hand', () => {
+    const { slots, rows } = badgeSlotsAbove(lhOctave, 48)
+    expect(slots.map((s) => s.midi)).toEqual([55, 57, 59, 60, 62, 64, 66, 67])
+    expect(slots.every((s) => s.hand === 'lh')).toBe(true)
+    // F#4 (66) is the one black key: the outer sub-row, so two rows are needed
+    expect(slots.filter((s) => s.subRow === 1).map((s) => s.midi)).toEqual([66])
+    expect(rows).toBe(2)
+    expect(badgeSlotsAbove(lhOctave.filter((m) => m.midi !== 66), 48).rows).toBe(1)
+  })
+
+  it('leaves out marks with no finger or no hand, and keeps one badge per key', () => {
+    const { slots, rows } = badgeSlotsAbove(
+      [
+        { midi: 60, hand: 'none', finger: 1 },
+        { midi: 62, hand: 'lh' },
+        { midi: 64, hand: 'rh', finger: 3 },
+        { midi: 64, hand: 'lh', finger: 2 },
+      ],
+      60,
+    )
+    expect(slots.map((s) => [s.midi, s.finger, s.hand])).toEqual([[64, 3, 'rh']])
+    expect(rows).toBe(1)
+    expect(badgeSlotsAbove([], 60)).toEqual({ slots: [], rows: 0 })
+  })
+
+  it("with reserveRows 'rh' every panel has the same key position and nothing below", () => {
+    const heights = [lhOctave, lhOctave.filter((m) => m.midi !== 66), []].map((marks) =>
+      verticalLayout({ rhRows: badgeSlotsAbove(marks, 48).rows, lhRows: 0 }, 'rh'),
+    )
+    for (const h of heights) {
+      expect(h).toEqual(heights[0])
+      expect(h.height).toBe(h.keyTop + KEY.whiteH)
+    }
+    // the split layout would have put these LH badges below, leaving no room above
+    const split = verticalLayout(badgeSlots(lhOctave, 48))
+    expect(split.keyTop).toBe(0)
+    expect(heights[0]!.keyTop).toBeGreaterThan(0)
   })
 })

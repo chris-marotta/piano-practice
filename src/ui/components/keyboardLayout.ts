@@ -120,6 +120,25 @@ export function badgeSlots(marks: KeyMark[], low: number): BadgeLayout {
   return { rh, lh, rhRows: rows(rh), lhRows: rows(lh) }
 }
 
+/**
+ * Every badge above the keys, whatever its hand (a keyboard that shows one hand, such as a session hand panel).
+ * Same rules as badgeSlots: black-key badges in the outer sub-row, one badge per key (the first mark wins).
+ * `rows` is what the single row above needs; feed it to verticalLayout as `rhRows` with `lhRows: 0`.
+ */
+export function badgeSlotsAbove(
+  marks: KeyMark[],
+  low: number,
+): { slots: (BadgeSlot & { hand: 'rh' | 'lh' })[]; rows: 0 | 1 | 2 } {
+  const seen = new Set<number>()
+  const slots: (BadgeSlot & { hand: 'rh' | 'lh' })[] = []
+  for (const m of marks) {
+    if (m.hand === 'none' || m.finger === undefined || seen.has(m.midi)) continue
+    seen.add(m.midi)
+    slots.push({ midi: m.midi, finger: m.finger, cx: keyCenterX(m.midi, low), subRow: isBlack(m.midi) ? 1 : 0, hand: m.hand })
+  }
+  return { slots, rows: slots.length === 0 ? 0 : slots.some((s) => s.subRow === 1) ? 2 : 1 }
+}
+
 // ---- per-key look ----
 
 export type KeyFill = 'rh' | 'lh' | 'none' | 'split' | 'good' | 'bad' | 'pressed'
