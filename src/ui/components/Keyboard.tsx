@@ -10,6 +10,8 @@ import {
   keyAriaLabel,
   keyLooks,
   keyRects,
+  rootDotGeometry,
+  rootDotLookFor,
   keyboardMaxWidth,
   minRenderWidth,
   verticalLayout,
@@ -132,6 +134,7 @@ export function Keyboard({
   const viewBoxWidth = width + 4
 
   const looks = keyLooks(marks, low, high)
+  const rootKeys = new Set(marks.filter((m) => m.root).map((m) => m.midi))
   const presses = usePresses(onKeyPress)
 
   const interactive = onKeyTap !== undefined || onKeyPress !== undefined
@@ -171,9 +174,13 @@ export function Keyboard({
         }
       : {}
     // The ✓/× takes the label slot; a label on the same key moves up one slot.
+    // A root key's bottom slot is the dot (label inside); the ✓/× then sits above the dot.
+    const isRoot = rootKeys.has(k.midi)
+    const dot = isRoot ? rootDotGeometry(k, keyTop, label !== undefined) : null
+    const dotLook = dot ? rootDotLookFor(looks.get(k.midi) ?? NO_LOOK, k.black) : null
     const slotY = keyTop + k.h - (k.black ? 10 : 14)
     const glyphS = k.black ? 5 : 7
-    const glyphCy = slotY - glyphS
+    const glyphCy = dot ? dot.cy - dot.r - 4 - glyphS : slotY - glyphS
     const labelY = glyph ? slotY - (k.black ? 18 : 24) : slotY
     return (
       <g key={k.midi} class={interactive ? 'key-hit' : undefined} {...tap}>
@@ -189,7 +196,7 @@ export function Keyboard({
         {glow === 'target' && k.black && (
           <rect class="key-rim" x={k.x + 1.5} y={keyTop + 1.5} width={k.w - 3} height={k.h - 3} rx={2} aria-hidden="true" />
         )}
-        {label !== undefined && (
+        {label !== undefined && !dot && (
           <text
             class={`key-label key-label--${tone}${fill ? ' key-label--marked' : glow ? ' key-label--glow' : ''}`}
             x={k.x + k.w / 2}
@@ -198,6 +205,22 @@ export function Keyboard({
           >
             {label}
           </text>
+        )}
+        {dot && dotLook && (
+          <>
+            <circle
+              class={`root-dot${k.black ? ' root-dot--black' : ''}${dotLook.ring ? ' root-dot--ring' : ''}`}
+              cx={dot.cx}
+              cy={dot.cy}
+              r={dot.r}
+              aria-hidden="true"
+            />
+            {label !== undefined && (
+              <text class="root-dot__label" x={dot.cx} y={dot.cy} dy="0.35em" text-anchor="middle">
+                {label}
+              </text>
+            )}
+          </>
         )}
         {glyph && (
           <path

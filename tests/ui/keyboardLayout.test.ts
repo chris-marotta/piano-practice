@@ -16,6 +16,8 @@ import {
   keyRects,
   keyLooks,
   keyboardRange,
+  rootDotGeometry,
+  rootDotLook,
   whiteKeys,
   type KeyMark,
 } from '../../src/ui/components/keyboardLayout'
@@ -365,5 +367,41 @@ describe('badgeSlotsAbove (every badge above the keys, whatever the hand)', () =
     const split = verticalLayout(badgeSlots(lhOctave, 48))
     expect(split.keyTop).toBe(0)
     expect(heights[0]!.keyTop).toBeGreaterThan(0)
+  })
+})
+
+describe('rootDotGeometry', () => {
+  const rect = (midi: number) => keyRects(60, 71).find((k) => k.midi === midi)!
+  it('is 0.3 x key width with a label inside and 0.2 without, centred on the key', () => {
+    const c = rect(60)
+    expect(rootDotGeometry(c, 40, true)).toMatchObject({ cx: c.x + 20, r: 12 })
+    expect(rootDotGeometry(c, 40, false)).toMatchObject({ cx: c.x + 20, r: 8 })
+    const cs = rect(61)
+    expect(rootDotGeometry(cs, 40, true).r).toBeCloseTo(7.2, 5)
+    expect(rootDotGeometry(cs, 40, false).r).toBeCloseTo(4.8, 5)
+  })
+  it('sits wholly inside the bottom of the key, below where a badge or the top half of a split key would be', () => {
+    for (const midi of [60, 61, 64, 66]) {
+      for (const labelled of [true, false]) {
+        const k = rect(midi)
+        const { cy, r } = rootDotGeometry(k, 30, labelled)
+        expect(cy + r).toBeLessThan(30 + k.h)
+        expect(cy - r).toBeGreaterThan(30 + k.h / 2)
+      }
+    }
+  })
+})
+
+describe('rootDotLook', () => {
+  it('white keys: --root with white text; black keys: --root-on-black with --ink text', () => {
+    expect(rootDotLook(undefined, 'rh', false)).toMatchObject({ fill: '#3d6fb3', text: '#ffffff' })
+    expect(rootDotLook(undefined, 'rh', true)).toMatchObject({ fill: '#a9c7ee', text: '#12161c' })
+  })
+  it('a ring on a hand colour or a live state; none on a pale glow', () => {
+    expect(rootDotLook(undefined, 'lh', false).ring).toBe(true)
+    expect(rootDotLook('good', 'none', false).ring).toBe(true)
+    expect(rootDotLook('played', 'none', false).ring).toBe(false)
+    expect(rootDotLook('target', 'none', true).ring).toBe(false)
+    expect(rootDotLook('bad', 'none', true).ring).toBe(true)
   })
 })

@@ -99,11 +99,13 @@ export function handPanels(
 ): { lh: Panel; rh: Panel } {
   const rows = fingerRows(ref, SESSION_OCTAVES, direction, fingeringRef)
   const panel = (hand: 'rh' | 'lh', row: HandRow): Panel => {
+    // The first and last notes are the tonic, going up or down.
     const marks: KeyMark[] = row.notes.map((n, i) => ({
       midi: noteMidi(n),
       hand,
       finger: row.fingers[i],
       label: formatNote(pitchClass(n)),
+      ...(i === 0 || i === row.notes.length - 1 ? { root: true } : {}),
     }))
     return { ...keyboardRange(marks.map((m) => m.midi)), marks }
   }

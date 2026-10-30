@@ -12,6 +12,8 @@ export interface KeyMark {
   finger?: number
   label?: string
   state?: KeyState
+  /** This key's pitch class is the target's root: it gets a blue dot at the bottom (label inside, if it has one). */
+  root?: boolean
 }
 
 /** White key 40 wide; black keys ~60% width and ~62% length, as on a real piano. */
@@ -193,6 +195,50 @@ export function keyLooks(marks: KeyMark[], low: number, high: number): Map<numbe
     out.set(midi, { fill, glow, glyph: null, label })
   }
   return out
+}
+
+// ---- root dot ----
+
+/** --root / --root-on-black (tokens.css) and the text on each; tests/ui/contrast.test.ts checks these against the CSS. */
+export const ROOT_DOT = {
+  white: { fill: '#3d6fb3', text: '#ffffff' },
+  black: { fill: '#a9c7ee', text: '#12161c' },
+} as const
+
+/** Dot radius as a share of the key width: with a label inside, and without. */
+const ROOT_R_LABELLED = 0.3
+const ROOT_R_PLAIN = 0.2
+
+/** Gap between the dot and the key's bottom edge. */
+const ROOT_MARGIN = { white: 8, black: 6 } as const
+
+/**
+ * The root dot's colours for the key it sits on. A key's fill is its state (good / bad / pressed, or a glow) if it
+ * has one, else its hand colour. `ring`: the dot alone is under 3:1 on that fill, so it gets a 2px --ink ring
+ * (--ink is >= 3:1 on every fill that rings). The dot needs no ring on the pale glows: white keys' played tint,
+ * black keys' target and played tints (tests/ui/contrast.test.ts checks every combination).
+ */
+export function rootDotLook(
+  state: KeyState | undefined,
+  hand: KeyMark['hand'],
+  black: boolean,
+): { fill: string; text: string; ring: boolean } {
+  const { fill, text } = black ? ROOT_DOT.black : ROOT_DOT.white
+  const clear: (KeyState | KeyMark['hand'])[] = black ? ['target', 'played'] : ['played']
+  return { fill, text, ring: !clear.includes(state ?? hand) }
+}
+
+/** rootDotLook for a key's resolved look (a split key: the dot sits on its bottom half, the LH one). */
+export function rootDotLookFor(look: KeyLook, black: boolean): { fill: string; text: string; ring: boolean } {
+  const state = look.fill === 'good' || look.fill === 'bad' || look.fill === 'pressed' ? look.fill : (look.glow ?? undefined)
+  const hand = look.fill === 'split' ? 'lh' : look.fill === 'rh' || look.fill === 'lh' ? look.fill : 'none'
+  return rootDotLook(state, hand, black)
+}
+
+/** Centre and radius of a key's root dot, at the bottom of the key: 0.3 x key width with a label inside, else 0.2. */
+export function rootDotGeometry(k: KeyRect, keyTop: number, labelled: boolean): { cx: number; cy: number; r: number } {
+  const r = k.w * (labelled ? ROOT_R_LABELLED : ROOT_R_PLAIN)
+  return { cx: k.x + k.w / 2, cy: keyTop + k.h - ROOT_MARGIN[k.black ? 'black' : 'white'] - r, r }
 }
 
 // ---- vertical layout ----

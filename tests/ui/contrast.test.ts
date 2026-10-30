@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ROOT_DOT, keyLooks, rootDotLookFor, type KeyLook, type KeyMark, type KeyState } from '../../src/ui/components/keyboardLayout'
 import { contrastRatio, mixSrgb, parseHex } from '../../src/ui/contrast'
 // The real stylesheets, so the test checks what ships rather than a copy of the numbers.
 import appCss from '../../src/ui/app.css?raw'
@@ -207,4 +208,79 @@ describe('pressable keys (shipped CSS)', () => {
     expect(rule('.key-hit:focus-visible .key', appCss).stroke).toBe('var(--accent)')
     expect(appCss).not.toMatch(/\.key-hit:focus(?!-visible)/)
   })
+})
+
+describe('root dot contrast (shipped CSS)', () => {
+  const white = resolve('var(--key-white)')
+  const black = resolve('var(--key-black)')
+  const ink = resolve('var(--ink)')
+  const tone = (isBlack: boolean) => (isBlack ? 'black' : 'white')
+
+  it('the dot colours in code are the tokens', () => {
+    expect(ROOT_DOT.white.fill).toBe(TOKENS.root)
+    expect(ROOT_DOT.black.fill).toBe(TOKENS['root-on-black'])
+    expect(ROOT_DOT.white.text).toBe('#ffffff')
+    expect(ROOT_DOT.black.text).toBe(TOKENS.ink)
+  })
+
+  it('the stylesheet paints the dot and its label from those tokens, and the ring is 2px --ink', () => {
+    expect(rule('.root-dot', appCss).fill).toBe('var(--root)')
+    expect(rule('.root-dot--black', appCss).fill).toBe('var(--root-on-black)')
+    expect(rule('.root-dot--ring', appCss).stroke).toBe('var(--ink)')
+    expect(rule('.root-dot--ring', appCss)['stroke-width']).toBe('2')
+    expect(rule('.root-dot__label', appCss).fill).toBe('#fff')
+    expect(rule('.root-dot--black + .root-dot__label', appCss).fill).toBe('var(--ink)')
+  })
+
+  /** The CSS fill(s) a key look is drawn with (a split key: both halves; the dot is on the bottom, LH one). */
+  function keyFills(look: KeyLook, isBlack: boolean): RGB[] {
+    const t = tone(isBlack)
+    if (look.fill === 'good' || look.fill === 'bad' || look.fill === 'pressed') return [colour(rule(`.key.key--${look.fill}`, appCss).fill as string)]
+    if (look.fill === 'split') return [colour(rule(`.key--${t}.key--lh`, appCss).fill as string)]
+    const cls = look.fill ?? look.glow
+    if (cls === null) return [isBlack ? black : white]
+    return [colour(rule(`.key--${t}.key--${cls}`, appCss).fill as string)]
+  }
+
+  // Every look a root key can have: its state (or none) x the hand its mark carries, plus both hands on one key.
+  const scenarios: { name: string; marks: KeyMark[] }[] = []
+  for (const state of [undefined, 'good', 'bad', 'pressed', 'target', 'played'] as (KeyState | undefined)[])
+    for (const hand of ['rh', 'lh', 'none'] as const)
+      scenarios.push({ name: `${state ?? 'no state'}, ${hand}`, marks: [{ midi: 60, hand, state, root: true }] })
+  scenarios.push({
+    name: 'both hands (split)',
+    marks: [{ midi: 60, hand: 'rh', root: true }, { midi: 60, hand: 'lh', root: true }],
+  })
+
+  for (const isBlack of [false, true]) {
+    const midi = isBlack ? 61 : 60
+    describe(`on a ${tone(isBlack)} key`, () => {
+      const bare = isBlack ? black : white
+      const dotOf = (marks: KeyMark[]) => {
+        const look = keyLooks(marks.map((m) => ({ ...m, midi })), 48, 72).get(midi) as KeyLook
+        return { look, dot: rootDotLookFor(look, isBlack) }
+      }
+      it('the bare key: the dot is at least 3:1 with no ring', () => {
+        const dot = rootDotLookFor({ fill: null, glow: null, glyph: null, label: undefined }, isBlack)
+        expect(contrastRatio(parseHex(dot.fill), bare)).toBeGreaterThanOrEqual(3)
+      })
+      it.each(scenarios)('$name: dot >= 3:1 on the key fill, or a ring that is', ({ marks }) => {
+        const { look, dot } = dotOf(marks)
+        for (const keyFill of keyFills(look, isBlack)) {
+          const dotOk = contrastRatio(parseHex(dot.fill), keyFill) >= 3
+          const ringOk = dot.ring && contrastRatio(ink, keyFill) >= 3
+          expect(dotOk || ringOk).toBe(true)
+        }
+      })
+      it.each(scenarios)('$name: a ring is only used where the dot alone falls short', ({ marks }) => {
+        const { look, dot } = dotOf(marks)
+        if (dot.ring) return
+        for (const keyFill of keyFills(look, isBlack)) expect(contrastRatio(parseHex(dot.fill), keyFill)).toBeGreaterThanOrEqual(3)
+      })
+      it('label text on the dot is at least 4.5:1', () => {
+        const dot = rootDotLookFor({ fill: 'rh', glow: null, glyph: null, label: 'C' }, isBlack)
+        expect(contrastRatio(parseHex(dot.text), parseHex(dot.fill))).toBeGreaterThanOrEqual(4.5)
+      })
+    })
+  }
 })

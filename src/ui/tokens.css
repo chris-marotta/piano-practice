@@ -48,6 +48,12 @@
      well-known scale reads as "bright" without looking like either hand. */
   --mastery: var(--accent);
 
+  /* Root dot (phase 3): the blue dot at the bottom of every key that is the target's root. White text
+     on --root, --ink text on --root-on-black. Where a dot is under 3:1 on the key it sits on, it gets a
+     2px --ink ring (checked in tests/ui/contrast.test.ts). */
+  --root: #3d6fb3;
+  --root-on-black: #a9c7ee;
+
   /* Piano keys */
   --key-white: #f4f1ea;
   --key-white-edge: #d9d4c9;

@@ -375,6 +375,33 @@ p {
   fill: var(--text);
 }
 
+/* Root dot: bottom of the key, label inside. Ring only where the dot alone is under 3:1 on the key fill. */
+.root-dot {
+  fill: var(--root);
+  pointer-events: none;
+}
+
+.root-dot--black {
+  fill: var(--root-on-black);
+}
+
+.root-dot--ring {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.root-dot__label {
+  font-size: 13px;
+  font-weight: 700;
+  fill: #fff;
+  pointer-events: none;
+}
+
+.root-dot--black + .root-dot__label {
+  font-size: 10px;
+  fill: var(--ink);
+}
+
 .badge__dot {
   stroke: var(--bg);
   stroke-width: 2;
