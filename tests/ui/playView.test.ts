@@ -9,6 +9,7 @@ import {
   effectiveToggles,
   fitHand,
   fittedWindow,
+  modeForPickedTarget,
   followsNotes,
   pickerSummary,
   guideAvailable,
@@ -499,6 +500,17 @@ describe('mode availability', () => {
     expect(effectiveMode('keys', C_CHORD)).toBe('keys')
     expect(effectiveMode('keys', NONE)).toBe('keys')
     expect(effectiveMode('keys', G_MAJOR)).toBe('keys')
+  })
+})
+
+describe('modeForPickedTarget', () => {
+  it('Keys would hide a picked scale, so it opens Free', () => {
+    expect(modeForPickedTarget('keys')).toBe('free')
+  })
+  it('the other modes are kept', () => {
+    expect(modeForPickedTarget('free')).toBe('free')
+    expect(modeForPickedTarget('guided')).toBe('guided')
+    expect(modeForPickedTarget('check')).toBe('check')
   })
 })
 

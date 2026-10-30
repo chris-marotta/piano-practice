@@ -63,6 +63,14 @@ export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
   return mode
 }
 
+/**
+ * The mode to open Play in when something hands it a picked target (the circle page's "Play it"). Keys ignores the
+ * target, so landing in Keys would hide the pick behind a name-that-key round: go to Free instead. Others are kept.
+ */
+export function modeForPickedTarget(mode: PlayMode): PlayMode {
+  return mode === 'keys' ? 'free' : mode
+}
+
 /** In target is by pitch class. Melodic minor counts its ascending and descending (natural) forms together. */
 export function targetPitchClasses(target: PlayTarget): Set<number> {
   if (target.kind === 'none') return new Set()

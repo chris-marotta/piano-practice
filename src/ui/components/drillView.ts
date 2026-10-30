@@ -67,6 +67,14 @@ function shownTarget(q: Question, picked: number | null, correct: boolean): numb
  * with the root dot on the landmark when the route starts at C or F (ASSUMED: a black key's white neighbour is not a
  * landmark, so it gets no dot). `answeredMidi` is null for a name pick or a timeout.
  */
+/**
+ * True when an event (stamped `at`, in the performance.now() timebase) happened at or after the current question
+ * began (`startedAt`). One stamped earlier belongs to the previous question and must not answer this one.
+ */
+export function belongsToQuestion(at: number, startedAt: number): boolean {
+  return at >= startedAt
+}
+
 export function answerMarks(q: Question, answeredMidi: number | null, correct: boolean): KeyMark[] {
   const picked = answeredMidi === null ? null : onBoard(answeredMidi)
   const target = shownTarget(q, picked, correct)

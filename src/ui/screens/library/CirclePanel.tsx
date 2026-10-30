@@ -1,7 +1,8 @@
 import { Wheel } from '../../components/Wheel'
 import { navigate } from '../../state'
 import { ScrollKeyboard } from '../steps/ScrollKeyboard'
-import { scaleSel as playScaleSel, targetKind } from '../play/playState'
+import { mode as playMode, scaleSel as playScaleSel, targetKind } from '../play/playState'
+import { modeForPickedTarget } from '../play/playView'
 import { circlePanel } from './libraryView'
 import { circleSel, scaleSel, segment } from './libraryState'
 
@@ -32,6 +33,7 @@ export function CirclePanel() {
   const playIt = () => {
     targetKind.value = 'scale'
     playScaleSel.value = p.major
+    playMode.value = modeForPickedTarget(playMode.peek())
     navigate('play')
   }
 

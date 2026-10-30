@@ -51,6 +51,11 @@
   color: var(--text);
 }
 
+/* Thirteen rows: 34 px keeps the page inside the 1180 x 820 iPad viewport (38 px ran 45 px past it). */
+.mastery .mcell {
+  height: 34px;
+}
+
 .mcell__root {
   font-size: 20px;
   font-weight: 700;
@@ -252,7 +257,7 @@
 .cday {
   display: grid;
   place-items: center;
-  height: 40px;
+  height: 36px;
   border-radius: 6px;
   background: var(--surface);
   color: var(--muted);

@@ -148,7 +148,7 @@ export function Keyboard({
     const tap = interactive
       ? {
           role: 'button' as const,
-          tabIndex: 0,
+          tabindex: 0,
           'aria-label': aria,
           ...(toggle ? { 'aria-pressed': fill !== null } : {}),
           ...(onKeyTap ? { onClick: () => onKeyTap(k.midi) } : {}),

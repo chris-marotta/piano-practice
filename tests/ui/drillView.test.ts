@@ -9,6 +9,7 @@ import {
   TIMED_OUT,
   answer,
   answerMarks,
+  belongsToQuestion,
   levelRose,
   raisedLevel,
   listeningText,
@@ -202,5 +203,22 @@ describe('nextLabel', () => {
   it('Next until the last question, then the finish label', () => {
     expect(nextLabel(0, 8, 'Next round')).toBe('Next')
     expect(nextLabel(7, 8, 'Next round')).toBe('Next round')
+  })
+})
+
+describe('belongsToQuestion', () => {
+  it('an event at or after the question started answers it', () => {
+    expect(belongsToQuestion(1000, 1000)).toBe(true)
+    expect(belongsToQuestion(1450, 1000)).toBe(true)
+  })
+  it('an event stamped before it started belongs to the previous question', () => {
+    expect(belongsToQuestion(999, 1000)).toBe(false)
+  })
+  it('so a late note never reads the old start: a start moved forward on Next rejects the stale press', () => {
+    const oldStart = 1000
+    const newStart = 7000 // Next pressed at 7 s
+    const staleNote = 6990 // pressed just before Next
+    expect(belongsToQuestion(staleNote, oldStart)).toBe(true) // would have been graded against the old start
+    expect(belongsToQuestion(staleNote, newStart)).toBe(false)
   })
 })

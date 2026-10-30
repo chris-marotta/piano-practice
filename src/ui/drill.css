@@ -118,7 +118,7 @@
   font-weight: 700;
 }
 
-/* Level 4: the 3 s a key runs out left to right; it stops where it was on an answer. */
+/* Level 4: the time limit (DRILL_FAST_MS, set inline on the fill) runs out left to right; it stops where it was on an answer. */
 .drill__timer {
   height: 6px;
   border-radius: 3px;
@@ -131,7 +131,7 @@
   height: 100%;
   background: var(--accent);
   transform-origin: left center;
-  animation: drill-countdown 3000ms linear forwards;
+  animation: drill-countdown linear forwards; /* duration is inline, from DRILL_FAST_MS */
 }
 
 .drill__timer-fill.is-stopped {

@@ -12,6 +12,7 @@ import {
   TIMED_OUT,
   answer,
   answerMarks,
+  belongsToQuestion,
   listeningText,
   nextLabel,
   promptText,
@@ -102,7 +103,9 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
     const i = indexRef.current
     const q = roundRef.current[i]
     if (!q) return
-    const s = answer(ansRef.current, q, given, Math.max(0, Math.round(at - startRef.current)))
+    // A note stamped before this question began (the last one's late press) isn't an answer to it.
+    if (!belongsToQuestion(at, startRef.current)) return
+    const s = answer(ansRef.current, q, given, Math.round(at - startRef.current))
     if (s === ansRef.current || !s.answered) return
     ansRef.current = s
     setAns(s)
@@ -126,13 +129,15 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
     }
     indexRef.current = i + 1
     ansRef.current = UNANSWERED
+    // The new question's clock starts now, not after the render: a note in between must not read the old start.
+    startRef.current = performance.now()
     setIndex(i + 1)
     setAns(UNANSWERED)
   }
 
-  // The clock starts once the question is on screen.
+  // The first question's clock starts once it is on screen; later ones start in `next`.
   useEffect(() => {
-    startRef.current = performance.now()
+    if (index === 0) startRef.current = performance.now()
   }, [index])
 
   // Keyboard notes answer 'tap' and 'play' questions: the first note-on, any octave.
@@ -204,6 +209,7 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
         <div class="drill__timer" aria-hidden="true">
           <span
             key={index}
+            style={{ animationDuration: `${DRILL_FAST_MS}ms` }}
             class={`drill__timer-fill${!ans.answered ? '' : ans.pc === null ? ' is-out' : ' is-stopped'}`}
           />
         </div>
