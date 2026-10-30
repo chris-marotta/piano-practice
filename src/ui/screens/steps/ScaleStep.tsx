@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { playScale } from '../../../audio/piano'
 import { unlockAudio } from '../../../audio/unlock'
 import { midiStatus } from '../../../midi/access'
 import { suggestRating } from '../../../play/suggest'
+import { WRONG_SHAPE_NOTE_MS } from '../../../play/thresholds'
 import type { Step } from '../../../session/builder'
 import type { Settings } from '../../../srs/items'
 import type { Rating } from '../../../srs/scheduler'
@@ -11,7 +12,18 @@ import { FingerRow } from '../../components/FingerRow'
 import { RatingBar } from '../../components/RatingBar'
 import { Segmented } from '../../components/Segmented'
 import { update } from '../../state'
-import { REP_KINDS, emptyTiles, placeRun, tileResult, toggleTile, untick } from './autoCheck'
+import {
+  REP_KINDS,
+  currentTile,
+  emptyTiles,
+  fillTile,
+  tileResult,
+  toggleTile,
+  untick,
+  wrongShapeText,
+  type RepKind,
+  type StepRun,
+} from './autoCheck'
 import { RunResultDialog } from './RunResultDialog'
 import {
   familyLine,
@@ -71,12 +83,14 @@ interface SupportProps {
   step: ScaleStepData
   showKeyboard: boolean
   direction: Direction
+  /** The current rep tile's hand (connected only); the other hand's panel dims. Together lights both. */
+  activeHand: RepKind | null
 }
 
 /** One hand's keyboard under a hand-coloured title. */
-function HandPanel({ hand, panel }: { hand: 'lh' | 'rh'; panel: Panel }) {
+function HandPanel({ hand, panel, dim }: { hand: 'lh' | 'rh'; panel: Panel; dim: boolean }) {
   return (
-    <section class={`hand-panel hand-panel--${hand}`}>
+    <section class={`hand-panel hand-panel--${hand}${dim ? ' hand-panel--dim' : ''}`}>
       <h2 class="hand-panel__title">{hand === 'lh' ? 'LEFT HAND' : 'RIGHT HAND'}</h2>
       <ScrollKeyboard
         low={panel.low}
@@ -95,13 +109,13 @@ function HandPanel({ hand, panel }: { hand: 'lh' | 'rh'; panel: Panel }) {
  * columns, L2 key signature, L3 name only. Melodic minor descends as natural minor, so its keyboards follow
  * `direction` and its L1 shows a "Going up" and a "Coming down" pair (R16).
  */
-function Support({ step, showKeyboard, direction }: SupportProps) {
+function Support({ step, showKeyboard, direction, activeHand }: SupportProps) {
   if (step.support === 0 || showKeyboard) {
     const { lh, rh } = handPanels(step.ref, direction)
     return (
       <div class="support support--keyboard support--hands">
-        <HandPanel hand="lh" panel={lh} />
-        <HandPanel hand="rh" panel={rh} />
+        <HandPanel hand="lh" panel={lh} dim={activeHand === 'rh'} />
+        <HandPanel hand="rh" panel={rh} dim={activeHand === 'lh'} />
       </div>
     )
   }
@@ -138,6 +152,9 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   const [showKeyboard, setShowKeyboard] = useState(false)
   // v1 hand ticks, plus (keyboard connected) the detected runs that ticked a tile by themselves (spec §6).
   const [tiles, setTiles] = useState(emptyTiles)
+  // The tile Chris tapped to play next (connected only). The current tile is this one if still empty, else the first empty.
+  const [picked, setPicked] = useState<number | null>(null)
+  const [wrongNote, setWrongNote] = useState<string | null>(null)
   const [openTile, setOpenTile] = useState<number | null>(null)
   const [direction, setDirection] = useState<Direction>('up')
   const mounted = useMounted()
@@ -149,7 +166,35 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   // Auto-check only while a keyboard is connected; disconnected, the tiles are v1's hand toggles. Results already
   // detected stay on their tiles (and in the suggestion) after an unplug.
   const connected = midiStatus.value.kind === 'connected'
-  useScaleRuns(step.ref, SESSION_OCTAVES, connected, (run) => setTiles((ts) => placeRun(ts, run.hand, run.outcome)))
+  // Refs, so a run that finishes reads the tile as it is now (not as of the render that built the checker).
+  const live = useRef({ tiles, picked })
+  live.current = { tiles, picked }
+  const current = connected ? currentTile(tiles, picked) : null
+  const currentKind = (): RepKind | null => {
+    const i = currentTile(live.current.tiles, live.current.picked)
+    return i === null ? null : REP_KINDS[i] ?? null
+  }
+  const onRun = (run: StepRun) => {
+    const { tiles: ts, picked: p } = live.current
+    const i = currentTile(ts, p)
+    if (i === null) return
+    if (run.kind === 'wrongShape') {
+      // Never ticks anything: the same tile stays current.
+      setWrongNote(wrongShapeText(run.heard, REP_KINDS[i] ?? 'rh'))
+      return
+    }
+    const next = fillTile(ts, i, run.outcome)
+    live.current = { tiles: next, picked: null }
+    setTiles(next)
+    setPicked(null)
+    setWrongNote(null)
+  }
+  useScaleRuns(step.ref, currentKind, connected, onRun)
+  useEffect(() => {
+    if (wrongNote === null) return
+    const id = setTimeout(() => setWrongNote(null), WRONG_SHAPE_NOTE_MS)
+    return () => clearTimeout(id)
+  }, [wrongNote])
   const results = tiles.flatMap((t) => (t.result ? [t.result] : []))
   const suggested = suggestRating(results, { peeked })
   const open = openTile === null ? null : tiles[openTile]?.result ?? null
@@ -220,21 +265,28 @@ export function ScaleStep({ step, settings, onRate }: Props) {
                 )}
               </div>
             )}
-            <Support step={step} showKeyboard={showKeyboard} direction={direction} />
+            <Support step={step} showKeyboard={showKeyboard} direction={direction} activeHand={current === null ? null : REP_KINDS[current] ?? null} />
           </div>
           <div class="step__foot">
             <div class="reps" role="group" aria-label="Reps">
               {REPS.map((r, i) => {
                 const tile = tiles[i]
                 const res = tile?.result ? tileResult(tile.result) : null
+                const isCurrent = i === current
                 if (!res) {
                   return (
                     <button
                       key={i}
                       type="button"
-                      class={`btn rep rep--${r.hand}`}
+                      class={`btn rep rep--${r.hand}${isCurrent ? ' rep--current' : ''}`}
                       aria-pressed={tile?.ticked ?? false}
-                      onClick={() => setTiles((ts) => toggleTile(ts, i))}
+                      aria-current={isCurrent ? 'step' : undefined}
+                      onClick={() => {
+                        if (!connected) return setTiles((ts) => toggleTile(ts, i))
+                        // Connected: pick an empty tile to play next; tapping the current one ticks it by hand.
+                        if (tile?.ticked || isCurrent) return setTiles((ts) => toggleTile(ts, i))
+                        setPicked(i)
+                      }}
                     >
                       {tile?.ticked && <Check />}
                       {r.label}
@@ -261,6 +313,11 @@ export function ScaleStep({ step, settings, onRate }: Props) {
                 )
               })}
             </div>
+            {wrongNote && (
+              <p class="step__hint step__hint--wrong" role="status">
+                {wrongNote}
+              </p>
+            )}
             <RatingBar
               options={['nailed', 'shaky', 'lost']}
               onRate={(r) => onRate(r, { peeked })}

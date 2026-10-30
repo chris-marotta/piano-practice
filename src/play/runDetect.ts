@@ -9,9 +9,8 @@ import {
 } from './thresholds'
 
 /**
- * 'single' is a one-hand run. Which hand it was is not decided here: callers read it from the run's octave offset
- * against the RH run from octave 4 (ruling P15, see autoCheck.ts), which a pitch median gets wrong for LH runs from
- * G3, A3 or B3.
+ * 'single' is a one-hand run. Which hand it was is not decided here: callers take the hand from the current rep tile
+ * (see autoCheck.ts). A pitch median got LH runs from G3, A3 or B3 wrong, and an octave guess is not needed now.
  */
 export type RunHand = 'together' | 'single'
 
@@ -22,7 +21,7 @@ export interface FinishedRun {
 
 /**
  * Together when at least TOGETHER_PAIR_RATIO of the onsets belong to octave pairs (exactly 12 apart, within
- * PAIR_WINDOW_MS), else single. For a single-hand run the hand comes from the octave offset (P15), not from here.
+ * PAIR_WINDOW_MS), else single. For a single-hand run the hand comes from the current tile, not from here.
  */
 export function classifyHand(notes: PlayedNote[]): RunHand {
   if (notes.length === 0) return 'single'

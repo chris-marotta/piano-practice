@@ -17,4 +17,5 @@ export const NAILED_EVENNESS = 0.85
 export const LOST_SLIPS = 2
 /** Fraction of notes that must be octave pairs for a run to read as Together. */
 export const TOGETHER_PAIR_RATIO = 0.6
-// No LH pitch split: a one-hand run's hand comes from its octave offset (P15, autoCheck.ts).
+/** A wrong-shape note (one hand vs both) stays under the rep tiles this long. */
+export const WRONG_SHAPE_NOTE_MS = 4000

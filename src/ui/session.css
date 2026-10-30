@@ -228,6 +228,11 @@
   min-width: 0; /* let a wide keyboard scroll inside its column */
 }
 
+/* The other hand's keyboard while a one-hand tile is current (Together lights both). */
+.hand-panel--dim {
+  opacity: 0.45;
+}
+
 .hand-panel__title {
   font-size: var(--fs-small);
   font-weight: 700;
@@ -350,6 +355,26 @@
 .rep--both[aria-pressed='true'] {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+/* The tile the next run fills: its border in the hand colour (Together: --accent). */
+.rep--rh.rep--current {
+  border-color: var(--rh);
+  box-shadow: 0 0 0 2px var(--rh);
+}
+
+.rep--lh.rep--current {
+  border-color: var(--lh);
+  box-shadow: 0 0 0 2px var(--lh);
+}
+
+.rep--both.rep--current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.step__hint--wrong {
+  color: var(--text);
 }
 
 .rep__check {

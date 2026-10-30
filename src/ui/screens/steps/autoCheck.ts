@@ -1,4 +1,4 @@
-// Session auto-check (spec §6), pure: rep tile assignment, chord matching, and the per-step run checker. No Preact,
+// Session auto-check (spec §6), pure: the current rep tile, chord matching, and the per-step run checker. No Preact,
 // no window: time comes in on the notes and through tick(now), so it is unit tested in node.
 import { analyseRun, type PlayedNote } from '../../../play/analyse'
 import { createRunDetector, type FinishedRun } from '../../../play/runDetect'
@@ -8,22 +8,11 @@ import { chroma, type ScaleRef } from '../../../theory/scales'
 import { outcomeOf, type RunOutcome } from '../play/playRun'
 import { preferFor } from '../play/playView'
 
-/** A rep tile's hand. The detector only says Together or single; P15 splits single into RH / LH by octave offset. */
+/** A rep tile's hand. The detector only says Together or single; the current tile says which hand a single run is. */
 export type RepKind = 'rh' | 'lh' | 'together'
-
-/** P15: a one-hand run this many semitones (or more) below the RH run from octave 4 is the left hand. */
-const LH_OFFSET = 12
 
 /** The six rep tiles, in order: Right hand ×2, Left hand ×2, Together ×2. */
 export const REP_KINDS: RepKind[] = ['rh', 'rh', 'lh', 'lh', 'together', 'together']
-
-/** The first unticked tile of that kind, else the first unticked tile of any kind, else null (all ticked). */
-export function assignRun(ticked: boolean[], hand: RepKind): number | null {
-  const own = REP_KINDS.findIndex((k, i) => k === hand && !ticked[i])
-  if (own !== -1) return own
-  const any = REP_KINDS.findIndex((_k, i) => !ticked[i])
-  return any === -1 ? null : any
-}
 
 /** Held keys spell the chord: pitch-class set equality, any inversion, doublings allowed. */
 export function chordMatched(held: ReadonlySet<number>, chordRoot: string, type: DiatonicChord['type']): boolean {
@@ -42,15 +31,16 @@ export interface Tile {
 
 export const emptyTiles = (): Tile[] => REP_KINDS.map(() => ({ ticked: false, result: null }))
 
-/** A detected run ticks the tile assignRun picks. All six ticked: the run is dropped (same tiles returned). */
-export function placeRun(tiles: Tile[], hand: RepKind, result: RunOutcome): Tile[] {
-  const i = assignRun(
-    tiles.map((t) => t.ticked),
-    hand,
-  )
-  if (i === null) return tiles
-  return tiles.map((t, j) => (j === i ? { ticked: true, result } : t))
+/** The tile the next run fills: the picked one if it is empty, else the first empty one, else null (all six filled). */
+export function currentTile(tiles: Tile[], picked: number | null): number | null {
+  if (picked !== null && tiles[picked] && !tiles[picked].ticked) return picked
+  const first = tiles.findIndex((t) => !t.ticked)
+  return first === -1 ? null : first
 }
+
+/** A detected run fills tile i with its result. */
+export const fillTile = (tiles: Tile[], i: number, outcome: RunOutcome): Tile[] =>
+  tiles.map((t, j) => (j === i ? { ticked: true, result: outcome } : t))
 
 /** v1 hand toggle (for a tile with no detected result). */
 export const toggleTile = (tiles: Tile[], i: number): Tile[] =>
@@ -71,9 +61,14 @@ export function tileResult(r: RunOutcome): { clean: boolean; slips: string; even
 
 // ---- run checker ----
 
-export interface StepRun {
-  hand: RepKind
-  outcome: RunOutcome
+/** A finished run: filled into the current tile, or the wrong shape for it (it never ticks anything). */
+export type StepRun = { kind: 'filled'; outcome: RunOutcome } | { kind: 'wrongShape'; heard: 'one' | 'both' }
+
+/** What the player is told when a run was the wrong shape for the current tile. */
+export function wrongShapeText(heard: 'one' | 'both', wanted: RepKind): string {
+  const heardText = heard === 'one' ? 'one hand' : 'both hands'
+  const wantedText = wanted === 'together' ? 'both hands' : wanted === 'rh' ? 'the right hand' : 'the left hand'
+  return `That sounded like ${heardText}. This one's ${wantedText}.`
 }
 
 export interface StepChecker {
@@ -86,21 +81,21 @@ export interface StepChecker {
 }
 
 /**
- * One run detector for a scale step. Every run is analysed against the RH run from octave 4; the analyser's
- * octave-offset search absorbs whichever octave was actually played. Hand (P15): Together comes from the detector's
- * pair ratio; a single-hand run is LH when its offset is an octave or more below (≤ −12), else RH. (A pitch-median
- * split read LH runs from G3, A3 or B3 as RH, so the detector no longer guesses the hand.)
+ * One run detector for a scale step. The current tile decides the hand: a finished run is analysed against the
+ * one-octave run from octave 3 (LH tile) or 4 (otherwise), and the analyser's octave-offset search absorbs whichever
+ * octave was actually played. The detector's Together / single must match the tile's kind, else the run is a
+ * wrongShape. `current()` is read when a run finishes; null (all six filled) drops the run.
  */
-export function createStepChecker(ref: ScaleRef, octaves: 1 | 2): StepChecker {
-  const rh = expectedRun(ref, octaves, 4)
+export function createStepChecker(ref: ScaleRef, current: () => RepKind | null): StepChecker {
   const prefer = preferFor(ref)
-  const detector = createRunDetector({ tonicPc: chroma(ref.root), expectedLength: rh.length })
+  const detector = createRunDetector({ tonicPc: chroma(ref.root), expectedLength: expectedRun(ref, 1, 4).length })
   const judge = (run: FinishedRun | null): StepRun | null => {
-    if (!run) return null
+    const kind = current()
+    if (!run || kind === null) return null
     const together = run.hand === 'together'
-    const a = analyseRun(rh, run.notes, { together, prefer })
-    const hand: RepKind = together ? 'together' : a.offset <= -LH_OFFSET ? 'lh' : 'rh'
-    return { hand, outcome: outcomeOf(a, prefer) }
+    if (together !== (kind === 'together')) return { kind: 'wrongShape', heard: together ? 'both' : 'one' }
+    const a = analyseRun(expectedRun(ref, 1, kind === 'lh' ? 3 : 4), run.notes, { together, prefer })
+    return { kind: 'filled', outcome: outcomeOf(a, prefer) }
   }
   return {
     push: (n) => judge(detector.push(n)),

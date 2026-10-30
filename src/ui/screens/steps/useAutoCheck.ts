@@ -4,21 +4,24 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks'
 import { heldNotes, onClear, onKeyboard } from '../../../midi/input'
 import type { DiatonicChord } from '../../../theory/chords'
 import type { ScaleRef } from '../../../theory/scales'
-import { chordMatched, createStepChecker, type StepRun } from './autoCheck'
+import { chordMatched, createStepChecker, type RepKind, type StepRun } from './autoCheck'
 
 /** The run detector's silence windows are checked this often. */
 const TICK_MS = 250
 
 /**
- * One run checker for the step while `on`. Every finished run goes to `onRun`. onClear (unplug, Reset keys) abandons
+ * One run checker for the step while `on`. `current` names the hand of the tile the next run fills (read when a run
+ * finishes, so it may change freely without rebuilding the checker). Every finished run goes to `onRun`. onClear (unplug, Reset keys) abandons
  * the run in progress. A layout effect, so a note played right after mounting or connecting is not lost.
  */
-export function useScaleRuns(ref: ScaleRef, octaves: 1 | 2, on: boolean, onRun: (r: StepRun) => void): void {
+export function useScaleRuns(ref: ScaleRef, current: () => RepKind | null, on: boolean, onRun: (r: StepRun) => void): void {
   const cb = useRef(onRun)
   cb.current = onRun
+  const cur = useRef(current)
+  cur.current = current
   useLayoutEffect(() => {
     if (!on) return
-    const checker = createStepChecker(ref, octaves)
+    const checker = createStepChecker(ref, () => cur.current())
     const report = (r: StepRun | null) => {
       if (r) cb.current(r)
     }
@@ -32,7 +35,7 @@ export function useScaleRuns(ref: ScaleRef, octaves: 1 | 2, on: boolean, onRun: 
       offClear()
       clearInterval(timer)
     }
-  }, [ref, octaves, on])
+  }, [ref, on])
 }
 
 /**
