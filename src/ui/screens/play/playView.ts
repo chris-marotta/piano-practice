@@ -326,9 +326,11 @@ function withLabelsAndRoots(marks: KeyMark[], a: MarksArgs): KeyMark[] {
   const names = a.labels === 'names' ? nameMap(a.target) : a.labels === 'degrees' ? degreeMap(a.target) : null
   const labelFor = (midi: number): string | undefined => names?.get(midi % 12)
   // 'pressed' and 'bad' say nothing about the target: no label there (Check, or Right / wrong off, would give it away).
+  // A key with a bad mark (a pressed slip or the guide's flash) shows no label, whatever glow lies under it.
+  const bad = new Set(marks.filter((m) => m.state === 'bad').map((m) => m.midi))
   const labelled = (m: KeyMark): KeyMark => {
     const isRoot = m.midi % 12 === rootPc
-    const label = m.state === 'bad' || m.state === 'pressed' ? undefined : labelFor(m.midi)
+    const label = m.state === 'pressed' || bad.has(m.midi) ? undefined : labelFor(m.midi)
     return label === undefined && !isRoot ? m : { ...m, ...(label === undefined ? {} : { label }), ...(isRoot ? { root: true } : {}) }
   }
   const out = marks.map(labelled)

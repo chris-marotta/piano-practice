@@ -597,6 +597,41 @@ describe('playMarks: labels and root dots', () => {
       expect(labelAt(flash, 64), labels).toBeUndefined()
     }
   })
+  it('a flashed key inside the glow has no label either (highlight on), but keeps the root dot', () => {
+    const G1 = G_MAJOR as Extract<PlayTarget, { kind: 'scale' }>
+    // Guided G major up, next C5: G4 A4 B4 are dimmed (played), D5 E5 F#5 G5 glow (target).
+    const guide: GuideState = { ...createGuide({ kind: 'scale', ref: G1.ref, octaves: 1, hand: 'rh' }), index: 3, offset: 0 }
+    for (const labels of ['names', 'degrees'] as const) {
+      for (const flash of [69, 76, 79]) {
+        // A4 played-glow, E5 target-glow, G5 target-glow and the scale's root
+        const ms = playMarks({
+          mode: 'guided', target: G1, toggles: DEFAULT_TOGGLES, labels, held: new Set(), next: null, window: DEFAULT_WINDOW, flash, guide,
+        })
+        expect(stateAt(ms, flash), `${labels} ${flash}`).toBe('bad')
+        expect(at(ms, flash).filter((m) => m.label !== undefined), `${labels} ${flash}`).toEqual([])
+      }
+      // The neighbours keep theirs.
+      const ms = playMarks({ mode: 'guided', target: G1, toggles: DEFAULT_TOGGLES, labels, held: new Set(), next: null, window: DEFAULT_WINDOW, flash: 76, guide })
+      expect(labelAt(ms, 74)).toBeDefined()
+      expect(labelAt(ms, 78)).toBeDefined()
+      // The root dot stays on a flashed root key.
+      const root = playMarks({ mode: 'guided', target: G1, toggles: DEFAULT_TOGGLES, labels, held: new Set(), next: null, window: DEFAULT_WINDOW, flash: 79, guide })
+      expect(rootAt(root, 79)).toBe(true)
+    }
+  })
+  it('the same for a guided chord: a chord tone flashed in the wrong place has no label', () => {
+    const next: GuideNext = { chord: { pcs: [0, 4, 7], bassPc: 0, inversion: 0 } }
+    for (const labels of ['names', 'degrees'] as const) {
+      for (const flash of [52, 64, 67, 72]) {
+        const ms = playMarks({
+          mode: 'guided', target: C_CHORD, toggles: DEFAULT_TOGGLES, labels, held: new Set(), next, window: DEFAULT_WINDOW, flash,
+          guide: createGuide({ kind: 'chord', root: 'C', type: 'M' }),
+        })
+        expect(stateAt(ms, flash), `${labels} ${flash}`).toBe('bad')
+        expect(at(ms, flash).filter((m) => m.label !== undefined), `${labels} ${flash}`).toEqual([])
+      }
+    }
+  })
   it('keys outside the target never get a label, in any setting', () => {
     for (const labels of ['names', 'degrees'] as const) {
       const ms = marks({ target: D_MAJOR, labels })
