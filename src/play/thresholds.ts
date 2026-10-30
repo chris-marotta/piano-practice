@@ -19,3 +19,7 @@ export const LOST_SLIPS = 2
 export const TOGETHER_PAIR_RATIO = 0.6
 /** A wrong-shape note (one hand vs both) stays under the rep tiles this long. */
 export const WRONG_SHAPE_NOTE_MS = 4000
+/** Drill: a right answer slower than this grades Shaky instead of Nailed. */
+export const DRILL_SLOW_MS = 5000
+/** Drill level 4 (Speed): a right answer slower than this grades Lost. */
+export const DRILL_FAST_MS = 3000
