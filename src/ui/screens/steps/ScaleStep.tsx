@@ -14,13 +14,12 @@ import { Segmented } from '../../components/Segmented'
 import { update } from '../../state'
 import {
   REP_KINDS,
+  applyRun,
   currentTile,
   emptyTiles,
-  fillTile,
   tileResult,
   toggleTile,
   untick,
-  wrongShapeText,
   type RepKind,
   type StepRun,
 } from './autoCheck'
@@ -176,18 +175,12 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   }
   const onRun = (run: StepRun) => {
     const { tiles: ts, picked: p } = live.current
-    const i = currentTile(ts, p)
-    if (i === null) return
-    if (run.kind === 'wrongShape') {
-      // Never ticks anything: the same tile stays current.
-      setWrongNote(wrongShapeText(run.heard, REP_KINDS[i] ?? 'rh'))
-      return
-    }
-    const next = fillTile(ts, i, run.outcome)
-    live.current = { tiles: next, picked: null }
-    setTiles(next)
-    setPicked(null)
-    setWrongNote(null)
+    const next = applyRun(ts, p, run)
+    if (next.tiles === ts && next.note === null) return
+    live.current = { tiles: next.tiles, picked: next.picked }
+    setTiles(next.tiles)
+    setPicked(next.picked)
+    setWrongNote(next.note)
   }
   useScaleRuns(step.ref, currentKind, connected, onRun)
   useEffect(() => {

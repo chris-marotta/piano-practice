@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { expectedRun } from '../../src/play/sequence'
 import {
   REP_KINDS,
+  applyRun,
   chordMatched,
   createStepChecker,
   currentTile,
@@ -96,6 +97,56 @@ describe('tiles', () => {
   })
 })
 
+describe('applyRun', () => {
+  const filled: StepRun = { kind: 'filled', outcome: outcome(0) }
+  const wrong: StepRun = { kind: 'wrongShape', heard: 'both' }
+  const ticks = (ts: ReturnType<typeof emptyTiles>) => ts.map((x) => x.ticked)
+
+  it('a wrongShape run leaves tiles and picked unchanged and returns the note for the current tile', () => {
+    const tiles = emptyTiles()
+    const r = applyRun(tiles, null, wrong)
+    expect(r.tiles).toBe(tiles)
+    expect(r.picked).toBeNull()
+    expect(r.note).toBe("That sounded like both hands. This one's the right hand.")
+    const picked = applyRun(tiles, 2, wrong)
+    expect(picked.tiles).toBe(tiles)
+    expect(picked.picked).toBe(2)
+    expect(picked.note).toBe("That sounded like both hands. This one's the left hand.")
+  })
+
+  it('a filled run with tile 3 picked fills only tile 3 and resets picked', () => {
+    const r = applyRun(emptyTiles(), 3, filled)
+    expect(ticks(r.tiles)).toEqual([f, f, f, t, f, f])
+    expect(r.tiles[3]?.result?.slips).toBe(0)
+    expect(r.picked).toBeNull()
+    expect(r.note).toBeNull()
+  })
+
+  it('a filled run with nothing picked fills the first empty tile only', () => {
+    const r = applyRun(toggleTile(emptyTiles(), 0), null, filled)
+    expect(ticks(r.tiles)).toEqual([t, t, f, f, f, f])
+    expect(r.tiles[0]?.result).toBeNull()
+    expect(r.tiles[1]?.result?.slips).toBe(0)
+  })
+
+  it('a run after a wrongShape fills the current tile and only that tile', () => {
+    const afterWrong = applyRun(emptyTiles(), 4, wrong)
+    const r = applyRun(afterWrong.tiles, afterWrong.picked, filled)
+    expect(ticks(r.tiles)).toEqual([f, f, f, f, t, f])
+    expect(r.picked).toBeNull()
+  })
+
+  it('all six filled: nothing changes, no note', () => {
+    const full = REP_KINDS.reduce((ts, _k, i) => toggleTile(ts, i), emptyTiles())
+    for (const run of [filled, wrong]) {
+      const r = applyRun(full, 3, run)
+      expect(r.tiles).toBe(full)
+      expect(r.picked).toBe(3)
+      expect(r.note).toBeNull()
+    }
+  })
+})
+
 describe('wrongShapeText', () => {
   it('names what was heard and what this tile wants', () => {
     expect(wrongShapeText('one', 'together')).toBe("That sounded like one hand. This one's both hands.")
@@ -157,38 +208,6 @@ describe('createStepChecker', () => {
 
   it('a one-hand run on a together tile is the wrong shape: one', () => {
     expect(finish(() => 'together', play(midis(G, 4)))).toEqual({ kind: 'wrongShape', heard: 'one' })
-  })
-
-  it('a wrong-shape run does not consume the tile: the next clean run fills the current one', () => {
-    let cur: RepKind | null = 'rh'
-    const checker = createStepChecker(G, () => cur)
-    const wrong = pairs(midis(G, 4))
-    const w = wrong.map((n) => checker.push(n)).find((x) => x !== null) ?? checker.tick(wrong[wrong.length - 1]!.t + 200)
-    expect(w?.kind).toBe('wrongShape')
-    // The caller turns only 'filled' runs into fillTile, so tiles are untouched and the same tile is still current.
-    const tiles0 = emptyTiles()
-    expect(currentTile(tiles0, null)).toBe(0)
-    const next = play(midis(G, 4), 400, 20_000)
-    next.forEach((n) => checker.push(n))
-    const done = checker.tick(next[next.length - 1]!.t + 200)
-    expect(done?.kind).toBe('filled')
-    const i = currentTile(tiles0, null)
-    const after = done?.kind === 'filled' && i !== null ? fillTile(tiles0, i, done.outcome) : tiles0
-    expect(after.map((x) => x.ticked)).toEqual([t, f, f, f, f, f])
-  })
-
-  it('a run with tile 3 picked fills tile 3, not tile 0', () => {
-    const tiles = emptyTiles()
-    const picked = 3
-    const kind = REP_KINDS[currentTile(tiles, picked) ?? 0] ?? null
-    expect(kind).toBe('lh')
-    const done = finish(() => kind, play(midis(G, 3)))
-    const i = currentTile(tiles, picked)
-    expect(done?.kind === 'filled' && i !== null).toBe(true)
-    if (done?.kind === 'filled' && i !== null) {
-      const after = fillTile(tiles, i, done.outcome)
-      expect(after.map((x) => x.ticked)).toEqual([f, f, f, t, f, f])
-    }
   })
 
   it('all six filled: current() is null and the run is dropped', () => {

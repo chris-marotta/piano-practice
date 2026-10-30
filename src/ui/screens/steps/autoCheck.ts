@@ -42,6 +42,22 @@ export function currentTile(tiles: Tile[], picked: number | null): number | null
 export const fillTile = (tiles: Tile[], i: number, outcome: RunOutcome): Tile[] =>
   tiles.map((t, j) => (j === i ? { ticked: true, result: outcome } : t))
 
+/**
+ * What a finished run does to the rep tiles. A filled run fills the current tile and only it, and clears `picked`.
+ * A wrongShape run changes nothing but returns the note to show (for the tile that was current). With all six
+ * filled there is no current tile: nothing changes and there is no note.
+ */
+export function applyRun(
+  tiles: Tile[],
+  picked: number | null,
+  run: StepRun,
+): { tiles: Tile[]; picked: number | null; note: string | null } {
+  const i = currentTile(tiles, picked)
+  if (i === null) return { tiles, picked, note: null }
+  if (run.kind === 'wrongShape') return { tiles, picked, note: wrongShapeText(run.heard, REP_KINDS[i] ?? 'rh') }
+  return { tiles: fillTile(tiles, i, run.outcome), picked: null, note: null }
+}
+
 /** v1 hand toggle (for a tile with no detected result). */
 export const toggleTile = (tiles: Tile[], i: number): Tile[] =>
   tiles.map((t, j) => (j === i ? { ticked: !t.ticked, result: null } : t))
