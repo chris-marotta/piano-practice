@@ -16,12 +16,14 @@ import { RunResultDialog } from './RunResultDialog'
 import {
   familyLine,
   fingerRows,
+  handPanels,
   hasDistinctDescent,
   keySignatureText,
   scaleHeader,
-  scaleKeyboard,
+  SESSION_OCTAVES,
   SUPPORT_NAMES,
   type Direction,
+  type Panel,
 } from './scaleView'
 import { ScrollKeyboard } from './ScrollKeyboard'
 import { Toggle } from './Toggle'
@@ -67,45 +69,60 @@ function Check() {
 
 interface SupportProps {
   step: ScaleStepData
-  octaves: 1 | 2
   showKeyboard: boolean
   direction: Direction
 }
 
+/** One hand's keyboard under a hand-coloured title. */
+function HandPanel({ hand, panel }: { hand: 'lh' | 'rh'; panel: Panel }) {
+  return (
+    <section class={`hand-panel hand-panel--${hand}`}>
+      <h2 class="hand-panel__title">{hand === 'lh' ? 'LEFT HAND' : 'RIGHT HAND'}</h2>
+      <ScrollKeyboard
+        low={panel.low}
+        high={panel.high}
+        marks={panel.marks}
+        firstMidi={Math.min(...panel.marks.map((m) => m.midi))}
+      />
+    </section>
+  )
+}
+
 /**
- * Support display for the item's level: L0 keyboard, L1 finger rows, L2 key signature, L3 name only.
- * Melodic minor descends as natural minor, so its keyboard follows `direction` and its L1 shows
- * a "Going up" and a "Coming down" pair (R16).
+ * Support display for the item's level: L0 a keyboard per hand (LH left, RH right), L1 finger rows in the same
+ * columns, L2 key signature, L3 name only. Melodic minor descends as natural minor, so its keyboards follow
+ * `direction` and its L1 shows a "Going up" and a "Coming down" pair (R16).
  */
-function Support({ step, octaves, showKeyboard, direction }: SupportProps) {
+function Support({ step, showKeyboard, direction }: SupportProps) {
   if (step.support === 0 || showKeyboard) {
-    const kb = scaleKeyboard(step.ref, octaves, direction)
+    const { lh, rh } = handPanels(step.ref, direction)
     return (
-      <div class="support support--keyboard">
-        <ScrollKeyboard low={kb.low} high={kb.high} marks={kb.marks} firstMidi={kb.firstMidi} />
+      <div class="support support--keyboard support--hands">
+        <HandPanel hand="lh" panel={lh} />
+        <HandPanel hand="rh" panel={rh} />
       </div>
     )
   }
   if (step.support === 1) {
     if (hasDistinctDescent(step.ref)) {
-      const up = fingerRows(step.ref, octaves, 'up')
-      const down = fingerRows(step.ref, octaves, 'down')
+      const up = fingerRows(step.ref, SESSION_OCTAVES, 'up')
+      const down = fingerRows(step.ref, SESSION_OCTAVES, 'down')
       return (
         <div class="support support--rows support--rows-split">
           <h2 class="support__dir">Going up</h2>
-          <FingerRow notes={up.rh.notes} fingers={up.rh.fingers} hand="rh" compact />
-          <FingerRow notes={up.lh.notes} fingers={up.lh.fingers} hand="lh" compact />
+          <FingerRow notes={up.lh.notes} fingers={up.lh.fingers} hand="lh" />
+          <FingerRow notes={up.rh.notes} fingers={up.rh.fingers} hand="rh" />
           <h2 class="support__dir">Coming down</h2>
-          <FingerRow notes={down.rh.notes} fingers={down.rh.fingers} hand="rh" compact />
-          <FingerRow notes={down.lh.notes} fingers={down.lh.fingers} hand="lh" compact />
+          <FingerRow notes={down.lh.notes} fingers={down.lh.fingers} hand="lh" />
+          <FingerRow notes={down.rh.notes} fingers={down.rh.fingers} hand="rh" />
         </div>
       )
     }
-    const rows = fingerRows(step.ref, octaves)
+    const rows = fingerRows(step.ref, SESSION_OCTAVES)
     return (
       <div class="support support--rows">
-        <FingerRow notes={rows.rh.notes} fingers={rows.rh.fingers} hand="rh" />
         <FingerRow notes={rows.lh.notes} fingers={rows.lh.fingers} hand="lh" />
+        <FingerRow notes={rows.rh.notes} fingers={rows.rh.fingers} hand="rh" />
       </div>
     )
   }
@@ -130,7 +147,7 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   // Auto-check only while a keyboard is connected; disconnected, the tiles are v1's hand toggles. Results already
   // detected stay on their tiles (and in the suggestion) after an unplug.
   const connected = midiStatus.value.kind === 'connected'
-  useScaleRuns(step.ref, settings.octaves, connected, (run) => setTiles((ts) => placeRun(ts, run.hand, run.outcome)))
+  useScaleRuns(step.ref, SESSION_OCTAVES, connected, (run) => setTiles((ts) => placeRun(ts, run.hand, run.outcome)))
   const results = tiles.flatMap((t) => (t.result ? [t.result] : []))
   const suggested = suggestRating(results, { peeked })
   const open = openTile === null ? null : tiles[openTile]?.result ?? null
@@ -138,7 +155,7 @@ export function ScaleStep({ step, settings, onRate }: Props) {
   const play = async () => {
     await unlockAudio()
     if (!mounted.current) return // the step was left while audio was unlocking
-    playScale(step.ref, settings.octaves, step.tempo)
+    playScale(step.ref, SESSION_OCTAVES, step.tempo)
   }
   const peek = () => {
     setPeeked(true)
@@ -155,7 +172,7 @@ export function ScaleStep({ step, settings, onRate }: Props) {
     <div class="step step--scale">
       <header class="step__head">
         <div class="step__heading">
-          <h1 class="step__title">{scaleHeader(step.ref, settings.octaves, step.tempo)}</h1>
+          <h1 class="step__title">{scaleHeader(step.ref, SESSION_OCTAVES, step.tempo)}</h1>
           <p class="step__kicker">
             Support L{step.support} · {SUPPORT_NAMES[step.support]}
           </p>
@@ -201,7 +218,7 @@ export function ScaleStep({ step, settings, onRate }: Props) {
                 )}
               </div>
             )}
-            <Support step={step} octaves={settings.octaves} showKeyboard={showKeyboard} direction={direction} />
+            <Support step={step} showKeyboard={showKeyboard} direction={direction} />
           </div>
           <div class="step__foot">
             <div class="reps" role="group" aria-label="Reps">

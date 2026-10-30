@@ -105,6 +105,9 @@ export function sessionScaleFor(ref: ScaleRef): ScaleRef | null {
   return twin ? { root: twin, form: ref.form } : null
 }
 
+/** The Library keeps showing two octaves per hand; only the session scale step is one octave (spec 3.1). */
+export const LIBRARY_OCTAVES = 2 as const
+
 /** Both hands, fingering from `fingeringRef`; with no fingering source, the notes without finger numbers. */
 export function scaleKeyboardFor(
   ref: ScaleRef,

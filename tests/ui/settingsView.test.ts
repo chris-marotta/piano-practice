@@ -3,7 +3,6 @@ import {
   DRONE_DB_MAX,
   DRONE_DB_MIN,
   LENGTH_OPTIONS,
-  OCTAVE_OPTIONS,
   TEMPO_MAX,
   TEMPO_MIN,
   TEMPO_STEP,
@@ -38,10 +37,9 @@ const placed = (): AppState => {
 }
 
 describe('options', () => {
-  it('session lengths 5/10/15/20, octaves 1/2', () => {
+  it('session lengths 5/10/15/20', () => {
     expect(LENGTH_OPTIONS.map((o) => o.value)).toEqual([5, 10, 15, 20])
     expect(LENGTH_OPTIONS.map((o) => o.label)).toEqual(['5 min', '10 min', '15 min', '20 min'])
-    expect(OCTAVE_OPTIONS.map((o) => o.value)).toEqual([1, 2])
   })
   it('tempo 40–120 step 4, drone −40…0 dB', () => {
     expect([TEMPO_MIN, TEMPO_MAX, TEMPO_STEP]).toEqual([40, 120, 4])
@@ -75,8 +73,8 @@ describe('withSettings', () => {
     const before = emptyState()
     const snapshot = structuredClone(before)
     const defaults = structuredClone(DEFAULT_SETTINGS)
-    const after = withSettings(before, { sessionMinutes: 20, octaves: 1, metronomeOn: true })
-    expect(after.settings).toMatchObject({ sessionMinutes: 20, octaves: 1, metronomeOn: true })
+    const after = withSettings(before, { sessionMinutes: 20, metronomeOn: true })
+    expect(after.settings).toMatchObject({ sessionMinutes: 20, metronomeOn: true })
     expect(after.settings.minorForms).toEqual(before.settings.minorForms)
     expect(after).not.toBe(before)
     expect(after.settings).not.toBe(before.settings)

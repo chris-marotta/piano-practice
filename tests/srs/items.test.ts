@@ -24,7 +24,6 @@ describe('defaults', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       sessionMinutes: 10,
       minorForms: { natural: true, harmonic: false, melodic: false },
-      octaves: 2,
       startTempo: 60,
       droneOn: true,
       droneVolumeDb: -12,

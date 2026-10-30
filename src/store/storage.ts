@@ -80,7 +80,6 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
       harmonic: bool(forms.harmonic, d.minorForms.harmonic),
       melodic: bool(forms.melodic, d.minorForms.melodic),
     },
-    octaves: oneOf(stored.octaves, [1, 2] as const, d.octaves),
     startTempo: isNum(stored.startTempo) ? Math.min(120, Math.max(40, stored.startTempo)) : d.startTempo,
     droneOn: bool(stored.droneOn, d.droneOn),
     droneVolumeDb: isNum(stored.droneVolumeDb) ? stored.droneVolumeDb : d.droneVolumeDb,

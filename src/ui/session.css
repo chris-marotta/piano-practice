@@ -218,10 +218,40 @@
   color: var(--muted);
 }
 
-.support--rows {
-  display: flex;
-  flex-direction: column;
+.support--hands {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--s-4);
+}
+
+.hand-panel {
+  min-width: 0; /* let a wide keyboard scroll inside its column */
+}
+
+.hand-panel__title {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hand-panel--lh .hand-panel__title {
+  color: var(--lh);
+}
+
+.hand-panel--rh .hand-panel__title {
+  color: var(--rh);
+}
+
+/* Finger rows: left hand in the left column, right hand in the right (the same sides as the keyboards). */
+.support--rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: var(--s-4);
+}
+
+.support--rows > .support__dir {
+  grid-column: 1 / -1;
 }
 
 .support--big {
@@ -257,35 +287,7 @@
 }
 
 .support--rows-split {
-  gap: var(--s-2);
-}
-
-/* Compact finger rows (melodic minor L1: up and down pairs on one screen). Badges stay 36px with
-   20px numbers; the hand label moves inline and the note cells shrink. */
-.finger-row--compact {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--s-3);
-}
-
-.finger-row--compact .finger-row__hand {
-  flex: none;
-  width: 92px;
-}
-
-.finger-row--compact .finger-row__cells {
-  gap: var(--s-1);
-}
-
-.finger-row--compact .finger-row__cell {
-  min-width: 52px;
-  gap: var(--s-1);
-  padding: var(--s-1);
-}
-
-.finger-row--compact .finger-row__note {
-  font-size: 24px;
-  line-height: 1.2;
+  row-gap: var(--s-2);
 }
 
 .btn--quiet-line {

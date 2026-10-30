@@ -8,7 +8,6 @@ import type { ItemState } from './scheduler'
 export interface Settings {
   sessionMinutes: 5 | 10 | 15 | 20
   minorForms: { natural: boolean; harmonic: boolean; melodic: boolean }
-  octaves: 1 | 2
   startTempo: number
   droneOn: boolean
   droneVolumeDb: number
@@ -20,7 +19,6 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   sessionMinutes: 10,
   minorForms: { natural: true, harmonic: false, melodic: false },
-  octaves: 2,
   startTempo: TEMPO_START,
   droneOn: true,
   droneVolumeDb: -12,

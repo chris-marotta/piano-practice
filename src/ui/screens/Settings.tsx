@@ -11,7 +11,6 @@ import {
   DRONE_DB_MIN,
   LENGTH_OPTIONS,
   MINOR_FORM_OPTIONS,
-  OCTAVE_OPTIONS,
   REDO_MESSAGE,
   SHARE_TITLE,
   TEMPO_MAX,
@@ -210,14 +209,6 @@ export function Settings() {
                 />
               ))}
             </div>
-          </Row>
-          <Row label="Octaves">
-            <Segmented
-              options={OCTAVE_OPTIONS}
-              value={settings.octaves}
-              onChange={(v) => set({ octaves: v })}
-              label="Octaves"
-            />
           </Row>
           <Row label="Start tempo" hint="Applies to scales you haven't practiced yet. Each scale then keeps its own tempo.">
             <div class="stepper">

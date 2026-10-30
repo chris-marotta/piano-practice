@@ -4,7 +4,7 @@ import { Segmented } from '../../components/Segmented'
 import { app } from '../../state'
 import { ScrollKeyboard } from '../steps/ScrollKeyboard'
 import type { Direction } from '../steps/scaleView'
-import { libraryTempo, respellForForm, scalePanel } from './libraryView'
+import { LIBRARY_OCTAVES, libraryTempo, respellForForm, scalePanel } from './libraryView'
 import { scaleDir, scaleSel } from './libraryState'
 import { RootPicker } from './RootPicker'
 import { usePiano } from './usePiano'
@@ -24,14 +24,14 @@ const DIRECTIONS: { value: Direction; label: string }[] = [
 export function ScalesPanel() {
   const ref = scaleSel.value
   const { settings, items } = app.value
-  const p = scalePanel(ref, settings.octaves, scaleDir.value)
+  const p = scalePanel(ref, LIBRARY_OCTAVES, scaleDir.value)
   const withPiano = usePiano()
 
   const setForm = (form: ScaleForm) => {
     scaleSel.value = { root: respellForForm(ref.root, ref.form, form), form }
     scaleDir.value = 'up'
   }
-  const play = () => withPiano(() => playScale(ref, settings.octaves, libraryTempo(items, ref, settings.startTempo)))
+  const play = () => withPiano(() => playScale(ref, LIBRARY_OCTAVES, libraryTempo(items, ref, settings.startTempo)))
   const fingeringText = p.fingering ? (p.fingering.note ?? p.fingering.family ?? 'Its own fingering') : 'No fingering for this spelling'
 
   return (

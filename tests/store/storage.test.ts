@@ -263,6 +263,16 @@ describe('MIDI settings', () => {
   })
 })
 
+describe('settings.octaves from before phase 3', () => {
+  it('a stored octaves: 2 loads without error and the merged settings have no octaves key', () => {
+    const stored = { ...populated(), settings: { sessionMinutes: 20, octaves: 2 } }
+    const r = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify(stored) }))
+    expect(r.notice).toBeNull()
+    expect(r.state.settings.sessionMinutes).toBe(20)
+    expect('octaves' in r.state.settings).toBe(false)
+  })
+})
+
 describe('validation hardening', () => {
   const badSettings = { sessionMinutes: 7, octaves: '2', startTempo: 'fast', minorForms: { harmonic: 'yes' }, bogus: 1 }
   const expectDefaults = (settings: AppState['settings']) => {
@@ -289,8 +299,8 @@ describe('validation hardening', () => {
       if (!r.ok) throw new Error('import failed')
       return r.state.settings
     }
-    const ok = mk({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, octaves: 1, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    const ok = mk({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

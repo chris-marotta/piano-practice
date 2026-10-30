@@ -12,11 +12,6 @@ export const LENGTH_OPTIONS: { value: Settings['sessionMinutes']; label: string 
   { value: 20, label: '20 min' },
 ]
 
-export const OCTAVE_OPTIONS: { value: Settings['octaves']; label: string }[] = [
-  { value: 1, label: '1 octave' },
-  { value: 2, label: '2 octaves' },
-]
-
 export type MinorForm = keyof Settings['minorForms']
 
 export const MINOR_FORM_OPTIONS: { form: MinorForm; label: string }[] = [

@@ -9,6 +9,9 @@ import { keyboardRange, type KeyMark } from '../../components/keyboardLayout'
 const RH_OCTAVE = 4
 const LH_OCTAVE = 3
 
+/** A session scale is one octave per hand (the Library and Play keep their own octave choices). */
+export const SESSION_OCTAVES = 1 as const
+
 const pitchClass = (n: string): string => n.replace(/-?\d+$/, '')
 
 export function scaleHeader(ref: ScaleRef, octaves: 1 | 2, tempo: number): string {
@@ -77,4 +80,32 @@ export function scaleKeyboard(
   const marks = [...marksFor('rh', rows.rh), ...marksFor('lh', rows.lh)]
   const midis = marks.map((m) => m.midi)
   return { ...keyboardRange(midis), marks, firstMidi: Math.min(...midis) }
+}
+
+export interface Panel {
+  low: number
+  high: number
+  marks: KeyMark[]
+}
+
+/**
+ * L0 for a session: one keyboard per hand, each ranged (whole white keys) around its own octave. LH runs
+ * from octave 3, RH from octave 4, so the LH top tonic and the RH tonic are the same key (e.g. G major: 67).
+ */
+export function handPanels(
+  ref: ScaleRef,
+  direction: Direction = 'up',
+  fingeringRef: ScaleRef = ref,
+): { lh: Panel; rh: Panel } {
+  const rows = fingerRows(ref, SESSION_OCTAVES, direction, fingeringRef)
+  const panel = (hand: 'rh' | 'lh', row: HandRow): Panel => {
+    const marks: KeyMark[] = row.notes.map((n, i) => ({
+      midi: noteMidi(n),
+      hand,
+      finger: row.fingers[i],
+      label: formatNote(pitchClass(n)),
+    }))
+    return { ...keyboardRange(marks.map((m) => m.midi)), marks }
+  }
+  return { lh: panel('lh', rows.lh), rh: panel('rh', rows.rh) }
 }
