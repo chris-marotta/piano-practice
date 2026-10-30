@@ -10,20 +10,37 @@ Progress is stored in the browser's `localStorage`.
 
 - Placement: mark each of the 24 scales Solid, Shaky, or Don't know to seed the schedule.
 - Today: a 5, 10, 15, or 20 minute session built from what is due, with a time estimate.
-- Guided session: theory recall cards (key signature, spelling, relative key, thumb notes),
-  scale steps (recall gate, four support levels from full keyboard to name only, Peek,
-  rep checklist, Play, Nailed / Shaky / Lost), and chord steps (block or broken, inversions,
-  voice-led cadence at higher levels).
+- Guided session, in this order:
+  - Name that key: a short drill on the 12 piano keys. Without a keyboard, questions alternate "Which key
+    is this?" (pick the name) and "Tap {name}" (tap the key); with a MIDI keyboard connected, every
+    question is "Play {name} on your piano". Four levels unlock as keys reach box 3: Landmarks (C and F),
+    White keys (D E G A B), Black keys (sharp and flat names), and Speed (3 seconds a key). Levels stay
+    unlocked once reached. In a session each key is graded on its first answer of the day; a miss
+    comes back once at the end of the round as practice. After each answer the
+    keyboard lights the route from the nearest landmark, with a "Why:" line.
+  - Warm-up deck: today's theory recall cards (key signature, spelling, relative key, thumb notes) as one
+    flip deck. Say the answer, tap to flip, and the back shows the answer, a "why" picture (circle of
+    fifths, keyboard, sharps and flats) and a "Why:" line; rate each card Got it or Missed.
+  - Scale steps: recall gate, four support levels (L0 one keyboard per hand, LH left and RH right;
+    L1 finger rows in the same columns; L2 key signature; L3 name only), Peek, rep tiles, Play,
+    Nailed / Shaky / Lost. Melodic minor shows its way up and way down.
+  - Chord steps: block or broken, inversions, voice-led cadence at higher levels.
 - Play tab: a free-play keyboard with a scale or chord target. Free shows right and wrong notes
   and names the chord you hold; Guided walks you note by note with hand colours and fingering;
-  Check is a from-memory run that reports slips in plain language, evenness, and tempo.
+  Check is a from-memory run that reports slips in plain language, evenness, and tempo; Keys is the
+  name-that-key drill on its own, one round at a time ("Next round"). A Labels switch shows key names,
+  scale degrees, or nothing (Off · Names · Degrees), and the scale's root keys carry a blue dot.
 - Keyboard input (Chrome on a computer): after connecting a MIDI keyboard once in Settings, the
   app plays its notes live, marks the on-screen keys, and auto-checks scale reps and chords in a
   session (suggesting a rating; you still tap it).
-- Progress: mastery grid (box and support level per scale), streak, minutes, 8-week calendar.
-- Library: scales with fingering, chords, chords in a key, and a "What's this chord?" detector.
-- Settings: minor forms (natural, harmonic, melodic), octaves, start tempo, drone and
-  metronome, MIDI keyboard connect and keyboard sound, JSON export and import, redo placement.
+- Progress: mastery grid (box and support level per scale), a Keys row (box per piano key and the drill
+  level), streak, minutes, 8-week calendar.
+- Library: scales with fingering, chords, chords in a key, a "What's this chord?" detector, and a
+  circle of fifths: tap a key on the wheel to see its key signature, relative minor and scale, then
+  **Open in Library** (its scale page) or **Play it** (Play tab with that scale).
+- Settings: minor forms (natural, harmonic, melodic), start tempo, drone and metronome, MIDI
+  keyboard connect and keyboard sound, JSON export and import, redo placement. Sessions are always one
+  octave; the octaves setting is gone (an old saved `octaves` value is ignored).
 - Installable PWA that works offline once cached (piano samples included).
 
 Built with Preact, TypeScript, Vite, Tone.js, and tonal.
@@ -38,19 +55,23 @@ runs the app without a keyboard and everything else works as before).
    when Chrome asks. The connection is remembered and re-attempted on the next launch.
 3. Tap or click the page once. Browsers keep audio off until a gesture, so the keyboard stays
    silent (the screen says "Tap anywhere to turn on sound") until you do.
-4. Open the **Play** tab, or start a session: scale steps tick the Right hand, Left hand, and
-   Together tiles from what you play, and chord steps tick a chord once you hold it.
+4. Open the **Play** tab, or start a session. In a scale step the rep tiles fill in order: the
+   current tile (outlined in its hand colour) decides which hand a run counts for, and the other
+   hand's keyboard dims. Tap another empty tile to play that one next, or tap the current tile to tick
+   it by hand. A run in the wrong shape (both hands on a one-hand tile, or one hand on a Together
+   tile) ticks nothing and shows a short note under the tiles. Chord steps tick a chord once you hold
+   it. The drill asks you to play each key on the keyboard ("● Listening: {device}").
 
 Settings, Keyboard sound turns the app's live piano off (for example when another app already
-plays the keyboard). Thresholds for run detection live in `src/play/thresholds.ts` and are
-guesses until tuned on the real keyboard.
+plays the keyboard). Thresholds for run detection and the drill's time limits live in
+`src/play/thresholds.ts` and are guesses until tuned on the real keyboard.
 
 ## Commands
 
 ```
 npm i
 npm run dev     # http://localhost:5230
-npm test        # vitest (pure modules: theory, data, srs, session, store, midi, play)
+npm test        # vitest (pure modules: theory, data, srs, session, store, midi, play, drill)
 npm run build   # typecheck + production build to dist/
 ```
 

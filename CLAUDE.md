@@ -18,14 +18,15 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 
 ## Rules
 
-- **Pure modules.** `src/theory`, `src/data`, `src/srs`, `src/session`, `src/store`, `src/play`, plus `src/midi/parse.ts`, `src/midi/held.ts` and `src/midi/dedupe.ts`, must not import Preact or Tone.js and must not touch `window`/`navigator`/`document`. The one exception is `store/storage.ts`, which takes an injected `Storage`.
+- **Pure modules.** `src/theory`, `src/data`, `src/srs`, `src/session`, `src/store`, `src/play`, `src/drill`, plus `src/midi/parse.ts`, `src/midi/held.ts` and `src/midi/dedupe.ts`, must not import Preact or Tone.js and must not touch `window`/`navigator`/`document`. The one exception is `store/storage.ts`, which takes an injected `Storage`.
 - **Tonal only in theory.** Only `src/theory/*` imports `@tonaljs/tonal`.
 - **Note spelling.** Internal names use tonal's ASCII (`F#`, `Bb`, `F##`). All UI text goes through `formatNote` (`♯ ♭ 𝄪 𝄫`).
 - **Fingerings.** Never edit a fingering silently. Harmonic and melodic minor reuse the natural-minor fingering for the same root in v1 (ASSUMED, on the teacher checklist).
 - **Hash routing is required.** Routes are `#/today`, `#/library`, etc., so the app works under a relative `base: './'` (any GitHub Pages subpath) with no server rewrites. Do not switch to path routing.
 - **Push only when Chris says so.** No remote is configured; do not push or add one without his explicit go-ahead.
 - **MIDI stays behind `src/midi/input.ts`.** Downstream code consumes notes only as `MidiEvent`s from `src/midi/input.ts` (`onKeyboard`, `onClear`, `heldNotes`). Connection status (`midiStatus`) and connect/disconnect come from `src/midi/access.ts`; nothing else touches `navigator.requestMIDIAccess`. Event timestamps are ms in the `performance.now()` timebase; all other MIDI messages are dropped.
-- **Play thresholds are ASSUMED.** All run/evenness/suggestion constants live in `src/play/thresholds.ts`; tune on the Roli, don't scatter new magic numbers.
+- **Play thresholds are ASSUMED.** All run/evenness/suggestion constants and the drill's time limits (`DRILL_SLOW_MS`, `DRILL_FAST_MS`) live in `src/play/thresholds.ts`; tune on the Roli, don't scatter new magic numbers.
+- **The tile decides the hand** (replaces phase 2's P15 octave-based hand guess). In a session scale step the rep tiles fill in order; the current tile (`currentTile` in `autoCheck.ts`: the picked tile if still empty, else the first empty one) says which hand a finished run counts for. A run whose shape doesn't match the tile (Together vs single hand) is `wrongShape`: it ticks nothing and shows `wrongShapeText` for `WRONG_SHAPE_NOTE_MS`. Never infer the hand from the octave played.
 
 ## Phase 2 modules (MIDI + Play)
 
@@ -34,6 +35,15 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 - `src/audio/live.ts` — live sampler voices for keyboard notes (`unlock.ts` gates all audio on a user gesture).
 - `src/ui/screens/play/` — Play tab (`Play.tsx`, `PlayPicker`, `RunResult`, `usePlayRun`, `playView.ts` and `playRun.ts` are pure; `playState.ts` holds the signals). Session auto-check lives in `src/ui/screens/steps/` (`autoCheck.ts`, `useAutoCheck.ts`); `src/ui/components/MidiChip.tsx` is the connect/status chip. `src/ui/unlockOnTap.ts` is the one app-level "tap anywhere to turn on sound" listener (armed from `main.tsx`); `UnlockPrompt` shows that prompt on screens without a chip.
 - Settings added: `midiEnabled` (default false), `keyboardSound` (default true).
+
+## Phase 3 modules (why, keys, drill)
+
+- `src/theory/keyNames.ts` — names and landmark routes for the 12 piano keys by pitch class (`keyName`, `keyLabel`, `landmarkRoute`, `routeText`, `nearbyChoices`). No tonal.
+- `src/theory/circle.ts` — the circle of fifths in the app's spelling (`CIRCLE`, `circleIndex`), used by the Library circle page and the deck's why pictures. `src/theory/recall.ts` now carries each card's `why` picture data and `whyText`.
+- `src/drill/` — name-that-key: `levels.ts` (`LEVEL_KEYS`, `drillLevel`; levels are sticky via `settings.lastDrillLevel`), `round.ts` (`buildRound`, `withRepeat`, `gradeAnswer`, `shouldGrade`, `gradeFirstAnswer`). Key items are a new id family, `key:<PC_ASCII>` (`key:C`, `key:F#`), on the same box scheduler; parse them with `parseKeyId`, not `parseId`.
+- UI: `src/ui/components/DrillRound.tsx` + `drillView.ts` + `useDrillRound.ts` (one round, shared by the session's `steps/DrillStep.tsx` and Play's `play/PlayKeys.tsx`, so both grade the same way), `Wheel.tsx`, `WhyPicture.tsx`, `steps/DeckStep.tsx` (the warm-up flip deck), `library/CirclePanel.tsx`.
+- Session order: drill → deck → each scale and its chord set → free play (`session/builder.ts`). Session scales are always one octave (`SESSION_OCTAVES`); `settings.octaves` is gone and an old saved value is ignored.
+- Settings added: `playLabels` (`'off' | 'names' | 'degrees'`, default names), `lastDrillLevel` (1–4, only rises; Redo placement resets it).
 
 ## Dev hooks (DEV builds only, stripped from `dist/`)
 
