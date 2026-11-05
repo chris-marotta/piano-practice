@@ -1,5 +1,6 @@
 import { useEffect } from 'preact/hooks'
 import { KEYS_DEF } from '../../../drill/keys'
+import { STAFF_DEF } from '../../../drill/staff'
 import { loadPiano, stopAll } from '../../../audio/piano'
 import { audioReady, unlockAudio } from '../../../audio/unlock'
 import { midiStatus } from '../../../midi/access'
@@ -7,6 +8,7 @@ import { clearKeyboard, emitKeyboard, heldNotes, onKeyboard } from '../../../mid
 import { formatNote, formatScale } from '../../../theory/format'
 import { keyboardBox, keyboardFitVars } from '../../components/keyboardLayout'
 import { KEYS_UI } from '../../components/keysUi'
+import { STAFF_UI } from '../../components/staffUi'
 import { MidiChip } from '../../components/MidiChip'
 import { Segmented } from '../../components/Segmented'
 import { app, update } from '../../state'
@@ -39,6 +41,7 @@ import {
   guidedStatus,
   KEYS_ROUND_QUESTIONS,
   pickerSummary,
+  STAFF_ROUND_QUESTIONS,
   playMarks,
   reserveRowsFor,
   shiftWindow,
@@ -59,6 +62,7 @@ const MODES: { value: PlayMode; label: string }[] = [
   { value: 'guided', label: 'Guided' },
   { value: 'check', label: 'Check' },
   { value: 'keys', label: 'Keys' },
+  { value: 'staff', label: 'Staff' },
 ]
 
 const HANDS: { value: PlayHand; label: string }[] = [
@@ -84,7 +88,7 @@ const TAP_VELOCITY = 80
 const PLAY_KEY_PX = 80
 
 function modeHint(mode: PlayMode, target: PlayTarget): string | null {
-  if (mode === 'keys') return null
+  if (mode === 'keys' || mode === 'staff') return null
   if (target.kind === 'none') return 'Pick a scale or chord for Guided and Check'
   if (!checkAvailable(target)) return 'Check works with scales'
   return null
@@ -128,8 +132,8 @@ export function Play() {
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
   const guide = run?.guide() ?? null
   const win = shownWindow({ mode: m, target, fitted: fitted.value, follow: keyWindow.value, guide })
-  const keys = m === 'keys'
-  const droneOn = t.drone && target.kind !== 'none' && !keys
+  const drill = m === 'keys' || m === 'staff'
+  const droneOn = t.drone && target.kind !== 'none' && !drill
   useDrone(rootOf(target), droneOn, app.value.settings.droneVolumeDb)
 
   useEffect(() => {
@@ -187,13 +191,29 @@ export function Play() {
             {hint}
           </p>
         )}
+        {m === 'staff' && (
+          <Toggle
+            label="Exact octave"
+            on={app.value.settings.staffExactOctave}
+            onChange={(on) => update((st) => withSettings(st, { staffExactOctave: on }))}
+          />
+        )}
         <div class="play-head__chip">
           <MidiChip />
         </div>
       </header>
 
-      {keys ? (
-        <PlayDrill def={KEYS_DEF} ui={KEYS_UI} count={KEYS_ROUND_QUESTIONS} />
+      {m === 'keys' ? (
+        <PlayDrill key="keys" def={KEYS_DEF} ui={KEYS_UI} count={KEYS_ROUND_QUESTIONS} mode="keys" />
+      ) : m === 'staff' ? (
+        <PlayDrill
+          key="staff"
+          def={STAFF_DEF}
+          ui={STAFF_UI}
+          count={STAFF_ROUND_QUESTIONS}
+          mode="staff"
+          exactOctave={app.value.settings.staffExactOctave}
+        />
       ) : (
         <>
           {collapsed ? (

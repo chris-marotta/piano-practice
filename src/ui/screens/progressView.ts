@@ -1,12 +1,15 @@
 // Pure view model for the Progress screen (no Preact, no window): unit tested in node.
 import { KEYS_DEF } from '../../drill/keys'
-import { keyId, stateFor } from '../../srs/items'
+import { STAFF_DEF } from '../../drill/staff'
+import { keyId, staffId, stateFor } from '../../srs/items'
 import type { Settings } from '../../srs/items'
 import type { ItemState } from '../../srs/scheduler'
 import type { SessionLog } from '../../store/storage'
 import { minutesTotals, practicedDays, streak } from '../../store/streak'
 import { formatNote } from '../../theory/format'
 import { keyLabel } from '../../theory/keyNames'
+import { chroma } from '../../theory/scales'
+import { STAFF_LEVEL_NOTES } from '../../theory/staff'
 import { formatDay, weekdayShort } from '../formatDate'
 import { placementColumns, placementRows } from './placementGrid'
 import type { GridColumn } from './placementGrid'
@@ -86,7 +89,39 @@ export function keyCells(items: Record<string, ItemState>, today: string, settin
 
 /** The line under the Keys row: where the name-that-key ladder stands. */
 export function keysLevelText(level: number): string {
-  return `Level ${level} of 4 · ${KEYS_DEF.levelNames[level]}`
+  return `Level ${level} of ${KEYS_DEF.levelCount} · ${KEYS_DEF.levelNames[level]}`
+}
+
+/** The line under the Staff row: where the staff ladder stands. */
+export function staffLevelText(level: number): string {
+  return `Level ${level} of ${STAFF_DEF.levelCount} · ${STAFF_DEF.levelNames[level]}`
+}
+
+const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
+
+/**
+ * The Staff row: the 54 staff notes in 5 level groups (levels 1-5; the speed level adds none), in introduction order,
+ * shaded by box. `label` is the note ("C4", "F♯4"); the clef is in the description.
+ */
+export function staffCells(
+  items: Record<string, ItemState>,
+  today: string,
+  settings: Settings,
+): { group: 1 | 2 | 3 | 4 | 5; cells: KeyCell[] }[] {
+  return ([1, 2, 3, 4, 5] as const).map((group) => ({
+    group,
+    cells: STAFF_LEVEL_NOTES[group].map(({ clef, note }) => {
+      const s = stateFor(staffId(clef, note), items, today, settings)
+      const label = formatNote(note)
+      const name = `${capital(clef)} ${label}`
+      return {
+        pc: chroma(note),
+        label,
+        box: s.introduced ? s.box : null,
+        description: s.introduced ? `${name}: box ${s.box} of 5` : `${name}: not started`,
+      }
+    }),
+  }))
 }
 
 export const MASTERY_LEGEND: { shade: 1 | 2 | 3 | 4 | 5; label: string }[] = [

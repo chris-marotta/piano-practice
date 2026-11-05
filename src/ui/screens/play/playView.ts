@@ -10,7 +10,7 @@ import { isBlack, whiteKeys, type KeyMark, type ReserveRows } from '../../compon
 import { chordPanel, detection, pickerKeys, type PickerContext } from '../library/libraryView'
 
 export type { PlayLabels }
-export type PlayMode = 'free' | 'guided' | 'check' | 'keys'
+export type PlayMode = 'free' | 'guided' | 'check' | 'keys' | 'staff'
 export type PlayHand = 'rh' | 'lh' | 'together'
 
 export type PlayTarget =
@@ -55,7 +55,7 @@ export function guideAvailable(target: PlayTarget): boolean {
 
 /**
  * The mode actually in force: a mode the target can't use falls back to Free (the chosen one is kept for later).
- * Keys ignores the target, so it is always available.
+ * Keys and Staff ignore the target, so they are always available.
  */
 export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
   if (mode === 'check' && !checkAvailable(target)) return 'free'
@@ -65,10 +65,10 @@ export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
 
 /**
  * The mode to open Play in when something hands it a picked target (the circle page's "Play it"). Keys ignores the
- * target, so landing in Keys would hide the pick behind a name-that-key round: go to Free instead. Others are kept.
+ * target, so landing in Keys (or Staff) would hide the pick behind a drill round: go to Free instead. Others are kept.
  */
 export function modeForPickedTarget(mode: PlayMode): PlayMode {
-  return mode === 'keys' ? 'free' : mode
+  return mode === 'keys' || mode === 'staff' ? 'free' : mode
 }
 
 /** In target is by pitch class. Melodic minor counts its ascending and descending (natural) forms together. */
@@ -358,6 +358,9 @@ function withLabelsAndRoots(marks: KeyMark[], a: MarksArgs): KeyMark[] {
 /** Keys mode: questions in one round (spec §6.6). */
 export const KEYS_ROUND_QUESTIONS = 8
 
+/** Staff mode: questions in one round. */
+export const STAFF_ROUND_QUESTIONS = 6
+
 /** Badge rows to keep free so the keys don't jump while a run goes on (none where no finger can show). */
 export function reserveRowsFor(mode: PlayMode, target: PlayTarget, hand: PlayHand): ReserveRows {
   if (mode !== 'guided') return false
@@ -410,7 +413,7 @@ export function targetTitle(target: PlayTarget): string {
 }
 
 const INVERSION_NAMES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion']
-const MODE_WORD: Record<PlayMode, string> = { free: 'Free', guided: 'Guided', check: 'Check', keys: 'Keys' }
+const MODE_WORD: Record<PlayMode, string> = { free: 'Free', guided: 'Guided', check: 'Check', keys: 'Keys', staff: 'Staff' }
 const HAND_SHORT: Record<PlayHand, string> = { rh: 'RH', lh: 'LH', together: 'Together' }
 const HAND_WORD = { rh: 'Right hand', lh: 'Left hand', together: 'Hands together' } as const
 const plain = (name: string): string => formatNote(name.replace(/-?\d+$/, ''))
@@ -420,7 +423,7 @@ const slipWord = (n: number): string => `${n} slip${n === 1 ? '' : 's'}`
  * The one line the picker collapses to once Chris plays: "D major · 1 oct · Guided RH", "A harmonic minor · 2 oct ·
  * Check Together", "C major chord, 1st inversion · Guided". Only a scale in Guided or Check names a hand (`hand`: the
  * one in force, see fitHand); a chord has no octaves; the chord's name and inversion are the Library's (chordPanel).
- * Keys mode ignores the target: "Keys · Level 2" (`drillLevel`, the level of the round on screen).
+ * Keys and Staff ignore the target: "Keys · Level 2", "Staff · Level 3" (`drillLevel`, the level of the round on screen).
  */
 export function pickerSummary(
   target: PlayTarget,
@@ -429,7 +432,7 @@ export function pickerSummary(
   hand: PlayHand,
   drillLevel = 1,
 ): string {
-  if (mode === 'keys') return `Keys · Level ${drillLevel}`
+  if (mode === 'keys' || mode === 'staff') return `${MODE_WORD[mode]} · Level ${drillLevel}`
   if (target.kind === 'none') return 'Free play'
   const modeWord = MODE_WORD[mode]
   if (target.kind === 'chord') {

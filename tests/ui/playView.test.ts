@@ -12,6 +12,7 @@ import {
   modeForPickedTarget,
   followsNotes,
   pickerSummary,
+  STAFF_ROUND_QUESTIONS,
   guideAvailable,
   degreeLabel,
   playMarks,
@@ -25,6 +26,9 @@ import {
   type PlayTarget,
   type PlayToggles,
 } from '../../src/ui/screens/play/playView'
+import { shouldGrade } from '../../src/drill/engine'
+import { STAFF_DEF } from '../../src/drill/staff'
+import type { ItemState } from '../../src/srs/scheduler'
 import { createGuide, type GuideNext, type GuideState } from '../../src/play/guide'
 import { isBlack, whiteKeys } from '../../src/ui/components/keyboardLayout'
 import { CHORD_TYPES, maxInversion } from '../../src/theory/chords'
@@ -727,5 +731,35 @@ describe('pickerSummary: the one line the picker collapses to', () => {
 
   it('nothing picked is just free play', () => {
     expect(pickerSummary(NONE, 1, 'free', 'rh')).toBe('Free play')
+  })
+})
+
+describe('Staff mode', () => {
+  it('is always available, like Keys, and leaves the target alone', () => {
+    expect(effectiveMode('staff', NONE)).toBe('staff')
+    expect(effectiveMode('staff', C_CHORD)).toBe('staff')
+    expect(effectiveMode('staff', G_MAJOR)).toBe('staff')
+  })
+
+  it('a picked target from the circle page sends Staff to Free, as Keys', () => {
+    expect(modeForPickedTarget('staff')).toBe('free')
+  })
+
+  it('the summary names the mode: "Staff · Level 3", never "Keys"', () => {
+    expect(pickerSummary(NONE, 1, 'staff', 'rh', 3)).toBe('Staff · Level 3')
+    expect(pickerSummary(G_MAJOR, 1, 'staff', 'rh', 1)).toContain('Staff')
+    expect(pickerSummary(G_MAJOR, 1, 'staff', 'rh', 1)).not.toContain('Keys')
+  })
+
+  it('a round is 6 questions', () => {
+    expect(STAFF_ROUND_QUESTIONS).toBe(6)
+  })
+
+  it('play grading: a right answer on a not-due item is not graded, a wrong one is', () => {
+    const q = STAFF_DEF.buildQuestion('staff:treble:C4', 'tap', () => 0)
+    const notDue: ItemState = { id: q.itemId, introduced: true, box: 3, support: 0, levelStreak: 0, due: '2026-11-10', history: [] }
+    expect(shouldGrade(q, notDue, '2026-11-05', 'play', true)).toBe(false)
+    expect(shouldGrade(q, notDue, '2026-11-05', 'play', false)).toBe(true)
+    expect(shouldGrade(q, { ...notDue, due: '2026-11-05' }, '2026-11-05', 'play', true)).toBe(true)
   })
 })

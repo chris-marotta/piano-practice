@@ -242,6 +242,15 @@ export function Settings() {
             </div>
           </Row>
 
+          <Row label="Exact octave" hint="Tap or play the exact key the staff shows, not just the right letter.">
+            <Segmented
+              options={ON_OFF}
+              value={onOff(settings.staffExactOctave)}
+              onChange={(v) => set({ staffExactOctave: v === 'on' })}
+              label="Exact octave"
+            />
+          </Row>
+
           <h2 class="settings__heading">Keyboard</h2>
           <Row label="MIDI keyboard">
             <div class="settings__midi">

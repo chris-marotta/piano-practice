@@ -245,3 +245,12 @@ describe('export → import round trip', () => {
     if (result.ok) expect(result.state).toEqual(state)
   })
 })
+
+describe('withSettings: Exact octave', () => {
+  it('writes staffExactOctave and leaves the rest', () => {
+    const before = placed()
+    const after = withSettings(before, { staffExactOctave: true })
+    expect(after.settings.staffExactOctave).toBe(true)
+    expect(after.settings).toEqual({ ...before.settings, staffExactOctave: true })
+  })
+})

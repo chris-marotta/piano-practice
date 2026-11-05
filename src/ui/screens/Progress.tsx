@@ -1,5 +1,6 @@
 import { drillLevel } from '../../drill/engine'
 import { KEYS_DEF } from '../../drill/keys'
+import { STAFF_DEF } from '../../drill/staff'
 import { app, resumed, today } from '../state'
 import {
   MASTERY_LEGEND,
@@ -9,6 +10,8 @@ import {
   masteryColumns,
   masteryRows,
   progressStats,
+  staffCells,
+  staffLevelText,
 } from './progressView'
 
 /** Mastery grid (box shade + support mark per scale), streak, minutes, and the last 8 weeks. */
@@ -19,6 +22,7 @@ export function Progress() {
   const columns = masteryColumns(settings)
   const rows = masteryRows(items, settings, date)
   const keys = keyCells(items, date, settings)
+  const staff = staffCells(items, date, settings)
   const stats = progressStats(log, date)
   const calendar = calendarWeeks(log, date)
 
@@ -78,6 +82,28 @@ export function Progress() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div class="keys-row staff-row">
+          <div class="keys-row__head">
+            <h2 class="keys-row__title">Staff</h2>
+            <p class="keys-row__level">{staffLevelText(drillLevel(STAFF_DEF, items, date, settings))}</p>
+          </div>
+          <div class="staff-row__groups" role="table" aria-label="Staff note mastery">
+            {staff.map((g) => (
+              <div key={g.group} class="staff-row__group" role="row" style={{ '--n': String(g.cells.length) }}>
+                {g.cells.map((cell, i) => (
+                  <div
+                    key={i}
+                    class={`mcell mcell--${cell.box ?? 0} scell`}
+                    role="cell"
+                    aria-label={cell.description}
+                    title={cell.description}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         </div>
 

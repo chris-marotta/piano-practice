@@ -21,16 +21,18 @@ interface Props {
   ui: DrillUi
   /** Questions per round. */
   count: number
+  /** Which mode this is, for the summary line. */
+  mode: 'keys' | 'staff'
   /** Staff's exact-octave setting; Keys has none. */
   exactOctave?: boolean
 }
 
 /** One round, built on mount (useDrillRound), with the summary line above it. */
-function DrillRoundOnce({ def, ui, count, exactOctave = false, onNext }: Props & { onNext: () => void }) {
+function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, onNext }: Props & { onNext: () => void }) {
   const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey)
   return (
     <div class="play-keys">
-      <p class="play-keys__summary">{pickerSummary(playTarget.value, octavesSel.value, 'keys', 'rh', setup.level)}</p>
+      <p class="play-keys__summary">{pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level)}</p>
       <DrillRound
         def={def}
         ui={ui}
@@ -47,7 +49,7 @@ function DrillRoundOnce({ def, ui, count, exactOctave = false, onNext }: Props &
 }
 
 /**
- * Play's drill mode (Keys: name-that-key rounds of 8), one round after another (spec §6.6). Only keys that are due, or answered
+ * Play's drill mode (Keys: rounds of 8; Staff: rounds of 6), one round after another (spec §6.6). Only keys that are due, or answered
  * wrong, move a box here (shouldGrade 'play'). "Next round" mounts a fresh round at the level the ratings now give.
  */
 export function PlayDrill(props: Props) {

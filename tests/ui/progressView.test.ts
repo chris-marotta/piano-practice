@@ -4,12 +4,14 @@ import {
   calendarWeeks,
   keyCells,
   keysLevelText,
+  staffCells,
+  staffLevelText,
   formatMinutes,
   masteryColumns,
   masteryRows,
   progressStats,
 } from '../../src/ui/screens/progressView'
-import { DEFAULT_SETTINGS, enabledScales, keyId, placeItems, scaleId } from '../../src/srs/items'
+import { DEFAULT_SETTINGS, enabledScales, keyId, staffId, placeItems, scaleId } from '../../src/srs/items'
 import { rateItem } from '../../src/session/record'
 import { emptyState, type AppState, type SessionLog } from '../../src/store/storage'
 import type { Placement, Settings } from '../../src/srs/items'
@@ -214,5 +216,37 @@ describe('keysLevelText', () => {
     expect(keysLevelText(2)).toBe('Level 2 of 4 · White keys')
     expect(keysLevelText(3)).toBe('Level 3 of 4 · Black keys')
     expect(keysLevelText(4)).toBe('Level 4 of 4 · Speed')
+  })
+})
+
+describe('staffCells: the Staff row', () => {
+  it('is 54 cells in 5 level groups of 4, 10, 10, 10, 20, none started', () => {
+    const groups = staffCells({}, TODAY, DEFAULT_SETTINGS)
+    expect(groups.map((g) => g.group)).toEqual([1, 2, 3, 4, 5])
+    expect(groups.map((g) => g.cells.length)).toEqual([4, 10, 10, 10, 20])
+    expect(groups.flatMap((g) => g.cells)).toHaveLength(54)
+    expect(groups.every((g) => g.cells.every((c) => c.box === null))).toBe(true)
+  })
+
+  it('labels are the note ("C4", "F♯4") and the description names the clef', () => {
+    const groups = staffCells({}, TODAY, DEFAULT_SETTINGS)
+    expect(groups[0]?.cells.map((c) => c.label)).toEqual(['C4', 'C4', 'G4', 'F3'])
+    expect(groups[0]?.cells[0]?.description).toBe('Treble C4: not started')
+    expect(groups[0]?.cells[1]?.description).toBe('Bass C4: not started')
+    expect(groups[4]?.cells[0]?.label).toBe('F♯4')
+  })
+
+  it('a rated note shows its box in words', () => {
+    const rated = rateItem(emptyState(), staffId('treble', 'F#4'), 'nailed', TODAY)
+    const cell = staffCells(rated.items, TODAY, DEFAULT_SETTINGS)[4]?.cells.find((c) => c.label === 'F♯4')
+    expect(cell?.box).toBe(2)
+    expect(cell?.description).toBe('Treble F♯4: box 2 of 5')
+  })
+})
+
+describe('staffLevelText', () => {
+  it('reads the count and names from the staff definition', () => {
+    expect(staffLevelText(3)).toBe('Level 3 of 6 · Bass staff')
+    expect(staffLevelText(6)).toBe('Level 6 of 6 · Speed')
   })
 })

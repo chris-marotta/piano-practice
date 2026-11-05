@@ -51,9 +51,9 @@
   color: var(--text);
 }
 
-/* Thirteen rows: 34 px keeps the page inside the 1180 x 820 iPad viewport (38 px ran 45 px past it). */
+/* Thirteen rows, plus the Keys and Staff rows: 30 px keeps the page inside the 1180 x 820 iPad viewport (38 px ran 45 px past it, 34 px stopped fitting once the Staff row came). */
 .mastery .mcell {
-  height: 34px;
+  height: 30px;
 }
 
 .mcell__root {
@@ -133,6 +133,26 @@
   line-height: 1.1;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+/* Staff row: 54 notes as one strip of swatches, the five level groups side by side (each as wide as its note count).
+   Too many for labels in this column; the note and its box are in each cell's tooltip and aria-label. */
+.staff-row__groups {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.staff-row__group {
+  display: grid;
+  flex: var(--n) 1 0;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 2px;
+}
+
+.scell {
+  height: 22px;
+  padding: 0;
+  border-radius: 3px;
 }
 
 .keys-row__level {
