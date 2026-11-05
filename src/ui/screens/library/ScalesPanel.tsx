@@ -1,12 +1,14 @@
 import { playScale } from '../../../audio/piano'
 import type { ScaleForm } from '../../../theory/scales'
 import { Segmented } from '../../components/Segmented'
+import { Staff } from '../../components/Staff'
 import { app } from '../../state'
 import { ScrollKeyboard } from '../steps/ScrollKeyboard'
 import type { Direction } from '../steps/scaleView'
 import { LIBRARY_OCTAVES, libraryTempo, respellForForm, scalePanel } from './libraryView'
 import { scaleDir, scaleSel } from './libraryState'
 import { RootPicker } from './RootPicker'
+import { staffPanel } from './staffPanelView'
 import { usePiano } from './usePiano'
 
 const FORMS: { value: ScaleForm; label: string }[] = [
@@ -25,6 +27,7 @@ export function ScalesPanel() {
   const ref = scaleSel.value
   const { settings, items } = app.value
   const p = scalePanel(ref, LIBRARY_OCTAVES, scaleDir.value)
+  const staff = staffPanel(ref)
   const withPiano = usePiano()
 
   const setForm = (form: ScaleForm) => {
@@ -83,6 +86,21 @@ export function ScalesPanel() {
           </div>
         </dl>
       </div>
+
+      <section class="lib-staff" aria-label="On the staff">
+        <h3 class="lib-staff__title">On the staff</h3>
+        <div class="lib-staff__pic">
+          <Staff
+            clef="grand"
+            size="library"
+            notes={staff.notes}
+            keySignature={staff.keySignature}
+            label={`${p.title} on the grand staff, up and back down`}
+          />
+        </div>
+        <p class="lib-staff__note">{staff.signatureText}</p>
+        <p class="lib-staff__note lib-staff__note--caption">{staff.caption}</p>
+      </section>
 
       <div class="lib-keyboard lib-keyboard--scale">
         <ScrollKeyboard low={p.keyboard.low} high={p.keyboard.high} marks={p.keyboard.marks} firstMidi={p.keyboard.firstMidi} />
