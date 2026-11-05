@@ -416,3 +416,15 @@ describe('rootDotLook', () => {
     expect(rootDotLook('bad', 'none', true).ring).toBe(true)
   })
 })
+
+describe('keyLooks: sustained (ringing under the pedal)', () => {
+  it('is a glow above the target glow', () => {
+    const looks = keyLooks([{ midi: 62, hand: 'none', state: 'target' }, { midi: 62, hand: 'none', state: 'sustained' }], 60, 71)
+    expect(looks.get(62)).toMatchObject({ fill: null, glow: 'sustained' })
+  })
+
+  it('gives way to a press and to a hand colour (the guided next note)', () => {
+    expect(keyLooks([{ midi: 62, hand: 'none', state: 'sustained' }, { midi: 62, hand: 'none', state: 'pressed' }], 60, 71).get(62)).toMatchObject({ fill: 'pressed' })
+    expect(keyLooks([{ midi: 62, hand: 'none', state: 'sustained' }, { midi: 62, hand: 'rh' }], 60, 71).get(62)).toMatchObject({ fill: 'rh', glow: null })
+  })
+})

@@ -2,10 +2,10 @@ import { useState } from 'preact/hooks'
 import { loadPiano } from '../../audio/piano'
 import { audioReady, unlockAudio } from '../../audio/unlock'
 import { connectMidi, midiStatus } from '../../midi/access'
-import { clearKeyboard } from '../../midi/input'
+import { clearKeyboard, heldNotes } from '../../midi/input'
 import { withSettings } from '../screens/settingsView'
 import { app, update } from '../state'
-import { RESET_LABEL, UNLOCK_PROMPT, chipView } from './midiChipView'
+import { PEDAL_LABEL, RESET_LABEL, UNLOCK_PROMPT, chipView } from './midiChipView'
 
 /** Connect click: unlock audio, start loading samples, then ask for MIDI, all inside the click. */
 function connect(): Promise<void> {
@@ -21,6 +21,8 @@ function connect(): Promise<void> {
  * when connected, otherwise a one-line explanation. After an automatic connect at startup (no click
  * yet), audio is still locked: it shows "Tap anywhere to turn on sound" (Keyboard sound on only).
  * The tap itself is caught app-wide by src/ui/unlockOnTap.ts, on every screen, chip or not.
+ * While connected, "Pedal" lights inside the chip when the sustain pedal is down; its space is kept when it's up,
+ * so pressing the pedal never moves the header.
  */
 export function MidiChip() {
   const status = midiStatus.value
@@ -54,6 +56,9 @@ export function MidiChip() {
             ●
           </span>
           <span class="midi-chip__name">{status.name}</span>
+          <span class={`midi-chip__pedal${heldNotes.value.pedal ? ' is-down' : ''}`} aria-hidden={!heldNotes.value.pedal}>
+            {PEDAL_LABEL}
+          </span>
         </p>
         {view.action === 'reset' && (
           <button type="button" class="btn btn--quiet-line midi-chip__reset" onClick={() => clearKeyboard()}>

@@ -304,6 +304,15 @@ p {
   fill: var(--target-dim-deep);
 }
 
+/* Sustained: a key let go while the pedal is down, still ringing. */
+.key--white.key--sustained {
+  fill: var(--sustain);
+}
+
+.key--black.key--sustained {
+  fill: var(--sustain-deep);
+}
+
 /* The black target key's rim (inset 1.5 inside the key): the glow that carries across a room. */
 .key-rim {
   fill: none;
@@ -467,6 +476,20 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Sustain pedal down: a small tag in the sustained-key tint. Hidden, not removed, when up, so the chip keeps its width. */
+.midi-chip__pedal {
+  visibility: hidden;
+  padding: 2px var(--s-2);
+  border-radius: 6px;
+  background: var(--sustain);
+  color: var(--ink);
+  font-size: var(--fs-small);
+}
+
+.midi-chip__pedal.is-down {
+  visibility: visible;
 }
 
 /* Blocked / no keyboard: something for Chris to fix, marked like other warnings. */

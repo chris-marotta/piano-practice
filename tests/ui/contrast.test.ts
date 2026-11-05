@@ -135,7 +135,7 @@ describe('key state marks contrast (shipped CSS)', () => {
     expect(contrastRatio(label, fill(state))).toBeGreaterThanOrEqual(4.5)
   })
 
-  const glow = (tone: 'white' | 'black', state: 'target' | 'played'): RGB =>
+  const glow = (tone: 'white' | 'black', state: 'sustained' | 'target' | 'played'): RGB =>
     colour(rule(`.key--${tone}.key--${state}`, appCss).fill as string)
 
   it('target and played glows are tints of --good, from tokens (no outline rule left)', () => {
@@ -146,12 +146,20 @@ describe('key state marks contrast (shipped CSS)', () => {
     expect(appCss).not.toMatch(/\.key-target\b/)
   })
 
+  it('sustained (ringing under the pedal) is a pale --pressed tint, lighter than the press and not green', () => {
+    expect(rule('.key--white.key--sustained', appCss).fill).toBe('var(--sustain)')
+    expect(rule('.key--black.key--sustained', appCss).fill).toBe('var(--sustain-deep)')
+    const pressed = colour(rule('.key.key--pressed', appCss).fill as string)
+    expect(contrastRatio(glow('white', 'sustained'), pressed)).toBeGreaterThanOrEqual(1.5)
+    expect(contrastRatio(glow('black', 'sustained'), colour('var(--key-black)'))).toBeGreaterThanOrEqual(1.5)
+  })
+
   it('labels on glowing keys: --ink on white keys, --text on black keys', () => {
     expect(rule('.key-label--white.key-label--glow', appCss).fill).toBe('var(--ink)')
     expect(rule('.key-label--black.key-label--glow', appCss).fill).toBe('var(--text)')
   })
 
-  it.each(['target', 'played'] as const)('a note label is at least 4.5:1 on the %s glow (white and black keys)', (state) => {
+  it.each(['sustained', 'target', 'played'] as const)('a note label is at least 4.5:1 on the %s glow (white and black keys)', (state) => {
     const onWhite = colour(rule('.key-label--white.key-label--glow', appCss).fill as string)
     const onBlack = colour(rule('.key-label--black.key-label--glow', appCss).fill as string)
     expect(contrastRatio(onWhite, glow('white', state))).toBeGreaterThanOrEqual(4.5)

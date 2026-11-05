@@ -43,6 +43,7 @@ function marks(opts: {
   target?: PlayTarget
   toggles?: Partial<PlayToggles>
   held?: number[]
+  sounding?: number[]
   next?: GuideNext
   flash?: number | null
   labels?: PlayLabels
@@ -52,6 +53,7 @@ function marks(opts: {
     target: opts.target ?? G_MAJOR,
     toggles: { ...DEFAULT_TOGGLES, ...opts.toggles },
     held: new Set(opts.held ?? []),
+    ...(opts.sounding ? { sounding: new Set(opts.sounding) } : {}),
     next: opts.next ?? null,
     window: DEFAULT_WINDOW,
     flash: opts.flash ?? null,
@@ -761,5 +763,22 @@ describe('Staff mode', () => {
     expect(shouldGrade(q, notDue, '2026-11-05', 'play', true)).toBe(false)
     expect(shouldGrade(q, notDue, '2026-11-05', 'play', false)).toBe(true)
     expect(shouldGrade(q, { ...notDue, due: '2026-11-05' }, '2026-11-05', 'play', true)).toBe(true)
+  })
+})
+
+describe('playMarks: notes ringing under the sustain pedal', () => {
+  it('a released key still sounding gets a sustained mark; a held key stays pressed, not sustained', () => {
+    const ms = marks({ target: NONE, held: [62], sounding: [60, 62, 64] })
+    expect(ms.filter((m) => m.state === 'sustained').map((m) => m.midi)).toEqual([60, 64])
+    expect(ms.find((m) => m.midi === 62)?.state).toBe('pressed')
+  })
+
+  it('a sustained key outside the window is not drawn', () => {
+    const ms = marks({ target: NONE, sounding: [DEFAULT_WINDOW.high + 1] })
+    expect(ms.some((m) => m.state === 'sustained')).toBe(false)
+  })
+
+  it('no sounding set: nothing sustained (callers without the pedal)', () => {
+    expect(marks({ target: NONE, held: [60] }).some((m) => m.state === 'sustained')).toBe(false)
   })
 })

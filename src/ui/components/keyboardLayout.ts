@@ -2,9 +2,10 @@
 
 /**
  * Live-play states (phase 2). good / bad / pressed fill the key over any hand colour; target is a soft green glow,
- * played a dimmer one (a guided run's notes already played on this leg).
+ * played a dimmer one (a guided run's notes already played on this leg). sustained: let go but still ringing under
+ * the pedal, a pale --pressed tint, the top glow.
  */
-export type KeyState = 'good' | 'bad' | 'pressed' | 'target' | 'played'
+export type KeyState = 'good' | 'bad' | 'pressed' | 'sustained' | 'target' | 'played'
 
 export interface KeyMark {
   midi: number
@@ -147,8 +148,8 @@ export type KeyFill = 'rh' | 'lh' | 'none' | 'split' | 'good' | 'bad' | 'pressed
 
 export interface KeyLook {
   fill: KeyFill | null
-  /** Soft --good tint, no fill (lowest priority: only on an otherwise unmarked key). Target outranks played. */
-  glow: 'target' | 'played' | null
+  /** A tint, no fill (lowest priority: only on an otherwise unmarked key). Sustained > target > played. */
+  glow: 'sustained' | 'target' | 'played' | null
   /** ✓ for good, × for bad, drawn in the label slot. */
   glyph: 'good' | 'bad' | null
   /** First label given for the key. */
@@ -156,14 +157,14 @@ export interface KeyLook {
 }
 
 /** Spec §4.3 priority among states; a hand colour sits between 'pressed' and the glows ('target' > 'played'). */
-const STATE_ORDER: Exclude<KeyState, 'target' | 'played'>[] = ['good', 'bad', 'pressed']
+const STATE_ORDER: Exclude<KeyState, 'sustained' | 'target' | 'played'>[] = ['good', 'bad', 'pressed']
 
 const isRootCarrier = (m: KeyMark): boolean => m.root === true && m.hand === 'none' && m.finger === undefined
 
 /**
  * One look per key in [low, high] (marks outside the range are dropped). A mark with a state
  * contributes that state, not its hand colour; its finger badge is unaffected (see badgeSlots).
- * Priority: good > bad > pressed > hand colour (rh / lh / split / none) > target glow > played glow.
+ * Priority: good > bad > pressed > hand colour (rh / lh / split / none) > sustained > target glow > played glow.
  */
 export function keyLooks(marks: KeyMark[], low: number, high: number): Map<number, KeyLook> {
   const byKey = new Map<number, KeyMark[]>()
@@ -194,7 +195,16 @@ export function keyLooks(marks: KeyMark[], low: number, high: number): Map<numbe
             : hands.has('none')
               ? 'none'
               : null
-    const glow = fill !== null ? null : states.has('target') ? 'target' : states.has('played') ? 'played' : null
+    const glow =
+      fill !== null
+        ? null
+        : states.has('sustained')
+          ? 'sustained'
+          : states.has('target')
+            ? 'target'
+            : states.has('played')
+              ? 'played'
+              : null
     out.set(midi, { fill, glow, glyph: null, label })
   }
   return out

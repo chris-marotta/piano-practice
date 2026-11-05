@@ -12,6 +12,8 @@ export interface ChipView {
 
 export const RESET_LABEL = 'Reset keys'
 export const UNLOCK_PROMPT = 'Tap anywhere to turn on sound'
+/** Lit beside the device name while the sustain pedal is down. */
+export const PEDAL_LABEL = 'Pedal'
 
 /**
  * A keyboard is connected but audio is still locked, so its notes would be silent: the next tap anywhere should

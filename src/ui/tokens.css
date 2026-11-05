@@ -37,6 +37,10 @@
   --target-glow-deep: #456c2d;
   --target-dim-deep: #30442a;
   --target-rim: #a3d977;
+  /* Sustained: let go but still ringing under the pedal. --pressed mixed into the bare key, 45% on white and
+     50% on black: paler than a press, grey not green, so it never reads as a target. */
+  --sustain: #bcc1c9;
+  --sustain-deep: #4a5464;
 
   /* Status */
   --success: #8cc86a;

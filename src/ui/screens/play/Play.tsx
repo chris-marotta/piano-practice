@@ -127,7 +127,7 @@ export function Play() {
   // Check forces the mark toggles off; with nothing picked they have nothing to show, so they read Off too.
   const forced = effectiveToggles(m, t)
   const shown = target.kind === 'none' ? { ...forced, highlight: false, colours: false, fingers: false } : forced
-  const held = heldNotes.value.held
+  const { held, sounding } = heldNotes.value
   const playLabels = app.value.settings.playLabels
   const { run, outcome, flash, again } = usePlayRun(m, target, h)
   const guide = run?.guide() ?? null
@@ -163,7 +163,7 @@ export function Play() {
   ]
   const hint = modeHint(m, target)
   const marksLocked = m === 'check' || target.kind === 'none'
-  const marks = playMarks({ mode: m, target, toggles: t, labels: playLabels, held, next: run?.next() ?? null, window: win, flash, guide })
+  const marks = playMarks({ mode: m, target, toggles: t, labels: playLabels, held, sounding, next: run?.next() ?? null, window: win, flash, guide })
   const reserve = reserveRowsFor(m, target, h)
   const fit = keyboardFitVars(keyboardBox(win.low, win.high, marks, reserve), PLAY_KEY_PX)
   const status = m === 'guided' && guide ? guidedStatus(target, h, guide) : null

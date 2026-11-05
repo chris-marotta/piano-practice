@@ -234,6 +234,8 @@ interface MarksArgs {
   /** Key labels on target keys: none, note names or degrees. Wrong and out-of-target keys never get one. */
   labels: PlayLabels
   held: ReadonlySet<number>
+  /** Notes still sounding (held keys plus keys let go under the sustain pedal); the let-go ones show as sustained. */
+  sounding?: ReadonlySet<number>
   next: GuideNext
   window: KeyWindow
   /** Guided: the key the guide just called wrong (shown bad for 400 ms). */
@@ -308,6 +310,9 @@ export function playMarks(a: MarksArgs): KeyMark[] {
     marks.push({ midi, hand: 'none', state })
   }
   if (flash !== null && !a.held.has(flash) && inWindow(flash)) marks.push({ midi: flash, hand: 'none', state: 'bad' })
+  for (const midi of a.sounding ?? []) {
+    if (!a.held.has(midi) && inWindow(midi)) marks.push({ midi, hand: 'none', state: 'sustained' })
+  }
 
   if (a.mode === 'guided' && a.next) {
     if ('chord' in a.next) {
