@@ -1,5 +1,6 @@
 // Pure view helpers for the name-that-key round (DrillRound), shared by the session and Play. No Preact, no window.
 import { isCorrect, type DrillDef, type Given, type Question, type Verdict } from '../../drill/engine'
+import { DRILL_ADVANCE_GUARD_MS } from '../../play/thresholds'
 import { keyName, landmarkRoute, routeText } from '../../theory/keyNames'
 import type { KeyMark } from './keyboardLayout'
 
@@ -8,6 +9,8 @@ export const DRILL_LOW = 48
 export const DRILL_HIGH = 71
 
 export const NEXT_LABEL = 'Next'
+/** Beside Next on a played question: the key moves on too (advancesOnKey). */
+export const AGAIN_HINT = 'or play it again'
 
 const pcOf = (midi: number): number => ((midi % 12) + 12) % 12
 const isLandmark = (midi: number): boolean => pcOf(midi) === 0 || pcOf(midi) === 5
@@ -77,6 +80,17 @@ function shownTarget(q: Question, picked: number | null, correct: boolean): numb
  * True when an event (stamped `at`, in the performance.now() timebase) happened at or after the current question
  * began (`startedAt`). One stamped earlier belongs to the previous question and must not answer this one.
  */
+/**
+ * Play it again for Next: once a key question is answered, the key you played (or, after a miss or a timeout, the
+ * right key), in any octave, moves on, so your hands stay on the keys. Not inside the guard right after the answer,
+ * so a doubled note-on doesn't skip the why line. Name questions are answered on screen and keep the button.
+ */
+export function advancesOnKey(q: Question, s: AnswerState, midi: number, msSinceAnswer: number): boolean {
+  if (!s.answered || q.format === 'name' || msSinceAnswer < DRILL_ADVANCE_GUARD_MS) return false
+  const played = givenMidi(s.given)
+  return pcOf(midi) === q.pc || (played !== null && pcOf(played) === pcOf(midi))
+}
+
 export function belongsToQuestion(at: number, startedAt: number): boolean {
   return at >= startedAt
 }

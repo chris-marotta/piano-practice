@@ -266,7 +266,19 @@
 }
 
 .drill__next {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   min-width: 200px;
+}
+
+/* "or play it again": the second line inside Next on a played question (the key moves on too). */
+.drill__again {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  opacity: 0.85;
 }
 
 /* ---- Staff drill: the staff beside its prompt, so ladder + staff + keyboard + choices fit one iPad screen ---- */

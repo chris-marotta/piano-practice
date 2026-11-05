@@ -27,3 +27,5 @@ export const DRILL_FAST_MS = 3000
 export const STAFF_SLOW_MS = 6000
 /** Staff drill level 6 (Speed): a right answer slower than this grades Lost (ASSUMED). */
 export const STAFF_FAST_MS = 4000
+/** Drill: after a question is answered on the keys, playing the key again moves on, but not this soon after the answer. */
+export const DRILL_ADVANCE_GUARD_MS = 250

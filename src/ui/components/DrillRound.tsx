@@ -4,7 +4,9 @@ import { midiStatus } from '../../midi/access'
 import { onKeyboard } from '../../midi/input'
 import type { DrillUi } from './drillUi'
 import {
+  AGAIN_HINT,
   TIMED_OUT,
+  advancesOnKey,
   answer,
   belongsToQuestion,
   listeningText,
@@ -73,6 +75,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
   const indexRef = useRef(0)
   const ansRef = useRef<AnswerState>(UNANSWERED)
   const startRef = useRef(performance.now())
+  const answeredAtRef = useRef(0)
   const finished = useRef(false)
   const onAnswerRef = useRef(onAnswer)
   onAnswerRef.current = onAnswer
@@ -87,6 +90,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
     const s = answer(ansRef.current, q, given, Math.round(at - startRef.current), def, exactOctave)
     if (s === ansRef.current || !s.answered) return
     ansRef.current = s
+    answeredAtRef.current = at
     setAns(s)
     if (!s.correct) {
       roundRef.current = withRepeat(roundRef.current, i)
@@ -113,19 +117,27 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
     setIndex(i + 1)
     setAns(UNANSWERED)
   }
+  const nextRef = useRef(next)
+  nextRef.current = next
 
   // The first question's clock starts once it is on screen; later ones start in `next`.
   useEffect(() => {
     if (index === 0) startRef.current = performance.now()
   }, [index])
 
-  // Keyboard notes answer 'tap' and 'play' questions: the first note-on, any octave.
+  // Keyboard notes answer 'tap' and 'play' questions: the first note-on, any octave. Once answered, playing the
+  // key again is Next (advancesOnKey).
   useEffect(
     () =>
       onKeyboard((e) => {
         if (e.type !== 'on') return
         const q = roundRef.current[indexRef.current]
         if (!q || q.format === 'name') return
+        const s = ansRef.current
+        if (s.answered) {
+          if (advancesOnKey(q, s, e.midi, e.t - answeredAtRef.current)) nextRef.current()
+          return
+        }
         giveRef.current({ kind: 'key', midi: e.midi }, e.t)
       }),
     [],
@@ -220,6 +232,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
             </p>
             <button ref={nextBtn} type="button" class="btn btn--primary btn--lg drill__next" onClick={next}>
               {nextLabel(index, round.length, finishLabel)}
+              {q.format === 'play' && status.kind === 'connected' && <span class="drill__again">{AGAIN_HINT}</span>}
             </button>
           </>
         )}

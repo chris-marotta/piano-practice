@@ -9,6 +9,7 @@ import type { KeyMark } from '../../src/ui/components/keyboardLayout'
 import { KEYS_UI } from '../../src/ui/components/keysUi'
 import {
   TIMED_OUT,
+  advancesOnKey,
   answer,
   answerMarks,
   belongsToQuestion,
@@ -19,6 +20,7 @@ import {
   timeLimit,
   type AnswerState,
 } from '../../src/ui/components/drillView'
+import { DRILL_ADVANCE_GUARD_MS } from '../../src/play/thresholds'
 
 const q = (pc: number, midi: number, format: Question['format'] = 'tap'): Question => ({
   itemId: `key:${pc}`,
@@ -267,5 +269,45 @@ describe('belongsToQuestion', () => {
     const staleNote = 6990 // pressed just before Next
     expect(belongsToQuestion(staleNote, oldStart)).toBe(true) // would have been graded against the old start
     expect(belongsToQuestion(staleNote, newStart)).toBe(false)
+  })
+})
+
+describe('advancesOnKey (play it again for Next)', () => {
+  const after = DRILL_ADVANCE_GUARD_MS
+  const right = (qq: Question, midi: number): AnswerState => answer({ answered: false }, qq, { kind: 'key', midi }, 900, KEYS_DEF, false)
+
+  it('playing the same key again moves on, in any octave', () => {
+    const qq = q(2, 50, 'play')
+    const s = right(qq, 62)
+    expect(advancesOnKey(qq, s, 62, after)).toBe(true)
+    expect(advancesOnKey(qq, s, 50, after)).toBe(true)
+  })
+
+  it('after a miss, the key you played or the right key moves on; any other key does not', () => {
+    const qq = q(2, 50, 'play')
+    const s = right(qq, 64)
+    expect(s.answered && s.correct).toBe(false)
+    expect(advancesOnKey(qq, s, 64, after)).toBe(true)
+    expect(advancesOnKey(qq, s, 62, after)).toBe(true)
+    expect(advancesOnKey(qq, s, 65, after)).toBe(false)
+  })
+
+  it('after a timeout, the right key moves on', () => {
+    const qq = q(2, 50, 'play')
+    const s = answer({ answered: false }, qq, TIMED_OUT, 3000, KEYS_DEF, false)
+    expect(advancesOnKey(qq, s, 62, after)).toBe(true)
+    expect(advancesOnKey(qq, s, 64, after)).toBe(false)
+  })
+
+  it('not before the question is answered, and not inside the guard right after the answer', () => {
+    const qq = q(2, 50, 'play')
+    expect(advancesOnKey(qq, { answered: false }, 62, after)).toBe(false)
+    expect(advancesOnKey(qq, right(qq, 62), 62, after - 1)).toBe(false)
+  })
+
+  it('name questions never move on from a key', () => {
+    const qq = q(2, 50, 'name')
+    const s = answer({ answered: false }, qq, { kind: 'choice', value: 'D' }, 900, KEYS_DEF, false)
+    expect(advancesOnKey(qq, s, 62, after)).toBe(false)
   })
 })
