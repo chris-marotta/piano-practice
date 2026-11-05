@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { staffLayout, type StaffNote } from '../../src/ui/components/staffLayout'
+import { ACC_DROP, staffLayout, type StaffNote } from '../../src/ui/components/staffLayout'
 import { keySignaturePositions } from '../../src/theory/staff'
 
 const n = (note: string, clef: 'treble' | 'bass' = 'treble', extra: Partial<StaffNote> = {}): StaffNote => ({ note, clef, mark: 'plain', ...extra })
@@ -102,7 +102,8 @@ describe('staffLayout', () => {
     const mid = (l.lines[0]!.y + l.lines[4]!.y) / 2
     const pos = keySignaturePositions('#', 3, 'treble')
     expect(pos).toEqual([4, 1, 5])
-    l.sigs.forEach((s, i) => expect(s.y).toBe(mid - (pos[i]! * 20) / 2))
+    // the baseline drops by the glyph's measured offset, so the ink centre lands on the line or space (I1)
+    l.sigs.forEach((s, i) => expect(s.y - (mid - (pos[i]! * 20) / 2)).toBeCloseTo(ACC_DROP['#'] * 20, 6))
   })
 
   it('grand staff puts the key signature on both staves, with flats as ♭', () => {
@@ -135,9 +136,10 @@ describe('staffLayout', () => {
       gap: 20,
     })
     expect(l.accidentals.map((a) => a.text)).toEqual(['♯', '♮', '𝄪', '𝄫', '♭'])
+    const accs = ['#', 'n', '##', 'bb', 'b'] as const
     l.accidentals.forEach((a, i) => {
       expect(a.x).toBeLessThan(l.heads[i]!.x - l.heads[i]!.rx)
-      expect(a.y).toBe(l.heads[i]!.y)
+      expect(a.y - l.heads[i]!.y).toBeCloseTo(ACC_DROP[accs[i]!] * 20, 6)
     })
   })
 
@@ -189,5 +191,42 @@ describe('bass clef dots (C1 re-check of BASS_CLEF_DROP)', () => {
       expect(down).toBeGreaterThan(fLine)
       expect(Math.abs((up + down) / 2 - fLine) / gap).toBeLessThan(0.05)
     }
+  })
+})
+
+describe('accidental glyph offsets (I1)', () => {
+  // Measured in the browser on the bundled Noto Music (canvas measureText / pixel scan, 2026-11-05), as a share of the
+  // font size above the baseline: the ink centre for ♯ ♮ 𝄪, the bowl's centre for ♭ 𝄫.
+  const CENTRE = { '#': 0.131, n: 0.1325, '##': 0.131, b: 0.124, bb: 0.124 } as const
+
+  it('pins the per-glyph drops, in gaps', () => {
+    expect(ACC_DROP).toEqual({ '#': 0.41, n: 0.41, '##': 0.41, b: 0.38, bb: 0.38 })
+  })
+
+  it('puts each glyph\'s ink centre (a flat\'s bowl) on its note, within 0.02 gap, at both sizes', () => {
+    for (const gap of [20, 12]) {
+      for (const acc of ['#', 'n', '##', 'b', 'bb'] as const) {
+        const l = staffLayout({ clef: 'treble', notes: [n('B4', 'treble', { accidental: acc })], gap })
+        const a = l.accidentals[0]!
+        expect(Math.abs(a.y - CENTRE[acc] * a.size - l.heads[0]!.y) / gap, acc).toBeLessThan(0.02)
+      }
+    }
+  })
+
+  it('key signatures: F♯ major ink on F5 (top line), C5, G5…; A♭ major bowls on B4 (middle line), E5…', () => {
+    for (const [accidental, count, notes] of [['#', 6, ['F5', 'C5', 'G5', 'D5', 'A4', 'E5']], ['b', 4, ['B4', 'E5', 'A4', 'D5']]] as const) {
+      const l = staffLayout({ clef: 'treble', notes: [], keySignature: { accidental, count }, gap: 12 })
+      const mid = (l.lines[0]!.y + l.lines[4]!.y) / 2
+      l.sigs.forEach((s, i) => {
+        const target = mid - (keySignaturePositions(accidental, count, 'treble')[i]! * 12) / 2
+        expect(Math.abs(s.y - CENTRE[accidental] * s.size - target) / 12, notes[i]).toBeLessThan(0.02)
+      })
+    }
+    // top line literally: the first sharp's ink centre is on lines[0]
+    const fs = staffLayout({ clef: 'treble', notes: [], keySignature: { accidental: '#', count: 1 }, gap: 12 })
+    expect(Math.abs(fs.sigs[0]!.y - CENTRE['#'] * fs.sigs[0]!.size - fs.lines[0]!.y)).toBeLessThan(0.25)
+    // bass B♭ on the 2nd line from the bottom
+    const bb = staffLayout({ clef: 'bass', notes: [], keySignature: { accidental: 'b', count: 1 }, gap: 12 })
+    expect(Math.abs(bb.sigs[0]!.y - CENTRE.b * bb.sigs[0]!.size - bb.lines[3]!.y)).toBeLessThan(0.25)
   })
 })

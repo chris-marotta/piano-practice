@@ -79,6 +79,18 @@ describe('keySignaturePositions', () => {
     expect(keySignaturePositions('#', 7, 'bass')).toEqual(pos(['F3', 'C3', 'G3', 'D3', 'A2', 'E3', 'B2'], 'bass'))
     expect(keySignaturePositions('b', 7, 'treble')).toEqual(pos(['B4', 'E5', 'A4', 'D5', 'G4', 'C5', 'F4'], 'treble'))
   })
+
+  // Literal positions (lines -4..4, bottom to top; odd = space), not derived from the note lists.
+  it('pins the engraved places: F♯ on the treble top line, B♭ on the bass 2nd line', () => {
+    expect(keySignaturePositions('#', 1, 'treble')).toEqual([4])
+    expect(keySignaturePositions('b', 1, 'bass')).toEqual([-2])
+    expect(keySignaturePositions('b', 1, 'treble')).toEqual([0])
+    expect(keySignaturePositions('#', 1, 'bass')).toEqual([2])
+    expect(keySignaturePositions('#', 7, 'treble')).toEqual([4, 1, 5, 2, -1, 3, 0])
+    expect(keySignaturePositions('b', 7, 'treble')).toEqual([0, 3, -1, 2, -2, 1, -3])
+    expect(keySignaturePositions('#', 7, 'bass')).toEqual([2, -1, 3, 0, -3, 1, -2])
+    expect(keySignaturePositions('b', 7, 'bass')).toEqual([-2, 1, -3, 0, -4, -1, -5])
+  })
 })
 
 describe('writtenAccidental', () => {

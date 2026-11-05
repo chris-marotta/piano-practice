@@ -68,6 +68,14 @@ const ACC_SIZE = 3.1
 // the font size above its baseline (2.39 gaps on average at CLEF_SIZE), so 0.39 centres them on the F line, 0.4 gap either side.
 const BASS_CLEF_DROP = 0.39
 
+/**
+ * How far below its line or space each accidental's baseline goes, in gaps, so the glyph reads on it. Noto Music's
+ * ♯ ♮ 𝄪 are not centred on their baseline: measured in the browser (canvas measureText on the bundled font), their ink
+ * centre is 0.131–0.133 of the font size above it, 0.41 gap at ACC_SIZE. ♭ and 𝄫 sit almost wholly above the baseline;
+ * their bowl's centre is 0.124 of the size above it (pixel scan), 0.38 gap. Used for key signatures and note accidentals.
+ */
+export const ACC_DROP: Record<Exclude<StaffAccidental, ''>, number> = { '#': 0.41, n: 0.41, '##': 0.41, b: 0.38, bb: 0.38 }
+
 export const ACCIDENTAL_TEXT: Record<Exclude<StaffAccidental, ''>, string> = {
   '#': formatNote('C#').slice(1),
   b: formatNote('Cb').slice(1),
@@ -155,7 +163,7 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
     glyphClefs.push({ x: clefX, y: c === 'treble' ? yOf(-2, c) : yOf(-2, c) + BASS_CLEF_DROP * g, text: c === 'treble' ? '\u{1D11E}' : '\u{1D122}', size: CLEF_SIZE * g, kind: 'clef' })
     if (sig) {
       keySignaturePositions(sig.accidental, sig.count, c).forEach((pos, i) => {
-        sigs.push({ x: sigX0 + (i + 0.5) * SIG_STEP * g, y: yOf(pos, c), text: ACCIDENTAL_TEXT[sig.accidental], size: ACC_SIZE * g, kind: 'sig' })
+        sigs.push({ x: sigX0 + (i + 0.5) * SIG_STEP * g, y: yOf(pos, c) + ACC_DROP[sig.accidental] * g, text: ACCIDENTAL_TEXT[sig.accidental], size: ACC_SIZE * g, kind: 'sig' })
       })
     }
   }
@@ -190,7 +198,7 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
       ledgers.push({ x1: cx - (HEAD_RX + LEDGER_OVER) * g, x2: cx + (HEAD_RX + LEDGER_OVER) * g, y: ly })
     }
     if (n.accidental) {
-      accidentals.push({ x: cx - ACC_LEFT * g - HEAD_RX * g + 0.25 * g, y: cy, text: ACCIDENTAL_TEXT[n.accidental], size: ACC_SIZE * g, kind: 'accidental' })
+      accidentals.push({ x: cx - ACC_LEFT * g - HEAD_RX * g + 0.25 * g, y: cy + ACC_DROP[n.accidental] * g, text: ACCIDENTAL_TEXT[n.accidental], size: ACC_SIZE * g, kind: 'accidental' })
     }
   }
 
