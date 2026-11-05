@@ -15,6 +15,13 @@ describe('staffLayout', () => {
     expect(l.height).toBeGreaterThan(ys[4]!)
   })
 
+  it('bass clef baseline is just under the 2nd line from the bottom, so the F clef wraps the F line (not 2 gaps high)', () => {
+    const l = staffLayout({ clef: 'bass', notes: [], gap: 20 })
+    const secondFromBottom = l.lines[3]!.y
+    expect(l.clefs[0]!.y).toBeGreaterThan(secondFromBottom)
+    expect(l.clefs[0]!.y).toBeLessThan(secondFromBottom + 20)
+  })
+
   it('bass clef uses the bass glyph', () => {
     expect(staffLayout({ clef: 'bass', notes: [], gap: 20 }).clefs[0]!.text).toBe('\u{1D122}')
   })

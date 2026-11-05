@@ -58,6 +58,7 @@ const ACC_LEFT = 1.15 // accidental centre, left of the head centre
 const END_PAD = 2.2
 const CLEF_SIZE = 3.7 // font-size, in gaps
 const ACC_SIZE = 3.1
+const BASS_CLEF_DROP = 0.3 // bass clef baseline, in gaps below the 2nd line from the bottom
 
 export const ACCIDENTAL_TEXT: Record<Exclude<StaffAccidental, ''>, string> = {
   '#': formatNote('C#').slice(1),
@@ -138,8 +139,10 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
   const sigs: Glyph[] = []
   for (const c of clefs) {
     for (let i = 4; i >= -4; i -= 2) lines.push({ x1: barX, x2: width, y: yOf(i, c) })
-    // The clef glyphs are drawn on their own line: G (treble, 2nd line) and F (bass, 4th line).
-    glyphClefs.push({ x: clefX, y: yOf(c === 'treble' ? -2 : 2, c), text: c === 'treble' ? '\u{1D11E}' : '\u{1D122}', size: CLEF_SIZE * g, kind: 'clef' })
+    // Treble: the glyph's baseline is the G line (2nd line). Noto Music's F clef sits wholly above its baseline
+    // (ink 7.5 to 66.6 px at size 74), so its baseline goes just under the 2nd line to put the ink from the top line to
+    // the 2nd line, the dots either side of the F line (measured in the browser at gap 20; the baseline on the F line drew it 2 gaps high).
+    glyphClefs.push({ x: clefX, y: c === 'treble' ? yOf(-2, c) : yOf(-2, c) + BASS_CLEF_DROP * g, text: c === 'treble' ? '\u{1D11E}' : '\u{1D122}', size: CLEF_SIZE * g, kind: 'clef' })
     if (sig) {
       keySignaturePositions(sig.accidental, sig.count, c).forEach((pos, i) => {
         sigs.push({ x: sigX0 + (i + 0.5) * SIG_STEP * g, y: yOf(pos, c), text: ACCIDENTAL_TEXT[sig.accidental], size: ACC_SIZE * g, kind: 'sig' })

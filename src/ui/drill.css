@@ -231,3 +231,15 @@
 .drill__next {
   min-width: 200px;
 }
+
+/* ---- Staff drill: the staff beside its prompt, so ladder + staff + keyboard + choices fit one iPad screen ---- */
+
+.staff-ask {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+
+.staff-ask .staff {
+  flex: none;
+}

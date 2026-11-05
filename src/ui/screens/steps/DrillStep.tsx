@@ -6,7 +6,7 @@ import type { DrillUi } from '../../components/drillUi'
 import { NEXT_LABEL } from '../../components/drillView'
 import { useDrillRound } from '../../components/useDrillRound'
 
-type DrillStepData = Extract<Step, { kind: 'drill' }>
+type DrillStepData = Extract<Step, { kind: 'drill' | 'staff' }>
 
 interface Props {
   def: DrillDef

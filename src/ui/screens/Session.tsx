@@ -1,11 +1,13 @@
 import { useEffect } from 'preact/hooks'
 import { stopAll } from '../../audio/piano'
 import { KEYS_DEF } from '../../drill/keys'
+import { STAFF_DEF } from '../../drill/staff'
 import { midiStatus } from '../../midi/access'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
 import { KEYS_UI } from '../components/keysUi'
 import { MidiChip } from '../components/MidiChip'
+import { STAFF_UI } from '../components/staffUi'
 import { app, currentSession, route, today, update } from '../state'
 import { useWakeLock } from '../useWakeLock'
 import { Done } from './Done'
@@ -83,6 +85,18 @@ export function Session() {
   let body
   if (step.kind === 'drill')
     body = <DrillStep key={i} def={KEYS_DEF} ui={KEYS_UI} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
+  else if (step.kind === 'staff')
+    body = (
+      <DrillStep
+        key={i}
+        def={STAFF_DEF}
+        ui={STAFF_UI}
+        step={step}
+        exactOctave={settings.staffExactOctave}
+        onRate={(id, r) => rateInStep(i, id, r)}
+        onDone={() => advance(i)}
+      />
+    )
   else if (step.kind === 'deck')
     body = <DeckStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
   else if (step.kind === 'scale')
