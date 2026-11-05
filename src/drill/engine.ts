@@ -86,6 +86,16 @@ function poolFor(def: DrillDef, level: number): string[] {
   return pool
 }
 
+/** A picked level's own items (Play: practise one level); the speed level has none of its own, so it takes them all. */
+function pickedPool(def: DrillDef, level: number): string[] {
+  return level >= def.levelCount ? poolFor(def, level) : def.levelItems(level)
+}
+
+/** Practising a level above the one unlocked: answers there move no box and unlock nothing. */
+export function practiceOnly(picked: number | null, unlocked: number): boolean {
+  return picked !== null && picked > unlocked
+}
+
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
 /**
@@ -109,16 +119,17 @@ function orderPool(def: DrillDef, pool: string[], items: Record<string, ItemStat
  * level before it). When the pool is smaller than `count` it cycles. Formats alternate per item (spec §3.4): an
  * item's first appearance is 'name' when its place in the pool order is even, else 'tap', and each later appearance
  * flips that item's previous format. With `midi` every format is 'play'. Deterministic for a given `rng`.
+ * `level` (Play's level picker) drills that level's own items instead, locked or not (pickedPool).
  */
 export function buildRound(
   def: DrillDef,
   items: Record<string, ItemState>,
   today: string,
   settings: Settings,
-  opts: { count: number; midi: boolean; rng: () => number },
+  opts: { count: number; midi: boolean; rng: () => number; level?: number },
 ): Question[] {
-  const level = drillLevel(def, items, today, settings)
-  const order = orderPool(def, poolFor(def, level), items, today, settings)
+  const pool = opts.level === undefined ? poolFor(def, drillLevel(def, items, today, settings)) : pickedPool(def, opts.level)
+  const order = orderPool(def, pool, items, today, settings)
   const lastMidi = new Map<string, number>()
   const lastFormat = new Map<string, 'name' | 'tap'>()
   const round: Question[] = []

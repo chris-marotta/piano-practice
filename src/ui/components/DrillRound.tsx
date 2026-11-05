@@ -21,6 +21,10 @@ interface Props {
   /** The round as built; DrillRound appends each missed key's practice repeat itself (withRepeat). Key it per round. */
   questions: Question[]
   level: number
+  /** The highest level unlocked, when it differs from `level` (a picked level); defaults to `level`. */
+  reached?: number
+  /** Makes the ladder a picker (Play): every level, locked or not. */
+  onPickLevel?: (level: number) => void
   /** Once per question, on its first answer (repeats included: the caller decides what to grade). */
   onAnswer: (q: Question, correct: boolean, ms: number) => void
   /** Next on the last question. */
@@ -37,26 +41,43 @@ interface Props {
 
 const UNANSWERED: AnswerState = { answered: false }
 
-function Ladder({ def, level }: { def: DrillDef; level: number }) {
+/**
+ * The level ladder: the current level outlined, the unlocked ones up to `reached` in full text, locked ones muted.
+ * With `onPick` (Play) every step is a button, locked ones too.
+ */
+function Ladder({ def, level, reached, onPick }: { def: DrillDef; level: number; reached: number; onPick?: (n: number) => void }) {
   const levels = Array.from({ length: def.levelCount }, (_, i) => i + 1)
   return (
     <ol
-      class={`drill-ladder${def.levelCount > 4 ? ' drill-ladder--many' : ''}`}
+      class={`drill-ladder${def.levelCount > 4 ? ' drill-ladder--many' : ''}${onPick ? ' drill-ladder--pick' : ''}`}
       style={{ '--levels': def.levelCount }}
       aria-label={`Level ${level} of ${def.levelCount}`}
     >
-      {levels.map((n) => (
-        <li
-          key={n}
-          class={`drill-ladder__step${n === level ? ' drill-ladder__step--current' : n < level ? ' drill-ladder__step--done' : ''}`}
-          aria-current={n === level ? 'step' : undefined}
-          title={def.levelHints[n]}
-        >
-          <span class="drill-ladder__num">Level {n}</span>
-          <span class="drill-ladder__name">{def.levelNames[n]}</span>
-          <span class="drill-ladder__hint">{def.levelHints[n]}</span>
-        </li>
-      ))}
+      {levels.map((n) => {
+        const body = (
+          <>
+            <span class="drill-ladder__num">Level {n}</span>
+            <span class="drill-ladder__name">{def.levelNames[n]}</span>
+            <span class="drill-ladder__hint">{def.levelHints[n]}</span>
+          </>
+        )
+        return (
+          <li
+            key={n}
+            class={`drill-ladder__step${n === level ? ' drill-ladder__step--current' : n <= reached ? ' drill-ladder__step--done' : ''}`}
+            aria-current={n === level ? 'step' : undefined}
+            title={def.levelHints[n]}
+          >
+            {onPick ? (
+              <button type="button" class="drill-ladder__pick" aria-pressed={n === level} onClick={() => onPick(n)}>
+                {body}
+              </button>
+            ) : (
+              body
+            )}
+          </li>
+        )
+      })}
     </ol>
   )
 }
@@ -66,7 +87,20 @@ function Ladder({ def, level }: { def: DrillDef; level: number }) {
  * Only the first answer to a question counts: every pick, tap, note and timeout goes through `answer`, which
  * ignores anything after the first, and nothing moves on until Next. A miss gets one practice repeat at the end.
  */
-export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, finishLabel, unlocked = false, exactOctave = false, headNote }: Props) {
+export function DrillRound({
+  def,
+  ui,
+  questions,
+  level,
+  reached = level,
+  onPickLevel,
+  onAnswer,
+  onFinish,
+  finishLabel,
+  unlocked = false,
+  exactOctave = false,
+  headNote,
+}: Props) {
   const [round, setRound] = useState(questions)
   const [index, setIndex] = useState(0)
   const [ans, setAns] = useState<AnswerState>(UNANSWERED)
@@ -194,7 +228,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
               Level {level} unlocked
             </p>
           )}
-          <Ladder def={def} level={level} />
+          <Ladder def={def} level={level} reached={reached} {...(onPickLevel ? { onPick: onPickLevel } : {})} />
         </div>
       )}
       <header class="drill__head">

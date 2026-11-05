@@ -38,6 +38,9 @@ export const toggles = signal<PlayToggles>(DEFAULT_TOGGLES)
  */
 export const pickerCollapsed = signal(false)
 
+/** Play's drill level picker: the level picked in each drill, or null for the unlocked level (the schedule's). */
+export const drillPick = signal<{ keys: number | null; staff: number | null }>({ keys: null, staff: null })
+
 /** A new object only when the selection changes (guide.ts caches per target object). */
 export const playTarget = computed<PlayTarget>(() => {
   const kind = targetKind.value

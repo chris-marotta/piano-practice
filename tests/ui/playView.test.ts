@@ -782,3 +782,10 @@ describe('playMarks: notes ringing under the sustain pedal', () => {
     expect(marks({ target: NONE, held: [60] }).some((m) => m.state === 'sustained')).toBe(false)
   })
 })
+
+describe('pickerSummary: a picked level above the unlocked one', () => {
+  it('says practice', () => {
+    expect(pickerSummary(NONE, 1, 'staff', 'rh', 5, true)).toBe('Staff · Level 5 · practice')
+    expect(pickerSummary(NONE, 1, 'keys', 'rh', 2)).toBe('Keys · Level 2')
+  })
+})

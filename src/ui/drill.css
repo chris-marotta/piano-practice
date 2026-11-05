@@ -109,6 +109,39 @@
   text-overflow: ellipsis;
 }
 
+/* Play: the ladder is a level picker. Each tile is a button carrying the tile's own grid and padding. */
+.drill-ladder--pick .drill-ladder__step {
+  display: block;
+  padding: 0;
+}
+
+.drill-ladder__pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--s-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drill-ladder--many .drill-ladder__pick {
+  padding: var(--s-2) var(--s-1) var(--s-2) var(--s-2);
+  column-gap: 5px;
+}
+
+.drill-ladder__pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ---- question ---- */
 
 .drill__head {

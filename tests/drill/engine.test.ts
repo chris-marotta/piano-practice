@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildRound, gradeAnswer, gradeFirstAnswer, isCorrect, shouldGrade, withRepeat } from '../../src/drill/engine'
+import { buildRound, gradeAnswer, gradeFirstAnswer, isCorrect, practiceOnly, shouldGrade, withRepeat } from '../../src/drill/engine'
 import type { Question } from '../../src/drill/engine'
 import { KEYS_DEF } from '../../src/drill/keys'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
@@ -313,5 +313,33 @@ describe('gradeFirstAnswer', () => {
   it('an already-graded day (session) gives nothing', () => {
     const done = { ...due, history: [{ date: TODAY, rating: 'nailed' as const }] }
     expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), done, TODAY, 'session', true, 1200, 1)).toBeNull()
+  })
+})
+
+describe('buildRound with a picked level (Play: practise any level)', () => {
+  const picked = (level: number, count = 12) =>
+    buildRound(KEYS_DEF, {}, TODAY, DEFAULT_SETTINGS, { count, midi: true, rng: mulberry32(1), level })
+
+  it("drills only the picked level's own items, even when it is locked", () => {
+    expect(new Set(picked(3).map((qq) => qq.pc))).toEqual(new Set([1, 3, 6, 8, 10]))
+    expect(new Set(picked(2).map((qq) => qq.pc))).toEqual(new Set([2, 4, 7, 9, 11]))
+    expect(new Set(picked(1).map((qq) => qq.pc))).toEqual(new Set([0, 5]))
+  })
+
+  it('the speed level drills every item', () => {
+    expect(new Set(picked(4, 24).map((qq) => qq.pc)).size).toBe(12)
+  })
+
+  it('no picked level: the unlocked pool, as before', () => {
+    expect(new Set(round({}, 8, { midi: true }).map((qq) => qq.pc))).toEqual(new Set([0, 5]))
+  })
+})
+
+describe('practiceOnly', () => {
+  it('a picked level above the unlocked one is practice only; at or below it, or no pick, is graded', () => {
+    expect(practiceOnly(3, 1)).toBe(true)
+    expect(practiceOnly(1, 1)).toBe(false)
+    expect(practiceOnly(1, 3)).toBe(false)
+    expect(practiceOnly(null, 1)).toBe(false)
   })
 })

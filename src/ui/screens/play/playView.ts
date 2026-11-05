@@ -436,8 +436,9 @@ export function pickerSummary(
   mode: PlayMode,
   hand: PlayHand,
   drillLevel = 1,
+  practice = false,
 ): string {
-  if (mode === 'keys' || mode === 'staff') return `${MODE_WORD[mode]} · Level ${drillLevel}`
+  if (mode === 'keys' || mode === 'staff') return `${MODE_WORD[mode]} · Level ${drillLevel}${practice ? ' · practice' : ''}`
   if (target.kind === 'none') return 'Free play'
   const modeWord = MODE_WORD[mode]
   if (target.kind === 'chord') {
