@@ -1,13 +1,13 @@
 // The shared drill engine: which items to ask, in what order and format, and how answers become ratings. Pure.
 // A drill (Keys, Staff) supplies a DrillDef; everything else here is the same for both.
 import { stateFor } from '../srs/items'
+import type { Clef } from '../theory/staff'
 import type { Settings } from '../srs/items'
 import type { ItemState, Rating } from '../srs/scheduler'
 
 export type DrillFormat = 'name' | 'tap' | 'play'
 export type Verdict = 'right' | 'otherOctave' | 'wrong'
-/** Local until the staff theory module (src/theory/staff.ts) defines it. */
-export type Clef = 'treble' | 'bass'
+export type { Clef }
 
 /** What the player gave: a name pick, a key (tapped or played), or nothing before the clock ran out. */
 export type Given = { kind: 'choice'; value: string } | { kind: 'key'; midi: number } | { kind: 'timeout' }
