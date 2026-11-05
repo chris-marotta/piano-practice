@@ -9,10 +9,14 @@ import type { KeyMark } from '../../src/ui/components/keyboardLayout'
 import { KEYS_UI } from '../../src/ui/components/keysUi'
 import {
   TIMED_OUT,
+  acceptsPrompt,
   advancesOnKey,
   answer,
   answerMarks,
   belongsToQuestion,
+  clockStart,
+  msUntil,
+  promptPending,
   levelRose,
   raisedLevel,
   listeningText,
@@ -317,5 +321,36 @@ describe('timeLimit for an untimed last level', () => {
     const stub = { ...KEYS_DEF, levelCount: 6, fastMs: null } as DrillDef
     expect(timeLimit(stub, 6)).toBeNull()
     expect(timeLimit(stub, 3)).toBeNull()
+  })
+})
+
+describe('a sound prompt: the clock starts at the onset (DrillRound with ui.startQuestion)', () => {
+  it('no sound played: the clock never starts, so nothing answers the question', () => {
+    expect(clockStart(null)).toBe(Infinity)
+    expect(belongsToQuestion(1e12, clockStart(null))).toBe(false)
+  })
+  it('an event at the onset answers it; one a millisecond before does not', () => {
+    expect(clockStart(4000)).toBe(4000)
+    expect(belongsToQuestion(4000, clockStart(4000))).toBe(true)
+    expect(belongsToQuestion(3999, clockStart(4000))).toBe(false)
+  })
+  it('a stale prompt promise is dropped: only the current token is accepted (Review Focus 1)', () => {
+    expect(acceptsPrompt(1, 2)).toBe(false)
+    expect(acceptsPrompt(2, 2)).toBe(true)
+  })
+  it('the answer time counts from the onset', () => {
+    const s = answer({ answered: false }, q(4, 52), { kind: 'key', midi: 52 }, Math.round(5200 - clockStart(4000)), KEYS_DEF, false)
+    expect(s).toMatchObject({ answered: true, ms: 1200 })
+  })
+  it('msUntil: the wait until the onset, never negative (an onset already past is ready at once)', () => {
+    expect(msUntil(4000, 3750)).toBe(250)
+    expect(msUntil(4000, 4000)).toBe(0)
+    expect(msUntil(4000, 4300)).toBe(0)
+  })
+  it('promptPending: the name buttons wait and retry works while waiting or silent, not once ready or with no prompt', () => {
+    expect(promptPending('waiting')).toBe(true)
+    expect(promptPending('silent')).toBe(true)
+    expect(promptPending('ready')).toBe(false)
+    expect(promptPending('none')).toBe(false)
   })
 })

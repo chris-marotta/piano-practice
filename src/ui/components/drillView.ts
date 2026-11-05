@@ -95,6 +95,32 @@ export function belongsToQuestion(at: number, startedAt: number): boolean {
   return at >= startedAt
 }
 
+/**
+ * Where a sound prompt stands (DrillRound with `ui.startQuestion`): 'waiting' until the note's onset, 'ready' from it,
+ * 'silent' when no sound played. 'none' is a UI without `startQuestion` (Keys, Staff): the clock starts as before.
+ */
+export type PromptState = 'none' | 'waiting' | 'ready' | 'silent'
+
+/** A sound question's clock starts at the note's onset; with no sound it never starts, so nothing answers it. */
+export function clockStart(onset: number | null): number {
+  return onset ?? Infinity
+}
+
+/** A prompt's promise counts only for the call it was made for: an older token (Next or a retry since) is dropped. */
+export function acceptsPrompt(token: number, current: number): boolean {
+  return token === current
+}
+
+/** The wait from `now` until `at` (both performance.now() ms), never negative: an onset already past is ready at once. */
+export function msUntil(at: number, now: number): number {
+  return Math.max(0, at - now)
+}
+
+/** Waiting for the sound or no sound: the name buttons wait (aria-disabled) and the prompt can be re-run (retry). */
+export function promptPending(p: PromptState): boolean {
+  return p === 'waiting' || p === 'silent'
+}
+
 export function answerMarks(q: Question, answeredMidi: number | null, correct: boolean): KeyMark[] {
   const picked = answeredMidi === null ? null : onBoard(answeredMidi)
   const target = shownTarget(q, picked, correct)

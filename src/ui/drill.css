@@ -274,6 +274,19 @@
   color: var(--muted);
 }
 
+/* A sound prompt still on its way (or none played): the names are there to read but can't be picked yet. */
+.drill-choice--waiting {
+  opacity: 0.55;
+}
+
+/* A second, smaller line under a choice's label (Ear: the degree's half-step name). */
+.drill-choice__sub {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
 /* ---- after an answer: why + Next ---- */
 
 .drill__after {
@@ -296,6 +309,12 @@
 
 .drill__why--wrong {
   border-left-color: var(--bad);
+}
+
+/* No sound played: Skip sits where Next would. */
+.drill__skip {
+  margin-left: auto;
+  min-width: 200px;
 }
 
 .drill__next {

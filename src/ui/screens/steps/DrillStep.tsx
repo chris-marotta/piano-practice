@@ -37,6 +37,7 @@ export function DrillStep({ def, ui, step, onRate, onDone, exactOctave = false }
         unlocked={setup.unlocked}
         onAnswer={onAnswer}
         onFinish={onDone}
+        onSkip={onDone}
         finishLabel={NEXT_LABEL}
       />
     </div>

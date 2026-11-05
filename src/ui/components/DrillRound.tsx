@@ -6,13 +6,18 @@ import type { DrillUi } from './drillUi'
 import {
   AGAIN_HINT,
   TIMED_OUT,
+  acceptsPrompt,
   advancesOnKey,
   answer,
   belongsToQuestion,
+  clockStart,
   listeningText,
+  msUntil,
   nextLabel,
+  promptPending,
   timeLimit,
   type AnswerState,
+  type PromptState,
 } from './drillView'
 
 interface Props {
@@ -37,7 +42,11 @@ interface Props {
   exactOctave?: boolean
   /** A short line in the head row between the kicker and the count (Play Staff's "Staff · Level n"). */
   headNote?: string
+  /** With a sound prompt that played nothing ('silent'), a Skip button moves on (the session's next step). */
+  onSkip?: () => void
 }
+
+export const SKIP_LABEL = 'Skip'
 
 const UNANSWERED: AnswerState = { answered: false }
 
@@ -100,6 +109,7 @@ export function DrillRound({
   unlocked = false,
   exactOctave = false,
   headNote,
+  onSkip,
 }: Props) {
   const [round, setRound] = useState(questions)
   const [index, setIndex] = useState(0)
@@ -108,7 +118,15 @@ export function DrillRound({
   const roundRef = useRef(round)
   const indexRef = useRef(0)
   const ansRef = useRef<AnswerState>(UNANSWERED)
-  const startRef = useRef(performance.now())
+  // With a sound prompt the clock waits for the note's onset (Infinity until then: nothing answers before it).
+  const startRef = useRef(ui.startQuestion ? Infinity : performance.now())
+  const [prompt, setPrompt] = useState<PromptState>(ui.startQuestion ? 'waiting' : 'none')
+  const promptRef = useRef(prompt)
+  // Each startQuestion call gets a token; a promise (or its ready timer) from an older call is dropped.
+  const tokenRef = useRef(0)
+  const readyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const uiRef = useRef(ui)
+  uiRef.current = ui
   const answeredAtRef = useRef(0)
   const finished = useRef(false)
   const onAnswerRef = useRef(onAnswer)
@@ -126,6 +144,7 @@ export function DrillRound({
     ansRef.current = s
     answeredAtRef.current = at
     setAns(s)
+    ui.onAnswered?.(q, s)
     if (!s.correct) {
       roundRef.current = withRepeat(roundRef.current, i)
       setRound(roundRef.current)
@@ -135,19 +154,69 @@ export function DrillRound({
   const giveRef = useRef(give)
   giveRef.current = give
 
+  const setPromptNow = (p: PromptState) => {
+    promptRef.current = p
+    setPrompt(p)
+  }
+  const clearReady = () => {
+    if (readyTimer.current !== null) clearTimeout(readyTimer.current)
+    readyTimer.current = null
+  }
+
+  /**
+   * Play question `i`'s sound prompt. The clock and the state are written here, synchronously, before any render: the
+   * clock stops (Infinity) until the onset comes back; then it starts at the onset, and 'ready' shows when the onset
+   * arrives. A null onset is 'silent'. A resolve after Next, a retry or unmount carries an old token and is dropped.
+   */
+  const runPrompt = (i: number) => {
+    const start = ui.startQuestion
+    const q = roundRef.current[i]
+    if (!start || !q) return
+    clearReady()
+    const token = ++tokenRef.current
+    startRef.current = Infinity
+    setPromptNow('waiting')
+    const settle = (onset: number | null) => {
+      if (!acceptsPrompt(token, tokenRef.current)) return
+      startRef.current = clockStart(onset)
+      if (onset === null) {
+        setPromptNow('silent')
+        return
+      }
+      readyTimer.current = setTimeout(() => {
+        if (!acceptsPrompt(token, tokenRef.current)) return
+        readyTimer.current = null
+        setPromptNow('ready')
+      }, msUntil(onset, performance.now()))
+    }
+    // A prompt that fails is treated as no sound (ASSUMED): 'silent', with retry and Skip.
+    start(q, { first: i === 0, level }).then(settle, () => settle(null))
+  }
+  const runPromptRef = useRef(runPrompt)
+  runPromptRef.current = runPrompt
+
+  /** Hear it again before the onset or after no sound: a fresh prompt. After the onset a replay is the Ask's own. */
+  const retry = () => {
+    if (promptPending(promptRef.current)) runPrompt(indexRef.current)
+  }
+
   const next = () => {
     if (!ansRef.current.answered) return
     const i = indexRef.current
     if (i + 1 >= roundRef.current.length) {
       if (finished.current) return
       finished.current = true
+      ui.onLeave?.()
       onFinish()
       return
     }
+    ui.onLeave?.()
     indexRef.current = i + 1
     ansRef.current = UNANSWERED
     // The new question's clock starts now, not after the render: a note in between must not read the old start.
-    startRef.current = performance.now()
+    // With a sound prompt it waits for the new note's onset (runPrompt writes the clock and the state at once).
+    if (ui.startQuestion) runPrompt(i + 1)
+    else startRef.current = performance.now()
     setIndex(i + 1)
     setAns(UNANSWERED)
   }
@@ -156,8 +225,20 @@ export function DrillRound({
 
   // The first question's clock starts once it is on screen; later ones start in `next`.
   useEffect(() => {
-    if (index === 0) startRef.current = performance.now()
+    if (index !== 0) return
+    if (uiRef.current.startQuestion) runPromptRef.current(0)
+    else startRef.current = performance.now()
   }, [index])
+
+  // On unmount: drop any pending prompt or ready timer, and let the UI stop its sound.
+  useEffect(
+    () => () => {
+      tokenRef.current++
+      if (readyTimer.current !== null) clearTimeout(readyTimer.current)
+      uiRef.current.onLeave?.()
+    },
+    [],
+  )
 
   // Keyboard notes answer 'tap' and 'play' questions: the first note-on, any octave. Once answered, playing the
   // key again is Next (advancesOnKey).
@@ -178,12 +259,14 @@ export function DrillRound({
   )
 
   // The speed level: the def's fastMs a question, then it counts as wrong.
+  // With a sound prompt it runs from the onset, once the prompt is ready.
   const limit = timeLimit(def, level)
   useEffect(() => {
-    if (limit === null || ans.answered) return
-    const t = setTimeout(() => giveRef.current(TIMED_OUT, startRef.current + limit), limit)
+    if (limit === null || ans.answered || promptPending(prompt)) return
+    const delay = prompt === 'none' ? limit : msUntil(startRef.current + limit, performance.now())
+    const t = setTimeout(() => giveRef.current(TIMED_OUT, startRef.current + limit), delay)
     return () => clearTimeout(t)
-  }, [limit, index, ans.answered])
+  }, [limit, index, ans.answered, prompt])
 
   // After an answer, Next takes the focus so Enter / Space moves on.
   useEffect(() => {
@@ -194,9 +277,11 @@ export function DrillRound({
   if (!q) return null
   const status = midiStatus.value
   const tappable = q.format !== 'name'
+  // Waiting for the sound (or none played): the name buttons are inactive, and a pick is dropped (the clock hasn't started).
+  const waiting = promptPending(prompt)
 
   const choiceClass = (value: string): string => {
-    if (!ans.answered) return 'drill-choice'
+    if (!ans.answered) return waiting ? 'drill-choice drill-choice--waiting' : 'drill-choice'
     if (value === q.answer) return 'drill-choice drill-choice--right'
     if (ans.given.kind === 'choice' && ans.given.value === value) return 'drill-choice drill-choice--wrong'
     return 'drill-choice drill-choice--other'
@@ -209,10 +294,11 @@ export function DrillRound({
           key={c.value}
           type="button"
           class={choiceClass(c.value)}
-          aria-disabled={ans.answered}
+          aria-disabled={ans.answered || waiting}
           onClick={() => give({ kind: 'choice', value: c.value })}
         >
           {c.label}
+          {c.sub && <span class="drill-choice__sub">{c.sub}</span>}
         </button>
       ))}
     </div>
@@ -239,12 +325,20 @@ export function DrillRound({
         </span>
       </header>
       <div class="drill__ask">
-        <ui.Ask q={q} ans={ans} {...(choicesInAsk && choices ? { choices } : {})} />
+        <ui.Ask
+          q={q}
+          ans={ans}
+          prompt={prompt}
+          retry={retry}
+          first={index === 0}
+          level={level}
+          {...(choicesInAsk && choices ? { choices } : {})}
+        />
         {q.format === 'play' && status.kind === 'connected' && (
           <p class="drill__listening">{listeningText(status.name)}</p>
         )}
       </div>
-      {limit !== null && (
+      {limit !== null && !waiting && (
         <div class="drill__timer" aria-hidden="true">
           <span
             key={index}
@@ -259,6 +353,11 @@ export function DrillRound({
       {!choicesInAsk && choices}
       {/* Always there, so the why line arrives without moving the keyboard. */}
       <div class="drill__after">
+        {!ans.answered && prompt === 'silent' && onSkip && (
+          <button type="button" class="btn btn--lg drill__skip" onClick={onSkip}>
+            {SKIP_LABEL}
+          </button>
+        )}
         {ans.answered && (
           <>
             <p class={`drill__why${ans.correct ? ' drill__why--right' : ' drill__why--wrong'}`} role="status">
