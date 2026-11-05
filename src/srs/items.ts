@@ -27,6 +27,10 @@ export interface Settings {
   staffExactOctave: boolean
   /** The highest Staff drill level reached; sticky like lastDrillLevel. */
   lastStaffLevel: 1 | 2 | 3 | 4 | 5 | 6
+  /** Ear drill: count a played note only in the octave the app played. */
+  earExactOctave: boolean
+  /** The highest Ear drill level reached; sticky like lastDrillLevel. */
+  lastEarLevel: 1 | 2 | 3 | 4 | 5 | 6
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -42,6 +46,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lastDrillLevel: 1,
   staffExactOctave: false,
   lastStaffLevel: 1,
+  earExactOctave: false,
+  lastEarLevel: 1,
 }
 
 // Ids use tonal's ASCII spelling for roots (F#, Bb), never the display glyphs.

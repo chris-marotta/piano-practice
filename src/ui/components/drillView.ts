@@ -44,7 +44,7 @@ export function answer(
   return { answered: true, verdict, correct: isCorrect(verdict, exactOctave), given, ms, exactOctave }
 }
 
-/** The speed level's per-question limit in ms (the def's fastMs), or null below it. DrillRound's timer reads this. */
+/** The speed level's per-question limit in ms (the def's fastMs), or null below it (and null throughout when the def is untimed, fastMs null). DrillRound's timer reads this. */
 export function timeLimit(def: DrillDef, level: number): number | null {
   return level === def.levelCount ? def.fastMs : null
 }

@@ -90,6 +90,8 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
     lastDrillLevel: oneOf(stored.lastDrillLevel, [1, 2, 3, 4] as const, d.lastDrillLevel),
     staffExactOctave: bool(stored.staffExactOctave, d.staffExactOctave),
     lastStaffLevel: oneOf(stored.lastStaffLevel, [1, 2, 3, 4, 5, 6] as const, d.lastStaffLevel),
+    earExactOctave: bool(stored.earExactOctave, d.earExactOctave),
+    lastEarLevel: oneOf(stored.lastEarLevel, [1, 2, 3, 4, 5, 6] as const, d.lastEarLevel),
   }
 }
 

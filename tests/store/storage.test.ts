@@ -275,6 +275,22 @@ describe('lastDrillLevel setting', () => {
   })
 })
 
+describe('ear settings', () => {
+  const load = (settings: object) =>
+    loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings }) })).state.settings
+  it('a save without ear fields loads with the defaults', () => {
+    expect(load({})).toMatchObject({ earExactOctave: false, lastEarLevel: 1 })
+  })
+  it('invalid values fall back to the defaults', () => {
+    for (const bad of [7, '2', null, 0, 2.5]) expect(load({ lastEarLevel: bad }).lastEarLevel).toBe(1)
+    for (const bad of [undefined, 'yes', 1, null]) expect(load({ earExactOctave: bad }).earExactOctave).toBe(false)
+  })
+  it('valid values are kept', () => {
+    expect(load({ earExactOctave: true }).earExactOctave).toBe(true)
+    for (const v of [1, 2, 3, 4, 5, 6]) expect(load({ lastEarLevel: v }).lastEarLevel).toBe(v)
+  })
+})
+
 describe('staff settings', () => {
   const load = (settings: object) =>
     loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings }) })).state.settings
@@ -354,7 +370,7 @@ describe('validation hardening', () => {
       return r.state.settings
     }
     const ok = mk({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', lastDrillLevel: 1, staffExactOctave: false, lastStaffLevel: 1, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', lastDrillLevel: 1, staffExactOctave: false, lastStaffLevel: 1, earExactOctave: false, lastEarLevel: 1, minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

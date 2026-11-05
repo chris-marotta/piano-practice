@@ -15,6 +15,15 @@ export type Given = { kind: 'choice'; value: string } | { kind: 'key'; midi: num
 export interface Choice {
   value: string
   label: string
+  /** An optional second line under the label (Ear: the degree's half-step name). */
+  sub?: string
+}
+
+/** What a round hands every `buildQuestion`: the drilled level, the round's tonic (Ear), and the pool before ordering. */
+export interface QuestionContext {
+  level: number
+  tonic?: string
+  pool: string[]
 }
 
 export interface Question {
@@ -29,25 +38,27 @@ export interface Question {
   /** A practice-only copy of a missed question. Never graded. */
   repeat: boolean
   staff?: { clef: Clef; note: string }
+  ear?: { root: string; tonic: number; target: number; degree: string; withTonic: boolean }
 }
 
 export interface DrillDef {
-  kind: 'keys' | 'staff'
+  kind: 'keys' | 'staff' | 'ear'
   /** Levels 1..levelCount; the last is speed and adds no items. */
   levelCount: number
   /** The item ids introduced at level `n` (1..levelCount-1). */
   levelItems(n: number): string[]
   levelNames: Record<number, string>
   levelHints: Record<number, string>
-  levelSetting: 'lastDrillLevel' | 'lastStaffLevel'
+  levelSetting: 'lastDrillLevel' | 'lastStaffLevel' | 'lastEarLevel'
   slowMs: number
-  fastMs: number
+  /** The speed level's limit in ms, or null when the last level is untimed (Ear). */
+  fastMs: number | null
   /**
    * Tie-break among due items (and among not-yet-due items) after box and due date. Defaults to the item's
    * position in the pool (level order). Keys supplies the pitch class, so its order matches phase 3 exactly.
    */
   tieOrder?(itemId: string): number
-  buildQuestion(itemId: string, format: DrillFormat, rng: () => number, prevMidi?: number): Question
+  buildQuestion(itemId: string, format: DrillFormat, rng: () => number, prevMidi?: number, ctx?: QuestionContext): Question
   judge(q: Question, given: Given): Verdict
 }
 
@@ -126,9 +137,10 @@ export function buildRound(
   items: Record<string, ItemState>,
   today: string,
   settings: Settings,
-  opts: { count: number; midi: boolean; rng: () => number; level?: number },
+  opts: { count: number; midi: boolean; rng: () => number; level?: number; tonic?: string },
 ): Question[] {
-  const pool = opts.level === undefined ? poolFor(def, drillLevel(def, items, today, settings)) : pickedPool(def, opts.level)
+  const level = opts.level ?? drillLevel(def, items, today, settings)
+  const pool = opts.level === undefined ? poolFor(def, level) : pickedPool(def, opts.level)
   const order = orderPool(def, pool, items, today, settings)
   const lastMidi = new Map<string, number>()
   const lastFormat = new Map<string, 'name' | 'tap'>()
@@ -143,7 +155,7 @@ export function buildRound(
       lastFormat.set(id, next)
       format = next
     }
-    const question = def.buildQuestion(id, format, opts.rng, lastMidi.get(id))
+    const question = def.buildQuestion(id, format, opts.rng, lastMidi.get(id), { level, tonic: opts.tonic, pool })
     lastMidi.set(id, question.midi)
     round.push(question)
   }
@@ -164,7 +176,7 @@ export function withRepeat(round: Question[], missedIndex: number): Question[] {
 /** Wrong is lost. At the speed level anything past the fast limit is lost too. Right but past the slow limit is shaky. */
 export function gradeAnswer(def: DrillDef, correct: boolean, ms: number, level: number): Rating {
   if (!correct) return 'lost'
-  if (level === def.levelCount && ms > def.fastMs) return 'lost'
+  if (level === def.levelCount && def.fastMs !== null && ms > def.fastMs) return 'lost'
   if (ms > def.slowMs) return 'shaky'
   return 'nailed'
 }

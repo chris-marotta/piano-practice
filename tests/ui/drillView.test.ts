@@ -311,3 +311,11 @@ describe('advancesOnKey (play it again for Next)', () => {
     expect(advancesOnKey(qq, s, 62, after)).toBe(false)
   })
 })
+
+describe('timeLimit for an untimed last level', () => {
+  it('is null at every level when fastMs is null', () => {
+    const stub = { ...KEYS_DEF, levelCount: 6, fastMs: null } as DrillDef
+    expect(timeLimit(stub, 6)).toBeNull()
+    expect(timeLimit(stub, 3)).toBeNull()
+  })
+})

@@ -40,6 +40,8 @@ describe('defaults', () => {
       lastDrillLevel: 1,
       staffExactOctave: false,
       lastStaffLevel: 1,
+      earExactOctave: false,
+      lastEarLevel: 1,
     })
   })
 })

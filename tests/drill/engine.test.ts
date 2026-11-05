@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildRound, gradeAnswer, gradeFirstAnswer, isCorrect, practiceOnly, shouldGrade, withRepeat } from '../../src/drill/engine'
-import type { Question } from '../../src/drill/engine'
+import type { DrillDef, Question, QuestionContext } from '../../src/drill/engine'
 import { KEYS_DEF } from '../../src/drill/keys'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
 import { PC_ASCII } from '../../src/theory/keyNames'
@@ -341,5 +341,54 @@ describe('practiceOnly', () => {
     expect(practiceOnly(1, 1)).toBe(false)
     expect(practiceOnly(1, 3)).toBe(false)
     expect(practiceOnly(null, 1)).toBe(false)
+  })
+})
+
+describe('ear-ready engine (untimed last level, context)', () => {
+  const stub = (over: Partial<DrillDef> = {}): DrillDef => ({
+    kind: 'ear',
+    levelCount: 6,
+    levelItems: (n) => (n === 1 ? ['a', 'b'] : n === 2 ? ['c'] : []),
+    levelNames: {},
+    levelHints: {},
+    levelSetting: 'lastEarLevel',
+    slowMs: 6000,
+    fastMs: null,
+    buildQuestion: (id) => ({ itemId: id, pc: 0, midi: 60, format: 'name', answer: id, repeat: false }),
+    judge: () => 'right',
+    ...over,
+  })
+
+  it('an untimed last level never loses a right answer to the clock', () => {
+    expect(gradeAnswer(stub(), true, 99999, 6)).toBe('shaky')
+    expect(gradeAnswer(stub(), true, 100, 6)).toBe('nailed')
+    expect(gradeAnswer(stub(), false, 100, 6)).toBe('lost')
+  })
+
+  it('passes a context to buildQuestion', () => {
+    const seen: (QuestionContext | undefined)[] = []
+    const spy = stub({
+      buildQuestion: (id, _f, _r, _p, ctx) => {
+        seen.push(ctx)
+        return { itemId: id, pc: 0, midi: 60, format: 'name', answer: id, repeat: false }
+      },
+    })
+    buildRound(spy, {}, TODAY, DEFAULT_SETTINGS, { count: 3, midi: false, rng: mulberry32(1), tonic: 'A' })
+    expect(seen).toHaveLength(3)
+    for (const c of seen) expect(c).toEqual({ level: 1, tonic: 'A', pool: ['a', 'b'] })
+  })
+
+  it('an explicit level is the context level, and its own items are the pool', () => {
+    const seen: (QuestionContext | undefined)[] = []
+    const spy = stub({
+      buildQuestion: (id, _f, _r, _p, ctx) => {
+        seen.push(ctx)
+        return { itemId: id, pc: 0, midi: 60, format: 'name', answer: id, repeat: false }
+      },
+    })
+    buildRound(spy, {}, TODAY, DEFAULT_SETTINGS, { count: 2, midi: false, rng: mulberry32(1), level: 5 })
+    expect(seen[0]?.level).toBe(5)
+    expect(seen[0]?.tonic).toBeUndefined()
+    expect(seen[0]?.pool).toEqual([])
   })
 })
