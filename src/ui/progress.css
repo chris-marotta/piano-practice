@@ -51,9 +51,9 @@
   color: var(--text);
 }
 
-/* Thirteen rows, plus the Keys and Staff rows: 30 px keeps the page inside the 1180 x 820 iPad viewport (38 px ran 45 px past it, 34 px stopped fitting once the Staff row came). */
+/* Thirteen rows, plus the Keys and Staff rows: 28 px keeps the page inside the 1180 x 820 iPad viewport (38 px ran 45 px past it, 34 px stopped fitting once the Staff row came). */
 .mastery .mcell {
-  height: 30px;
+  height: 28px;
 }
 
 .mcell__root {
@@ -126,7 +126,7 @@
 /* A key cell is a mastery cell with the key's name centred; a black key's two names stack. */
 .kcell {
   justify-content: center;
-  height: 40px;
+  height: 34px;
   padding: 0 2px;
   font-size: 15px;
   font-weight: 700;
@@ -147,6 +147,14 @@
   flex: var(--n) 1 0;
   grid-template-columns: repeat(var(--n), minmax(0, 1fr));
   gap: 2px;
+}
+
+/* The level number over each group (the names don't fit the narrow ones); it spans the group's columns. */
+.staff-row__cap {
+  grid-column: 1 / -1;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
 }
 
 .scell {

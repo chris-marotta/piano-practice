@@ -93,6 +93,9 @@ export function Progress() {
           <div class="staff-row__groups" role="table" aria-label="Staff note mastery">
             {staff.map((g) => (
               <div key={g.group} class="staff-row__group" role="row" style={{ '--n': String(g.cells.length) }}>
+                <span class="staff-row__cap" role="rowheader" aria-label={`Level ${g.group}, ${STAFF_DEF.levelNames[g.group]}`}>
+                  {g.group}
+                </span>
                 {g.cells.map((cell, i) => (
                   <div
                     key={i}
