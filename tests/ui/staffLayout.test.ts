@@ -64,6 +64,21 @@ describe('staffLayout', () => {
     expect(l.barlines[0]!.y2).toBe(bass[4])
   })
 
+  it('barlinesAfterBeat: a full-height barline between the beats, with extra room', () => {
+    const notes = [n('C4', 'treble', { beat: 7 }), n('C4', 'treble', { beat: 8 })]
+    const plain = staffLayout({ clef: 'grand', notes, gap: 12 })
+    const l = staffLayout({ clef: 'grand', notes, gap: 12, barlinesAfterBeat: [7] })
+    expect(l.barlines).toHaveLength(2)
+    const bar = l.barlines[1]!
+    expect(bar.y1).toBe(l.lines[0]!.y)
+    expect(bar.y2).toBe(l.lines[9]!.y)
+    expect(bar.x).toBeGreaterThan(l.heads[0]!.x)
+    expect(bar.x).toBeLessThan(l.heads[1]!.x)
+    expect(l.heads[1]!.x - l.heads[0]!.x).toBeGreaterThan(plain.heads[1]!.x - plain.heads[0]!.x)
+    expect(l.heads[0]!.x).toBe(plain.heads[0]!.x)
+    expect(plain.barlines).toHaveLength(1)
+  })
+
   it('grand staff: treble C4 and bass C4 each sit on their own ledger, between the staves', () => {
     const l = staffLayout({ clef: 'grand', notes: [n('C4', 'treble', { beat: 0 }), n('C4', 'bass', { beat: 1 })], gap: 20 })
     const trebleBottom = l.lines[4]!.y

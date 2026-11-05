@@ -10,6 +10,8 @@ export interface StaffProps {
   notes: StaffNote[]
   keySignature?: { accidental: '#' | 'b'; count: number }
   /** drill: 20 px between lines (reads from the stand); library: 12 px. */
+  /** Draw a barline after each of these beats (the Library puts one between up and down). */
+  barlinesAfterBeat?: number[]
   size: 'drill' | 'library'
   label: string
 }
@@ -30,8 +32,8 @@ function GlyphText({ glyph }: { glyph: Glyph }) {
   )
 }
 
-export function Staff({ clef, notes, keySignature, size, label }: StaffProps) {
-  const l = staffLayout({ clef, notes, keySignature, gap: GAP[size] })
+export function Staff({ clef, notes, keySignature, barlinesAfterBeat, size, label }: StaffProps) {
+  const l = staffLayout({ clef, notes, keySignature, barlinesAfterBeat, gap: GAP[size] })
   return (
     <svg
       class={`staff staff--${size}`}

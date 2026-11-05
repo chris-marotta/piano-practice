@@ -87,6 +87,10 @@ export function ScalesPanel() {
         </dl>
       </div>
 
+      <div class="lib-keyboard lib-keyboard--scale">
+        <ScrollKeyboard low={p.keyboard.low} high={p.keyboard.high} marks={p.keyboard.marks} firstMidi={p.keyboard.firstMidi} />
+      </div>
+
       <section class="lib-staff" aria-label="On the staff">
         <h3 class="lib-staff__title">On the staff</h3>
         <div class="lib-staff__pic">
@@ -95,16 +99,13 @@ export function ScalesPanel() {
             size="library"
             notes={staff.notes}
             keySignature={staff.keySignature}
+            barlinesAfterBeat={[7]}
             label={`${p.title} on the grand staff, up and back down`}
           />
         </div>
         <p class="lib-staff__note">{staff.signatureText}</p>
         <p class="lib-staff__note lib-staff__note--caption">{staff.caption}</p>
       </section>
-
-      <div class="lib-keyboard lib-keyboard--scale">
-        <ScrollKeyboard low={p.keyboard.low} high={p.keyboard.high} marks={p.keyboard.marks} firstMidi={p.keyboard.firstMidi} />
-      </div>
     </div>
   )
 }

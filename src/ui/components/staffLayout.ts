@@ -24,6 +24,8 @@ export interface StaffLayoutOpts {
   notes: StaffNote[]
   keySignature?: { accidental: '#' | 'b'; count: number }
   gap: number
+  /** Draw a barline (spanning both staves of a grand staff) after each of these beats. */
+  barlinesAfterBeat?: number[]
 }
 
 export interface StaffLayout {
@@ -54,6 +56,8 @@ const CLEF_X = 0.5 // from the barline
 const CLEF_W = 3.1
 const SIG_STEP = 1
 const BEAT = 3.2
+const BAR_GAP = 1.2 // extra room where a mid barline falls
+const BAR_AFTER = 1.6 // the barline's distance after the last note's centre
 const ACC_LEFT = 1.15 // accidental centre, left of the head centre
 const END_PAD = 2.2
 const CLEF_SIZE = 3.7 // font-size, in gaps
@@ -130,7 +134,8 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
   const firstX = sigX0 + sigW + 1.6 * g
   const beatOf = (n: StaffNote) => n.beat ?? 0
   const maxBeat = Math.max(0, ...opts.notes.map(beatOf))
-  const xOfBeat = (b: number) => firstX + b * BEAT * g
+  const bars = opts.barlinesAfterBeat ?? []
+  const xOfBeat = (b: number) => firstX + (b * BEAT + bars.filter((k) => k < b).length * BAR_GAP) * g
   const width = xOfBeat(maxBeat) + END_PAD * g
 
   const lines: Line[] = []
@@ -155,6 +160,12 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
     const bottom = yOf(-4, 'bass')
     barlines.push({ x: barX, y1: top, y2: bottom })
     brace = { d: bracePath(barX - 0.15 * g, top, bottom, BRACE_W * g) }
+  }
+
+  for (const k of bars) {
+    const top = yOf(4, clefs[0] as Clef)
+    const bottom = yOf(-4, clefs[clefs.length - 1] as Clef)
+    barlines.push({ x: xOfBeat(k) + BAR_AFTER * g, y1: top, y2: bottom })
   }
 
   const heads: Head[] = []
