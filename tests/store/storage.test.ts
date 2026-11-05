@@ -275,6 +275,30 @@ describe('lastDrillLevel setting', () => {
   })
 })
 
+describe('staff settings', () => {
+  const load = (settings: object) =>
+    loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify({ ...populated(), settings }) })).state.settings
+  it('a phase 3 save (no staff fields) loads with exact octave off and level 1', () => {
+    expect(emptyState().settings).toMatchObject({ staffExactOctave: false, lastStaffLevel: 1 })
+    expect(load({ lastDrillLevel: 3 })).toMatchObject({ staffExactOctave: false, lastStaffLevel: 1, lastDrillLevel: 3 })
+  })
+  it('invalid values fall back to the defaults', () => {
+    for (const bad of [undefined, 'yes', 1, null]) expect(load({ staffExactOctave: bad }).staffExactOctave).toBe(false)
+    for (const bad of [undefined, 0, 7, 2.5, '2', null, true]) expect(load({ lastStaffLevel: bad }).lastStaffLevel).toBe(1)
+  })
+  it('valid values round-trip', () => {
+    expect(load({ staffExactOctave: true }).staffExactOctave).toBe(true)
+    for (const v of [1, 2, 3, 4, 5, 6]) expect(load({ lastStaffLevel: v }).lastStaffLevel).toBe(v)
+  })
+  it('keeps staff items in a stored state', () => {
+    const state = populated()
+    const id = 'staff:treble:C4'
+    state.items[id] = { id, introduced: true, box: 2, support: 0, levelStreak: 0, due: '2026-10-20', history: [] }
+    const loaded = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify(state) })).state
+    expect(loaded.items[id]?.box).toBe(2)
+  })
+})
+
 describe('MIDI settings', () => {
   it('defaults: midiEnabled false, keyboardSound true', () => {
     expect(emptyState().settings).toMatchObject({ midiEnabled: false, keyboardSound: true })
@@ -330,7 +354,7 @@ describe('validation hardening', () => {
       return r.state.settings
     }
     const ok = mk({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, minorForms: { natural: false, harmonic: true, melodic: true } })
-    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', lastDrillLevel: 1, minorForms: { natural: false, harmonic: true, melodic: true } })
+    expect(ok).toEqual({ sessionMinutes: 20, startTempo: 90, droneVolumeDb: -6, droneOn: false, metronomeOn: true, midiEnabled: false, keyboardSound: true, playLabels: 'names', lastDrillLevel: 1, staffExactOctave: false, lastStaffLevel: 1, minorForms: { natural: false, harmonic: true, melodic: true } })
     expect(mk({ startTempo: 10 }).startTempo).toBe(40)
     expect(mk({ startTempo: 500 }).startTempo).toBe(120)
     expect(mk({ droneVolumeDb: 'loud', droneOn: 'yes', metronomeOn: 1 })).toEqual(DEFAULT_SETTINGS)

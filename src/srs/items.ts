@@ -1,6 +1,8 @@
 import { RECALL_TYPES } from '../theory/recall'
 import type { RecallType } from '../theory/recall'
 import { PC_ASCII } from '../theory/keyNames'
+import { STAFF_LEVEL_NOTES } from '../theory/staff'
+import type { Clef } from '../theory/staff'
 import { MAJOR_ROOTS, MINOR_ROOTS } from '../theory/scales'
 import type { ScaleForm, ScaleRef } from '../theory/scales'
 import { TEMPO_START } from './scheduler'
@@ -21,6 +23,10 @@ export interface Settings {
   playLabels: PlayLabels
   /** The highest drill level reached. drillLevel never goes below it (sticky levels), and "Level {n} unlocked" shows once. */
   lastDrillLevel: 1 | 2 | 3 | 4
+  /** Staff drill: tap or play the exact key the staff shows, not just the right letter. */
+  staffExactOctave: boolean
+  /** The highest Staff drill level reached; sticky like lastDrillLevel. */
+  lastStaffLevel: 1 | 2 | 3 | 4 | 5 | 6
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +40,8 @@ export const DEFAULT_SETTINGS: Settings = {
   keyboardSound: true,
   playLabels: 'names',
   lastDrillLevel: 1,
+  staffExactOctave: false,
+  lastStaffLevel: 1,
 }
 
 // Ids use tonal's ASCII spelling for roots (F#, Bb), never the display glyphs.
@@ -50,6 +58,24 @@ export function parseKeyId(id: string): number | null {
   if (!id.startsWith('key:')) return null
   const pc = PC_ASCII.indexOf(id.slice(4))
   return pc === -1 ? null : pc
+}
+
+/** Staff-reading items, one per clef and note: `staff:treble:F#4`. Not a `parseId` kind; use `parseStaffId`. */
+export const staffId = (clef: Clef, note: string): string => `staff:${clef}:${note}`
+
+/** The staff drill's 54 item ids, in level order. */
+export const STAFF_IDS: string[] = Object.values(STAFF_LEVEL_NOTES).flatMap((notes) => notes.map((n) => staffId(n.clef, n.note)))
+
+const STAFF_NOTE = /^[A-G](#{1,2}|b{1,2})?-?\d+$/
+
+/** The clef and note of a staff id, or null for anything else (never throws). This module must not import tonal. */
+export function parseStaffId(id: string): { clef: Clef; note: string } | null {
+  const parts = id.split(':')
+  if (parts.length !== 3 || parts[0] !== 'staff') return null
+  const clef = parts[1]
+  const note = parts[2] as string
+  if ((clef !== 'treble' && clef !== 'bass') || !STAFF_NOTE.test(note)) return null
+  return { clef, note }
 }
 
 const FORMS: ScaleForm[] = ['major', 'natural', 'harmonic', 'melodic']

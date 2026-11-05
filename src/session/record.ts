@@ -1,6 +1,6 @@
 // Writing session results into app state. Pure: callers pass the state in and save what comes back.
 import { localDate } from '../srs/dates'
-import { idsForScale, parseId, parseKeyId, stateFor } from '../srs/items'
+import { idsForScale, parseId, parseKeyId, parseStaffId, stateFor } from '../srs/items'
 import { applyRating, type Rating } from '../srs/scheduler'
 import type { AppState } from '../store/storage'
 
@@ -21,7 +21,7 @@ export function rateItem(
     ...state.items,
     [id]: applyRating(prior, rating, today, { ...opts, startTempo: state.settings.startTempo }),
   }
-  if (parseKeyId(id) !== null) return { ...state, items } // key items have no siblings to introduce
+  if (parseKeyId(id) !== null || parseStaffId(id) !== null) return { ...state, items } // key and staff items have no siblings to introduce
   const parsed = parseId(id)
   if (parsed.kind === 'scale' && !prior.introduced) {
     for (const sibling of idsForScale(parsed.ref)) {

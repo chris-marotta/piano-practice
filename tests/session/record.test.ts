@@ -148,3 +148,12 @@ describe('sessionDate', () => {
     expect(sessionDate(new Date(2026, 9, 21, 0, 5).getTime())).toBe('2026-10-21')
   })
 })
+
+describe('rateItem with staff ids', () => {
+  it('moves the box and introduces no siblings', () => {
+    const s = emptyState()
+    const next = rateItem(s, 'staff:treble:C4', 'nailed', TODAY)
+    expect(next.items['staff:treble:C4']?.box).toBe(2)
+    expect(Object.keys(next.items)).toEqual(['staff:treble:C4'])
+  })
+})

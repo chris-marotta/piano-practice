@@ -1,7 +1,7 @@
 // What moved during a session, for the Done screen. Pure.
-import { parseId, parseKeyId, stateFor, type Settings } from '../srs/items'
+import { parseId, parseKeyId, parseStaffId, stateFor, type Settings } from '../srs/items'
 import type { ItemState } from '../srs/scheduler'
-import { formatScale } from '../theory/format'
+import { formatNote, formatScale } from '../theory/format'
 import { keyLabel } from '../theory/keyNames'
 import type { RecallType } from '../theory/recall'
 
@@ -26,6 +26,8 @@ const RECALL_NAME: Record<RecallType, string> = {
 function itemName(id: string): string {
   const pc = parseKeyId(id)
   if (pc !== null) return `Key ${keyLabel(pc)}`
+  const staff = parseStaffId(id)
+  if (staff !== null) return `Staff ${staff.clef} ${formatNote(staff.note)}`
   const p = parseId(id)
   const scale = formatScale(p.ref)
   if (p.kind === 'scale') return scale
@@ -39,13 +41,13 @@ function change(id: string, name: string, kind: 'box' | 'support', from: number,
   return { id, name, direction, what, text: `${name} ${direction === 'up' ? '↑' : '↓'} ${what}` }
 }
 
-const KIND_ORDER = { scale: 0, chords: 1, recall: 2, key: 3 } as const
+const KIND_ORDER = { scale: 0, chords: 1, recall: 2, key: 3, staff: 4 } as const
 
-const kindOf = (id: string): keyof typeof KIND_ORDER => (parseKeyId(id) !== null ? 'key' : parseId(id).kind)
+const kindOf = (id: string): keyof typeof KIND_ORDER => (parseKeyId(id) !== null ? 'key' : parseStaffId(id) !== null ? 'staff' : parseId(id).kind)
 
 /**
  * Box and support moves for the session's items: scales first, then chord sets, then recall
- * cards, then key names (what matters most leads), session order within each. An item with no
+ * cards, then key names, then staff notes (what matters most leads), session order within each. An item with no
  * state before the session counts as new (box 1, L0); one with no state after is skipped.
  */
 export function sessionChanges(

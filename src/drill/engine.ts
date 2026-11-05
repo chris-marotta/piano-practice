@@ -61,7 +61,7 @@ export function isCorrect(verdict: Verdict, exactOctave: boolean): boolean {
 
 /** The stored level reached for this drill. Settings without the field (before the drill existed) read as 1. */
 export function reachedLevel(def: DrillDef, settings: Settings): number {
-  return (settings as unknown as Record<string, number | undefined>)[def.levelSetting] ?? 1
+  return settings[def.levelSetting]
 }
 
 /**

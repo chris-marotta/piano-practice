@@ -88,6 +88,8 @@ function mergeSettings(stored: Record<string, unknown>): Settings {
     keyboardSound: bool(stored.keyboardSound, d.keyboardSound),
     playLabels: oneOf(stored.playLabels, ['off', 'names', 'degrees'] as const, d.playLabels),
     lastDrillLevel: oneOf(stored.lastDrillLevel, [1, 2, 3, 4] as const, d.lastDrillLevel),
+    staffExactOctave: bool(stored.staffExactOctave, d.staffExactOctave),
+    lastStaffLevel: oneOf(stored.lastStaffLevel, [1, 2, 3, 4, 5, 6] as const, d.lastStaffLevel),
   }
 }
 

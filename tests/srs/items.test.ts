@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  STAFF_IDS,
+  parseStaffId,
+  staffId,
   DEFAULT_SETTINGS,
   chordsId,
   enabledScales,
@@ -35,6 +38,8 @@ describe('defaults', () => {
       keyboardSound: true,
       playLabels: 'names',
       lastDrillLevel: 1,
+      staffExactOctave: false,
+      lastStaffLevel: 1,
     })
   })
 })
@@ -219,5 +224,26 @@ describe('placeItems', () => {
 
   it('keys each state by its id', () => {
     for (const [k, v] of Object.entries(items)) expect(v.id).toBe(k)
+  })
+})
+
+describe('staff ids', () => {
+  it('builds and parses', () => {
+    expect(staffId('treble', 'F#4')).toBe('staff:treble:F#4')
+    expect(parseStaffId('staff:treble:F#4')).toEqual({ clef: 'treble', note: 'F#4' })
+    expect(parseStaffId('staff:bass:Gb3')).toEqual({ clef: 'bass', note: 'Gb3' })
+  })
+  it('returns null (never throws) for anything else', () => {
+    for (const bad of ['staff:alto:C4', 'staff:treble:H4', 'staff:treble:C', 'staff:treble', 'staff:treble:C4:x', 'key:C', 'scale:C:major', '']) {
+      expect(parseStaffId(bad)).toBeNull()
+    }
+  })
+  it('has 54 unique ids, all parseable', () => {
+    expect(STAFF_IDS).toHaveLength(54)
+    expect(new Set(STAFF_IDS).size).toBe(54)
+    for (const id of STAFF_IDS) expect(parseStaffId(id)).not.toBeNull()
+  })
+  it('defaults: exact octave off, level 1', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ staffExactOctave: false, lastStaffLevel: 1 })
   })
 })

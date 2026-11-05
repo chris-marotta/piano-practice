@@ -90,3 +90,13 @@ describe('sessionChanges', () => {
     expect(out.find((c) => c.id === keyId(8))?.text).toBe('Key G♯ / A♭ ↑ box 1 → 2')
   })
 })
+
+describe('sessionChanges with staff ids', () => {
+  it('names a staff item and lists it after key names', () => {
+    const staff = 'staff:treble:F#4'
+    const mk = (id: string, box: ItemState['box']): ItemState => ({ id, introduced: true, box, support: 0, levelStreak: 0, due: TODAY, history: [] })
+    const after = { [staff]: mk(staff, 2), [keyId(0)]: mk(keyId(0), 2), [scaleId(E)]: set(base, scaleId(E), { box: 4 })[scaleId(E)] as ItemState }
+    const out = sessionChanges([staff, keyId(0), scaleId(E)], base, after, TODAY, DEFAULT_SETTINGS)
+    expect(out.map((c) => c.text)).toEqual(['E major ↑ box 3 → 4', 'Key C ↑ box 1 → 2', 'Staff treble F♯4 ↑ box 1 → 2'])
+  })
+})

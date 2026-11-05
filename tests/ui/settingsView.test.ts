@@ -18,6 +18,7 @@ import {
   withSettings,
 } from '../../src/ui/screens/settingsView'
 import { drillLevel } from '../../src/drill/engine'
+import { STAFF_DEF } from '../../src/drill/staff'
 import { KEYS_DEF } from '../../src/drill/keys'
 import { DEFAULT_SETTINGS, enabledScales, keyId, placeItems, scaleId } from '../../src/srs/items'
 import { emptyState, exportState, parseImport } from '../../src/store/storage'
@@ -164,6 +165,20 @@ describe('resetPlacement', () => {
     expect(drillLevel(KEYS_DEF, after.items, TODAY, after.settings)).toBe(1)
     expect(after.settings).toEqual({ ...before.settings, lastDrillLevel: 1 }) // every other setting kept
     expect(before.settings.lastDrillLevel).toBe(4) // input untouched
+  })
+})
+
+describe('resetPlacement and the staff drill', () => {
+  it('resets lastStaffLevel to 1 and clears the staff boxes', () => {
+    const before = placed()
+    before.items['staff:treble:C4'] = { id: 'staff:treble:C4', introduced: true, box: 4, support: 0, levelStreak: 0, due: TODAY, history: [] }
+    before.settings = { ...before.settings, lastStaffLevel: 4, staffExactOctave: true }
+    const after = resetPlacement(before)
+    expect(after.settings.lastStaffLevel).toBe(1)
+    expect(after.settings.staffExactOctave).toBe(true) // a preference, kept
+    expect(after.items['staff:treble:C4']).toBeUndefined()
+    expect(drillLevel(STAFF_DEF, after.items, TODAY, after.settings)).toBe(1)
+    expect(before.settings.lastStaffLevel).toBe(4)
   })
 })
 
