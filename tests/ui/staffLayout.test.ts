@@ -155,3 +155,39 @@ describe('staffLayout', () => {
     expect(b.heads[0]!.rx).toBeLessThan(a.heads[0]!.rx)
   })
 })
+
+describe('staffLayout vertical metrics (C1)', () => {
+  it('the five lines sit centred in the box: as much room above the top line as below the bottom one', () => {
+    for (const gap of [20, 12]) {
+      for (const clef of ['treble', 'bass'] as const) {
+        const l = staffLayout({ clef, notes: [], gap })
+        expect(l.lines[0]!.y).toBeCloseTo(l.height - l.lines[4]!.y, 6)
+      }
+      const g = staffLayout({ clef: 'grand', notes: [], gap })
+      expect(g.lines[0]!.y).toBeCloseTo(g.height - g.lines[9]!.y, 6)
+    }
+  })
+
+  it('pads 2.75 gaps above the top line and below the bottom line: a drill box is 190 px tall at gap 20', () => {
+    const l = staffLayout({ clef: 'treble', notes: [], gap: 20 })
+    expect(l.lines[0]!.y).toBeCloseTo(2.75 * 20, 6)
+    expect(l.height).toBeCloseTo(190, 6)
+    expect(staffLayout({ clef: 'grand', notes: [], gap: 12 }).height).toBeCloseTo(19.5 * 12, 6)
+  })
+})
+
+describe('bass clef dots (C1 re-check of BASS_CLEF_DROP)', () => {
+  // Noto Music's F clef dots, centres above the baseline as a share of the font size (canvas pixel scan, 2026-11-05).
+  const DOTS = [0.755, 0.535]
+  it('the two dots sit evenly either side of the F line (4th line), within 0.05 gap', () => {
+    for (const gap of [20, 12]) {
+      const l = staffLayout({ clef: 'bass', notes: [], gap })
+      const clef = l.clefs[0]!
+      const fLine = l.lines[1]!.y
+      const [up, down] = DOTS.map((d) => clef.y - d * clef.size) as [number, number]
+      expect(up).toBeLessThan(fLine)
+      expect(down).toBeGreaterThan(fLine)
+      expect(Math.abs((up + down) / 2 - fLine) / gap).toBeLessThan(0.05)
+    }
+  })
+})

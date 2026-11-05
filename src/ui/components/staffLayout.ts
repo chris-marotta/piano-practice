@@ -42,7 +42,9 @@ export interface StaffLayout {
 }
 
 // All in gaps.
-const PAD_Y = 3.5 // above the top line / below the bottom line: room for two ledgers, a clef's overshoot
+// Above the top line / below the bottom line. The farthest ink in use: C6 / bass E4 heads 2.55 gaps above the top line,
+// A3 / C2 heads 2.55 below the bottom line, the G clef's top 1.94 above (measured, Noto Music). 0.2 gap to spare.
+const PAD_Y = 2.75
 const STAVES_APART = 6 // grand staff: treble bottom line to bass top line
 const HEAD_RX = 0.78
 const HEAD_RY = 0.55
@@ -62,7 +64,9 @@ const ACC_LEFT = 1.15 // accidental centre, left of the head centre
 const END_PAD = 2.2
 const CLEF_SIZE = 3.7 // font-size, in gaps
 const ACC_SIZE = 3.1
-const BASS_CLEF_DROP = 0.3 // bass clef baseline, in gaps below the 2nd line from the bottom
+// Bass clef baseline, in gaps below the 2nd line from the bottom. Measured: Noto Music's F clef dots are 0.755 and 0.535 of
+// the font size above its baseline (2.39 gaps on average at CLEF_SIZE), so 0.39 centres them on the F line, 0.4 gap either side.
+const BASS_CLEF_DROP = 0.39
 
 export const ACCIDENTAL_TEXT: Record<Exclude<StaffAccidental, ''>, string> = {
   '#': formatNote('C#').slice(1),
@@ -123,7 +127,8 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
     y += (4 + STAVES_APART) * g
   }
   const height = y - STAVES_APART * g + PAD_Y * g
-  const midY = (c: Clef) => (topLine[c] ?? (topLine[clefs[0] as Clef] as number)) + 4 * g
+  // The middle line is two gaps below the top line.
+  const midY = (c: Clef) => (topLine[c] ?? (topLine[clefs[0] as Clef] as number)) + 2 * g
   const yOf = (pos: number, c: Clef) => midY(c) - (pos * g) / 2
 
   const barX = grand ? (BRACE_W + 0.4) * g : 0.4 * g
@@ -145,8 +150,8 @@ export function staffLayout(opts: StaffLayoutOpts): StaffLayout {
   for (const c of clefs) {
     for (let i = 4; i >= -4; i -= 2) lines.push({ x1: barX, x2: width, y: yOf(i, c) })
     // Treble: the glyph's baseline is the G line (2nd line). Noto Music's F clef sits wholly above its baseline
-    // (ink 7.5 to 66.6 px at size 74), so its baseline goes just under the 2nd line to put the ink from the top line to
-    // the 2nd line, the dots either side of the F line (measured in the browser at gap 20; the baseline on the F line drew it 2 gaps high).
+    // (ink 0.1 to 0.9 of its size), so its baseline goes just under the 2nd line: the ink runs from about the top line
+    // to the 2nd line and the dots sit either side of the F line (BASS_CLEF_DROP).
     glyphClefs.push({ x: clefX, y: c === 'treble' ? yOf(-2, c) : yOf(-2, c) + BASS_CLEF_DROP * g, text: c === 'treble' ? '\u{1D11E}' : '\u{1D122}', size: CLEF_SIZE * g, kind: 'clef' })
     if (sig) {
       keySignaturePositions(sig.accidental, sig.count, c).forEach((pos, i) => {

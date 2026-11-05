@@ -270,11 +270,9 @@
   gap: var(--s-5);
 }
 
+/* The svg is sized to its ink (two ledger lines either way, the clef's overshoot), so it needs no trimming. */
 .staff-ask .staff {
   flex: none;
-  /* The svg keeps room for two ledger lines and a clef's overshoot, and draws outside its box; trim the blank so the
-     staff + keyboard + choices fit 820 px. */
-  margin-block: -15px -10px;
 }
 
 /* The staff drill's keyboard is capped a little lower than Keys' so the ladder, staff, keys and choices share one iPad screen. */
