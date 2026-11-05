@@ -54,6 +54,10 @@
   --root: #3d6fb3;
   --root-on-black: #a9c7ee;
 
+  /* Staff (phase 4): the five lines and ledgers. 3:1 on --bg is the floor (checked in
+     tests/ui/contrast.test.ts); noteheads are --text. */
+  --staff-line: #7a8798;
+
   /* Piano keys */
   --key-white: #f4f1ea;
   --key-white-edge: #d9d4c9;

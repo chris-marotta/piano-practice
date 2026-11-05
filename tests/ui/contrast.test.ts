@@ -284,3 +284,25 @@ describe('root dot contrast (shipped CSS)', () => {
     })
   }
 })
+
+describe('staff colours (shipped CSS)', () => {
+  const bg = resolve('var(--bg)')
+  it('staff lines are at least 3:1 on the page background', () => {
+    expect(rule('.staff__line', appCss).stroke).toBe('var(--staff-line)')
+    expect(contrastRatio(resolve('var(--staff-line)'), bg)).toBeGreaterThanOrEqual(3)
+  })
+  it('noteheads use the text colour, at least 4.5:1', () => {
+    expect(rule('.staff', appCss).color).toBe('var(--text)')
+    expect(contrastRatio(resolve('var(--text)'), bg)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('a landmark head (--root) is at least 3:1', () => {
+    expect(rule('.staff-head--landmark', appCss).fill).toBe('var(--root)')
+    expect(contrastRatio(resolve('var(--root)'), bg)).toBeGreaterThanOrEqual(3)
+  })
+  it('target outline, right and wrong heads are at least 3:1', () => {
+    expect(rule('.staff-head--target', appCss).stroke).toBe('var(--accent)')
+    expect(rule('.staff-head--right', appCss).fill).toBe('var(--good)')
+    expect(rule('.staff-head--wrong', appCss).fill).toBe('var(--bad)')
+    for (const t of ['accent', 'good', 'bad']) expect(contrastRatio(resolve(`var(--${t})`), bg)).toBeGreaterThanOrEqual(3)
+  })
+})

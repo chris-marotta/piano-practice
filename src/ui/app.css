@@ -981,3 +981,59 @@ p {
 .confirm a {
   color: var(--accent);
 }
+
+/* Staff (phase 4). Lines --staff-line, noteheads --text; marks reuse the drill colours. */
+.staff {
+  display: block;
+  color: var(--text);
+  overflow: visible;
+  max-width: 100%;
+  height: auto;
+}
+
+.staff__line {
+  stroke: var(--staff-line);
+  stroke-width: 1.5;
+  stroke-linecap: butt;
+}
+
+.staff__ledger {
+  stroke-width: 2;
+}
+
+.staff__brace {
+  fill: var(--staff-line);
+}
+
+.staff__glyph {
+  font-family: 'Noto Music', serif;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.staff-head {
+  fill: currentColor;
+  stroke: none;
+}
+
+.staff-head--landmark {
+  fill: var(--root);
+}
+
+.staff-head--target {
+  stroke: var(--accent);
+  stroke-width: 3;
+  paint-order: stroke;
+}
+
+.staff-head--ghost {
+  opacity: 0.35;
+}
+
+.staff-head--right {
+  fill: var(--good);
+}
+
+.staff-head--wrong {
+  fill: var(--bad);
+}
