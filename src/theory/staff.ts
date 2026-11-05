@@ -195,13 +195,18 @@ export function staffChoices(note: string, clef: Clef, rng: () => number): strin
   return names
 }
 
-/** Feedback for the right key in the wrong octave (or the right one, when exact octave is off). */
+const OCTAVE_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+
+/**
+ * Feedback for the right key in the wrong octave (or the right one, when exact octave is off). Only reached when the
+ * played key has the shown note's pitch class, so {L} is the shown note's own spelling (G♭, not F♯).
+ */
 export function octaveHint(shown: string, playedMidi: number, exactOctave: boolean): string {
   const diff = playedMidi - noteMidi(shown)
   const octaves = Math.max(1, Math.round(Math.abs(diff) / 12))
-  const count = octaves === 1 ? 'one octave' : octaves === 2 ? 'two octaves' : `${octaves} octaves`
+  const count = `${OCTAVE_WORDS[octaves - 1] ?? octaves} ${octaves === 1 ? 'octave' : 'octaves'}`
   const shownName = shown === 'C4' ? 'middle C' : formatNote(shown)
-  const L = formatNote(Note.get(midiToName(playedMidi, '#')).pc)
+  const L = formatNote(Note.get(shown).pc)
   const lead = exactOctave ? 'Wrong octave.' : 'Right.'
   return `${lead} The staff shows ${shownName}; you played the ${L} ${count} ${diff > 0 ? 'up' : 'down'}.`
 }

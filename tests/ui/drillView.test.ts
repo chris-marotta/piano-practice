@@ -135,6 +135,7 @@ describe('answer: first answer only', () => {
       correct: true,
       given: key(E3),
       ms: 1200,
+      exactOctave: false,
     })
     expect(answer(blank, q(4, E3), key(F3), 900, KEYS_DEF, false)).toMatchObject({ answered: true, verdict: 'wrong', correct: false, given: key(F3) })
   })
@@ -162,13 +163,14 @@ describe('answer: first answer only', () => {
       correct: false,
       given: { kind: 'timeout' },
       ms: 3000,
+      exactOctave: false,
     })
   })
 
   it("otherOctave counts as right only when the exact octave is off (a stub def's judge)", () => {
     const stub: DrillDef = { ...KEYS_DEF, judge: () => 'otherOctave' }
     expect(answer(blank, q(4, E3), key(E3 + 12), 800, stub, false)).toMatchObject({ verdict: 'otherOctave', correct: true })
-    expect(answer(blank, q(4, E3), key(E3 + 12), 800, stub, true)).toMatchObject({ verdict: 'otherOctave', correct: false })
+    expect(answer(blank, q(4, E3), key(E3 + 12), 800, stub, true)).toMatchObject({ verdict: 'otherOctave', correct: false, exactOctave: true })
   })
 })
 
@@ -192,20 +194,21 @@ describe('whyText', () => {
     correct,
     given: pc === null ? { kind: 'timeout' } : { kind: 'key', midi: 60 + pc },
     ms: 1,
+    exactOctave: false,
   })
 
   it('is the route sentence', () => {
-    expect(KEYS_UI.whyText(q(4, E3, 'tap'), answered(5, false), false)).toBe('From C (left of the two black keys): C, D, E.')
-    expect(KEYS_UI.whyText(q(8, Gs3, 'name'), answered(8, true), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(4, E3, 'tap'), answered(5, false))).toBe('From C (left of the two black keys): C, D, E.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'name'), answered(8, true))).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 
   it("a wrong 'play' names what was played", () => {
-    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(7, false), false)).toBe('You played G. G♯ is the black key just right of G. Also called A♭.')
-    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(8, true), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(7, false))).toBe('You played G. G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(8, true))).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 
   it('a timed-out play names nothing', () => {
-    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(null, false), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(null, false))).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 })
 

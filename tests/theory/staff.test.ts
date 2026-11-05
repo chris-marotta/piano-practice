@@ -201,4 +201,16 @@ describe('octaveHint', () => {
     expect(octaveHint('C4', 72, false)).toBe('Right. The staff shows middle C; you played the C one octave up.')
     expect(octaveHint('E5', 52, true)).toBe('Wrong octave. The staff shows E5; you played the E two octaves down.')
   })
+
+  it("{L} is the shown note's own spelling (M1): G♭4 played an octave up is 'the G♭', not 'the F♯'", () => {
+    expect(octaveHint('Gb4', 78, false)).toBe('Right. The staff shows G♭4; you played the G♭ one octave up.')
+    expect(octaveHint('F#4', 54, true)).toBe('Wrong octave. The staff shows F♯4; you played the F♯ one octave down.')
+    expect(octaveHint('Db3', 61, false)).toBe('Right. The staff shows D♭3; you played the D♭ one octave up.')
+  })
+
+  it('spells three or more octaves in words (M2)', () => {
+    expect(octaveHint('C4', 24, false)).toBe('Right. The staff shows middle C; you played the C three octaves down.')
+    expect(octaveHint('C4', 96, false)).toBe('Right. The staff shows middle C; you played the C three octaves up.')
+    expect(octaveHint('C4', 108, true)).toBe('Wrong octave. The staff shows middle C; you played the C four octaves up.')
+  })
 })

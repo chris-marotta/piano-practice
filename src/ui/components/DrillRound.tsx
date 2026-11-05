@@ -216,7 +216,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
         {ans.answered && (
           <>
             <p class={`drill__why${ans.correct ? ' drill__why--right' : ' drill__why--wrong'}`} role="status">
-              <b>Why:</b> {ui.whyText(q, ans, exactOctave)}
+              <b>Why:</b> {ui.whyText(q, ans)}
             </p>
             <button ref={nextBtn} type="button" class="btn btn--primary btn--lg drill__next" onClick={next}>
               {nextLabel(index, round.length, finishLabel)}

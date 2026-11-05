@@ -90,14 +90,17 @@ export function staffNotes(q: Question, ans: AnswerState): StaffNote[] {
   return [...lead, target(ans.correct ? 'right' : 'wrong')]
 }
 
-/** The why line: "You played D4." first for a wrong key, the octave hint for the right letter in another octave, then the route. */
-export function staffWhyText(q: Question, ans: AnswerState, exactOctave: boolean): string {
+/**
+ * The why line: "You played D4." first for a wrong key, the octave hint for the right letter in another octave, then the
+ * route. The hint's lead ("Right." / "Wrong octave.") follows the setting the answer was judged with.
+ */
+export function staffWhyText(q: Question, ans: AnswerState): string {
   const staff = q.staff
   if (!staff) return ''
   const route = routeText(staff.note, staff.clef)
   if (!ans.answered) return route
   const played = givenMidi(ans.given)
-  if (ans.verdict === 'otherOctave' && played !== null) return `${octaveHint(staff.note, played, exactOctave)} ${route}`
+  if (ans.verdict === 'otherOctave' && played !== null) return `${octaveHint(staff.note, played, ans.exactOctave)} ${route}`
   if (ans.verdict === 'wrong' && played !== null) return `You played ${formatNote(midiToName(played, '#'))}. ${route}`
   return route
 }

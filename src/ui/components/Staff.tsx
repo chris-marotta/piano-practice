@@ -9,9 +9,9 @@ export interface StaffProps {
   clef: Clef | 'grand'
   notes: StaffNote[]
   keySignature?: { accidental: '#' | 'b'; count: number }
-  /** drill: 20 px between lines (reads from the stand); library: 12 px. */
   /** Draw a barline after each of these beats (the Library puts one between up and down). */
   barlinesAfterBeat?: number[]
+  /** drill: 20 px between lines (reads from the stand); library: 12 px. */
   size: 'drill' | 'library'
   label: string
 }

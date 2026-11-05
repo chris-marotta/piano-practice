@@ -15,11 +15,11 @@ const isLandmark = (midi: number): boolean => pcOf(midi) === 0 || pcOf(midi) ===
 /**
  * One question's answer. Only the first answer counts: `answer` leaves an answered state as it is.
  * `given` is what the player gave; `verdict` is the def's judgement of it, `correct` that verdict under the
- * exact-octave setting.
+ * exact-octave setting, which is kept (`exactOctave`) so the why line agrees with the verdict even if the toggle changes.
  */
 export type AnswerState =
   | { answered: false }
-  | { answered: true; verdict: Verdict; correct: boolean; given: Given; ms: number }
+  | { answered: true; verdict: Verdict; correct: boolean; given: Given; ms: number; exactOctave: boolean }
 
 /** What a speed-level timeout gives: nothing, never right. */
 export const TIMED_OUT: Given = { kind: 'timeout' }
@@ -38,7 +38,7 @@ export function answer(
 ): AnswerState {
   if (s.answered) return s
   const verdict = def.judge(q, given)
-  return { answered: true, verdict, correct: isCorrect(verdict, exactOctave), given, ms }
+  return { answered: true, verdict, correct: isCorrect(verdict, exactOctave), given, ms, exactOctave }
 }
 
 /** The speed level's per-question limit in ms (the def's fastMs), or null below it. DrillRound's timer reads this. */

@@ -128,28 +128,39 @@ describe('staffNotes', () => {
 describe('staffWhyText', () => {
   it('a wrong tap names what was played', () => {
     const q = ask('treble', 'E4')
-    expect(staffWhyText(q, given(q, key(62)), false).startsWith('You played D4. ')).toBe(true)
+    expect(staffWhyText(q, given(q, key(62))).startsWith('You played D4. ')).toBe(true)
   })
 
   it('uses the real played note, sharp spelling', () => {
     const q = ask('treble', 'E4')
-    expect(staffWhyText(q, given(q, key(66)), false).startsWith('You played F♯4. ')).toBe(true)
+    expect(staffWhyText(q, given(q, key(66))).startsWith('You played F♯4. ')).toBe(true)
   })
 
   it('otherOctave leads with the octave hint, then the route', () => {
     const q = ask('treble', 'C4')
-    const text = staffWhyText(q, given(q, key(72)), false)
+    const text = staffWhyText(q, given(q, key(72)))
     expect(text.startsWith('Right. The staff shows middle C')).toBe(true)
     expect(text).toContain('This is middle C.')
-    expect(staffWhyText(q, given(q, key(72), true), true).startsWith('Wrong octave. The staff shows middle C')).toBe(true)
+    expect(staffWhyText(q, given(q, key(72), true)).startsWith('Wrong octave. The staff shows middle C')).toBe(true)
+  })
+
+  it('uses the exact-octave setting the answer was judged with, not the current one (M3)', () => {
+    const q = ask('treble', 'C4')
+    const judgedOff = given(q, key(72), false)
+    const judgedOn = given(q, key(72), true)
+    expect(judgedOff).toMatchObject({ correct: true, exactOctave: false })
+    expect(staffWhyText(q, judgedOff).startsWith('Right. ')).toBe(true)
+    expect(judgedOn).toMatchObject({ correct: false, exactOctave: true })
+    expect(staffWhyText(q, judgedOn).startsWith('Wrong octave. ')).toBe(true)
+    expect(STAFF_UI.whyText.length).toBeLessThanOrEqual(2) // no live setting parameter to disagree with the verdict
   })
 
   it('right, a name pick and a timeout: the route alone', () => {
     const q = ask('treble', 'A4')
     const route = 'From treble G (2nd line): G, A. A is the 2nd space.'
-    expect(staffWhyText(q, given(q, key(69)), false)).toBe(route)
-    expect(staffWhyText(q, given(q, { kind: 'choice', value: 'B' }), false)).toBe(route)
-    expect(staffWhyText(q, given(q, { kind: 'timeout' }), false)).toBe(route)
+    expect(staffWhyText(q, given(q, key(69)))).toBe(route)
+    expect(staffWhyText(q, given(q, { kind: 'choice', value: 'B' }))).toBe(route)
+    expect(staffWhyText(q, given(q, { kind: 'timeout' }))).toBe(route)
   })
 })
 

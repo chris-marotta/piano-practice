@@ -18,6 +18,6 @@ export interface DrillUi {
   choicesInAsk?: boolean
   /** The keyboard with its marks; `onKey` is set when keys can answer (tap and play questions). */
   Board(p: { q: Question; ans: AnswerState; onKey?: (midi: number) => void }): ComponentChildren
-  /** The why line after an answer. Keys ignores `exactOctave`. */
-  whyText(q: Question, ans: AnswerState, exactOctave: boolean): string
+  /** The why line after an answer (Staff reads the exact-octave setting the answer was judged with, from `ans`). */
+  whyText(q: Question, ans: AnswerState): string
 }

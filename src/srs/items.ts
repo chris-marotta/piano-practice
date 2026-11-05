@@ -68,7 +68,7 @@ export const STAFF_IDS: string[] = Object.values(STAFF_LEVEL_NOTES).flatMap((not
 
 const STAFF_NOTE = /^[A-G](#{1,2}|b{1,2})?-?\d+$/
 
-/** The clef and note of a staff id, or null for anything else (never throws). This module must not import tonal. */
+/** The clef and note of a staff id, or null for anything else (never throws). No direct tonal import here (a regex, not Note.get). */
 export function parseStaffId(id: string): { clef: Clef; note: string } | null {
   const parts = id.split(':')
   if (parts.length !== 3 || parts[0] !== 'staff') return null

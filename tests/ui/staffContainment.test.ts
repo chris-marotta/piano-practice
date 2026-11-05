@@ -51,7 +51,7 @@ describe('staff containment (gap 20, drill)', () => {
       const q = STAFF_DEF.buildQuestion(id, 'tap', () => 0.5)
       for (const ans of [
         { answered: false } as const,
-        { answered: true, verdict: 'right', correct: true, given: { kind: 'key', midi: q.midi }, ms: 500 } as const,
+        { answered: true, verdict: 'right', correct: true, given: { kind: 'key', midi: q.midi }, ms: 500, exactOctave: false } as const,
       ]) {
         const l = staffLayout({ clef, notes: staffNotes(q, ans), gap: 20 })
         expect(outside(l), id).toEqual([])
