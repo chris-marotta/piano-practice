@@ -35,7 +35,7 @@
 
 .drill-ladder {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--levels, 4), minmax(0, 1fr)); /* one row, sized from the def's level count */
   gap: var(--s-2);
   margin: 0;
   padding: 0;
@@ -77,6 +77,36 @@
 
 .drill-ladder__hint {
   grid-column: 1 / -1;
+}
+
+/* More than 4 levels (Staff's 6): one short row per tile, and only the current step shows its hint (the full hint is in the
+   title). This keeps question 1 inside 820 px. */
+.drill-ladder--many .drill-ladder__step {
+  padding: var(--s-2) var(--s-1) var(--s-2) var(--s-2);
+  column-gap: 5px;
+}
+
+.drill-ladder--many .drill-ladder__num {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.drill-ladder--many .drill-ladder__name {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drill-ladder--many .drill-ladder__step:not(.drill-ladder__step--current) .drill-ladder__hint {
+  display: none;
+}
+
+.drill-ladder--many .drill-ladder__step--current .drill-ladder__hint {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---- question ---- */
@@ -242,4 +272,12 @@
 
 .staff-ask .staff {
   flex: none;
+  /* The svg keeps room for two ledger lines and a clef's overshoot, and draws outside its box; trim the blank so the
+     staff + keyboard + choices fit 820 px. */
+  margin-block: -15px -10px;
+}
+
+/* The staff drill's keyboard is capped a little lower than Keys' so the ladder, staff, keys and choices share one iPad screen. */
+.staff-board .keyboard {
+  max-height: 200px;
 }

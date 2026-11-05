@@ -32,13 +32,15 @@ function Ask({ q, ans }: { q: Question; ans: AnswerState }) {
 function Board({ q, ans, onKey }: { q: Question; ans: AnswerState; onKey?: (midi: number) => void }) {
   const win = STAFF_WINDOWS[q.staff?.clef ?? 'treble']
   return (
-    <Keyboard
-      low={win.low}
-      high={win.high}
-      marks={staffAnswerMarks(q, ans)}
-      maxKeyPx={STAFF_KEY_PX}
-      {...(onKey ? { onKeyTap: onKey } : {})}
-    />
+    <div class="staff-board">
+      <Keyboard
+        low={win.low}
+        high={win.high}
+        marks={staffAnswerMarks(q, ans)}
+        maxKeyPx={STAFF_KEY_PX}
+        {...(onKey ? { onKeyTap: onKey } : {})}
+      />
+    </div>
   )
 }
 

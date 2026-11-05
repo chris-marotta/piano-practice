@@ -36,12 +36,17 @@ const UNANSWERED: AnswerState = { answered: false }
 function Ladder({ def, level }: { def: DrillDef; level: number }) {
   const levels = Array.from({ length: def.levelCount }, (_, i) => i + 1)
   return (
-    <ol class="drill-ladder" aria-label={`Level ${level} of ${def.levelCount}`}>
+    <ol
+      class={`drill-ladder${def.levelCount > 4 ? ' drill-ladder--many' : ''}`}
+      style={{ '--levels': def.levelCount }}
+      aria-label={`Level ${level} of ${def.levelCount}`}
+    >
       {levels.map((n) => (
         <li
           key={n}
           class={`drill-ladder__step${n === level ? ' drill-ladder__step--current' : n < level ? ' drill-ladder__step--done' : ''}`}
           aria-current={n === level ? 'step' : undefined}
+          title={def.levelHints[n]}
         >
           <span class="drill-ladder__num">Level {n}</span>
           <span class="drill-ladder__name">{def.levelNames[n]}</span>
