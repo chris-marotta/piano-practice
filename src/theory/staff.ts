@@ -1,6 +1,7 @@
 // Staff theory: where a note sits on a staff, ledger lines, the staff-reading levels and key signatures. Pure.
 import { Note } from '@tonaljs/tonal'
-import { noteMidi, scaleSequence } from './scales'
+import { formatNote } from './format'
+import { enharmonic, midiToName, noteMidi, scaleSequence } from './scales'
 import type { ScaleRef } from './scales'
 
 export type Clef = 'treble' | 'bass'
@@ -88,4 +89,119 @@ export function writtenAccidental(
 export function staffOctaves(ref: ScaleRef): { rh: 4; lh: 2 | 3 } {
   const asc = scaleSequence(ref, 1, 3).ascending
   return { rh: 4, lh: noteMidi(asc[asc.length - 1] as string) <= 64 ? 3 : 2 }
+}
+
+/** Landmark notes per clef, low to high. */
+export const LANDMARKS: Record<Clef, string[]> = {
+  treble: ['C4', 'G4', 'C5', 'C6'],
+  bass: ['C2', 'C3', 'F3', 'C4'],
+}
+
+export const LANDMARK_NAMES: Record<Clef, Record<string, string>> = {
+  treble: {
+    C4: 'middle C',
+    G4: 'treble G (2nd line)',
+    C5: 'treble C (3rd space)',
+    C6: 'high C (2nd ledger line above)',
+  },
+  bass: {
+    C2: 'low C (2nd ledger line below)',
+    C3: 'bass C (2nd space)',
+    F3: 'bass F (4th line)',
+    C4: 'middle C',
+  },
+}
+
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+
+function letterOctave(d: number): string {
+  return `${LETTERS[((d % 7) + 7) % 7]}${Math.floor(d / 7)}`
+}
+
+/** The nearest landmark (ties go to the lower one) and the natural notes from it to the note's letter, inclusive. */
+export function staffRoute(note: string, clef: Clef): { landmark: string; steps: string[] } {
+  const target = diatonic(note)
+  let landmark = LANDMARKS[clef][0] as string
+  for (const l of LANDMARKS[clef]) {
+    if (Math.abs(diatonic(l) - target) < Math.abs(diatonic(landmark) - target)) landmark = l
+  }
+  const from = diatonic(landmark)
+  const dir = target >= from ? 1 : -1
+  const steps: string[] = []
+  for (let d = from; d !== target + dir; d += dir) steps.push(letterOctave(d))
+  return { landmark, steps }
+}
+
+const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th']
+
+/** Where a staff position sits, as a predicate phrase: 'is the 2nd space', 'sits on the 2nd ledger line below'. */
+export function positionPhrase(position: number): string {
+  const abs = Math.abs(position)
+  const side = position < 0 ? 'below' : 'above'
+  if (abs <= 4) {
+    return position % 2 === 0
+      ? `is the ${ORDINALS[(position + 4) / 2]} line`
+      : `is the ${ORDINALS[(position + 3) / 2]} space`
+  }
+  if (abs === 5) return `sits just ${side} the staff`
+  if (abs % 2 === 0) return `sits on the ${ORDINALS[(abs - 6) / 2]} ledger line ${side}`
+  return `sits ${position < 0 ? 'under' : 'over'} the ${ORDINALS[(abs - 7) / 2]} ledger line ${side}`
+}
+
+/** The route from the nearest landmark to a note, as one plain-text hint. */
+export function routeText(note: string, clef: Clef): string {
+  const { landmark, steps } = staffRoute(note, clef)
+  const name = (LANDMARK_NAMES[clef][landmark] as string) ?? landmark
+  const n = Note.get(note)
+  const letter = n.letter
+  let text: string
+  if (steps.length === 1) {
+    text = `This is ${name}.`
+  } else {
+    const down = diatonic(note) < diatonic(landmark) ? ' down' : ''
+    const list = steps.map((s) => s[0]).join(', ')
+    text = `From ${name}${down}: ${list}. ${letter} ${positionPhrase(staffPosition(note, clef))}.`
+  }
+  if (n.acc === '#') {
+    text += ` ${formatNote(n.pc)} is ${letter} raised a half-step: the black key just right of ${letter}.`
+  } else if (n.acc === 'b') {
+    text += ` ${formatNote(n.pc)} is ${letter} lowered a half-step: the black key just left of ${letter}.`
+  }
+  return text
+}
+
+/** The pitch class (with the note's accidental) at the same staff position in the other clef. */
+export function otherClefReading(note: string, clef: Clef): string {
+  const other: Clef = clef === 'treble' ? 'bass' : 'treble'
+  const d = staffPosition(note, clef) + MIDDLE_LINE[other]
+  return `${LETTERS[((d % 7) + 7) % 7]}${Note.get(note).acc}`
+}
+
+/** Four distinct answer names (ASCII, no octave), shuffled: the target plus the usual reading mistakes. */
+export function staffChoices(note: string, clef: Clef, rng: () => number): string[] {
+  const n = Note.get(note)
+  const other = otherClefReading(note, clef)
+  let names: string[]
+  if (n.acc === '') {
+    const i = LETTER_INDEX[n.letter] as number
+    names = [n.letter, LETTERS[(i + 1) % 7] as string, LETTERS[(i + 6) % 7] as string, other]
+  } else {
+    names = [n.pc, enharmonic(n.pc), n.letter, other]
+  }
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[names[i], names[j]] = [names[j] as string, names[i] as string]
+  }
+  return names
+}
+
+/** Feedback for the right key in the wrong octave (or the right one, when exact octave is off). */
+export function octaveHint(shown: string, playedMidi: number, exactOctave: boolean): string {
+  const diff = playedMidi - noteMidi(shown)
+  const octaves = Math.max(1, Math.round(Math.abs(diff) / 12))
+  const count = octaves === 1 ? 'one octave' : octaves === 2 ? 'two octaves' : `${octaves} octaves`
+  const shownName = shown === 'C4' ? 'middle C' : formatNote(shown)
+  const L = formatNote(Note.get(midiToName(playedMidi, '#')).pc)
+  const lead = exactOctave ? 'Wrong octave.' : 'Right.'
+  return `${lead} The staff shows ${shownName}; you played the ${L} ${count} ${diff > 0 ? 'up' : 'down'}.`
 }
