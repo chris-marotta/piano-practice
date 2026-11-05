@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildRound, gradeAnswer, gradeFirstAnswer, shouldGrade, withRepeat } from '../../src/drill/round'
-import type { Question } from '../../src/drill/round'
+import { buildRound, gradeAnswer, gradeFirstAnswer, isCorrect, shouldGrade, withRepeat } from '../../src/drill/engine'
+import type { Question } from '../../src/drill/engine'
+import { KEYS_DEF } from '../../src/drill/keys'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
+import { PC_ASCII } from '../../src/theory/keyNames'
 import type { ItemState } from '../../src/srs/scheduler'
 
 const TODAY = '2026-10-30'
@@ -27,14 +29,15 @@ function itemsOf(...states: ItemState[]): Record<string, ItemState> {
 }
 
 const round = (items: Record<string, ItemState>, count: number, opts: { midi?: boolean; seed?: number } = {}) =>
-  buildRound(items, TODAY, DEFAULT_SETTINGS, { count, midi: opts.midi ?? false, rng: mulberry32(opts.seed ?? 1) })
+  buildRound(KEYS_DEF, items, TODAY, DEFAULT_SETTINGS, { count, midi: opts.midi ?? false, rng: mulberry32(opts.seed ?? 1) })
 
 const q = (over: Partial<Question> = {}): Question => ({
   itemId: keyId(0),
   pc: 0,
   midi: 60,
   format: 'name',
-  choices: [0, 2, 4, 5],
+  answer: 'C',
+  choices: [0, 2, 4, 5].map((c) => ({ value: PC_ASCII[c] as string, label: PC_ASCII[c] as string })),
   repeat: false,
   ...over,
 })
@@ -77,8 +80,16 @@ describe('buildRound at level 1 (2 keys, 8 questions)', () => {
 })
 
 describe('buildRound formats', () => {
-  it('alternates name and tap', () => {
-    expect(round({}, 6).map((x) => x.format)).toEqual(['name', 'tap', 'name', 'tap', 'name', 'tap'])
+  it('alternates formats per item, not per position (replaces the strict A/B alternation test)', () => {
+    // Level 1: C, F, C, F, C, F. C is even in the pool (name first), F is odd (tap first), then each flips.
+    const r = round({}, 6)
+    expect(r.map((x) => x.format)).toEqual(['name', 'tap', 'tap', 'name', 'name', 'tap'])
+    for (const pc of [0, 5]) expect(new Set(r.filter((x) => x.pc === pc).map((x) => x.format))).toEqual(new Set(['name', 'tap']))
+  })
+
+  it('at level 2 (C and F at box 3), 8 questions alternate name and tap as before', () => {
+    const items = itemsOf(keyState(0, 3, TOMORROW), keyState(5, 3, TOMORROW))
+    expect(round(items, 8).map((x) => x.format)).toEqual(['name', 'tap', 'name', 'tap', 'name', 'tap', 'name', 'tap'])
   })
 
   it('is all play when midi is on, with no choices', () => {
@@ -91,9 +102,12 @@ describe('buildRound formats', () => {
     const r = round({}, 8)
     for (const x of r) {
       if (x.format === 'name') {
-        expect(x.choices).toHaveLength(4)
-        expect(new Set(x.choices).size).toBe(4)
-        expect(x.choices).toContain(x.pc)
+        const values = x.choices?.map((c) => c.value)
+        expect(values).toHaveLength(4)
+        expect(new Set(values).size).toBe(4)
+        expect(values).toContain(x.answer)
+        expect(x.answer).toBe(PC_ASCII[x.pc])
+        expect(x.choices?.find((c) => c.value === x.answer)?.label).toBeDefined()
       } else {
         expect(x.choices).toBeUndefined()
       }
@@ -164,6 +178,23 @@ describe('buildRound pool and order', () => {
   })
 })
 
+describe('isCorrect and KEYS_DEF.judge', () => {
+  it('counts the other octave as right only when the exact octave is off', () => {
+    expect(isCorrect('right', true)).toBe(true)
+    expect(isCorrect('wrong', false)).toBe(false)
+    expect(isCorrect('otherOctave', false)).toBe(true)
+    expect(isCorrect('otherOctave', true)).toBe(false)
+  })
+  it('judges a key in another octave right, a wrong pitch class wrong, a timeout wrong', () => {
+    const k = round({}, 1)[0] as Question
+    expect(KEYS_DEF.judge(k, { kind: 'key', midi: k.midi + 12 })).toBe('right')
+    expect(KEYS_DEF.judge(k, { kind: 'key', midi: k.midi + 1 })).toBe('wrong')
+    expect(KEYS_DEF.judge(k, { kind: 'choice', value: k.answer })).toBe('right')
+    expect(KEYS_DEF.judge(k, { kind: 'choice', value: 'D#' })).toBe('wrong')
+    expect(KEYS_DEF.judge(k, { kind: 'timeout' })).toBe('wrong')
+  })
+})
+
 describe('withRepeat', () => {
   const base = [q({ pc: 0 }), q({ pc: 5, itemId: keyId(5), midi: 65 }), q({ pc: 0, midi: 48 })]
 
@@ -191,23 +222,25 @@ describe('withRepeat', () => {
 
 describe('gradeAnswer', () => {
   it('nails a quick right answer', () => {
-    expect(gradeAnswer(true, 2000, 2)).toBe('nailed')
+    expect(gradeAnswer(KEYS_DEF, true, 2000, 2)).toBe('nailed')
   })
   it('grades a slow right answer shaky', () => {
-    expect(gradeAnswer(true, 6000, 2)).toBe('shaky')
+    expect(gradeAnswer(KEYS_DEF, true, 6000, 2)).toBe('shaky')
   })
   it('sits exactly on the slow threshold as nailed', () => {
-    expect(gradeAnswer(true, 5000, 3)).toBe('nailed')
-    expect(gradeAnswer(true, 5001, 3)).toBe('shaky')
+    expect(gradeAnswer(KEYS_DEF, true, 5000, 3)).toBe('nailed')
+    expect(gradeAnswer(KEYS_DEF, true, 5001, 3)).toBe('shaky')
   })
   it('grades a wrong answer lost at any speed', () => {
-    expect(gradeAnswer(false, 1000, 1)).toBe('lost')
-    expect(gradeAnswer(false, 9000, 4)).toBe('lost')
+    expect(gradeAnswer(KEYS_DEF, false, 1000, 1)).toBe('lost')
+    expect(gradeAnswer(KEYS_DEF, false, 9000, 4)).toBe('lost')
   })
   it('grades a right answer past 3 s lost at level 4 only', () => {
-    expect(gradeAnswer(true, 3500, 4)).toBe('lost')
-    expect(gradeAnswer(true, 3000, 4)).toBe('nailed')
-    expect(gradeAnswer(true, 3500, 3)).toBe('nailed')
+    expect(gradeAnswer(KEYS_DEF, true, 3500, 4)).toBe('lost')
+    expect(gradeAnswer(KEYS_DEF, true, 3000, 4)).toBe('nailed')
+    expect(gradeAnswer(KEYS_DEF, true, 3500, 3)).toBe('nailed')
+    expect(gradeAnswer(KEYS_DEF, true, 3100, 4)).toBe('lost')
+    expect(gradeAnswer(KEYS_DEF, true, 3100, 3)).toBe('nailed')
   })
 })
 
@@ -245,40 +278,40 @@ describe('shouldGrade', () => {
 })
 
 describe('gradeFirstAnswer', () => {
-  const ask = (repeat = false): Question => ({ itemId: keyId(2), pc: 2, midi: 50, format: 'tap', repeat })
+  const ask = (repeat = false): Question => ({ itemId: keyId(2), pc: 2, midi: 50, format: 'tap', answer: 'D', repeat })
   const due = keyState(2, 2, TODAY)
 
   it('grades a key\'s first answer and remembers it', () => {
     const seen = new Set<string>()
-    expect(gradeFirstAnswer(ask(), seen, due, TODAY, 'play', true, 1200, 1)).toBe('nailed')
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), seen, due, TODAY, 'play', true, 1200, 1)).toBe('nailed')
     expect(seen.has(keyId(2))).toBe(true)
   })
 
   it('a second question on the same key is not graded', () => {
     const seen = new Set<string>()
-    gradeFirstAnswer(ask(), seen, due, TODAY, 'play', false, 1200, 1)
-    expect(gradeFirstAnswer(ask(), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
+    gradeFirstAnswer(KEYS_DEF, ask(), seen, due, TODAY, 'play', false, 1200, 1)
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
   })
 
   it('a practice repeat is never graded and does not use up the key', () => {
     const seen = new Set<string>()
-    expect(gradeFirstAnswer(ask(true), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
+    expect(gradeFirstAnswer(KEYS_DEF, ask(true), seen, due, TODAY, 'play', false, 1200, 1)).toBeNull()
     expect(seen.size).toBe(0)
   })
 
   it('goes through shouldGrade: in Play a right answer on a key that is not due gives nothing', () => {
     const later = keyState(2, 3, TOMORROW)
-    expect(gradeFirstAnswer(ask(), new Set(), later, TODAY, 'play', true, 1200, 1)).toBeNull()
-    expect(gradeFirstAnswer(ask(), new Set(), later, TODAY, 'play', false, 1200, 1)).toBe('lost')
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), later, TODAY, 'play', true, 1200, 1)).toBeNull()
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), later, TODAY, 'play', false, 1200, 1)).toBe('lost')
   })
 
   it('uses gradeAnswer for the level: slow is shaky, and past 3 s at level 4 is lost', () => {
-    expect(gradeFirstAnswer(ask(), new Set(), due, TODAY, 'play', true, 6000, 1)).toBe('shaky')
-    expect(gradeFirstAnswer(ask(), new Set(), due, TODAY, 'play', true, 3500, 4)).toBe('lost')
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), due, TODAY, 'play', true, 6000, 1)).toBe('shaky')
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), due, TODAY, 'play', true, 3500, 4)).toBe('lost')
   })
 
   it('an already-graded day (session) gives nothing', () => {
     const done = { ...due, history: [{ date: TODAY, rating: 'nailed' as const }] }
-    expect(gradeFirstAnswer(ask(), new Set(), done, TODAY, 'session', true, 1200, 1)).toBeNull()
+    expect(gradeFirstAnswer(KEYS_DEF, ask(), new Set(), done, TODAY, 'session', true, 1200, 1)).toBeNull()
   })
 })

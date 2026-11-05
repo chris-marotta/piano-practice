@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { drillLevel } from '../../src/drill/levels'
-import type { Question } from '../../src/drill/round'
+import { drillLevel } from '../../src/drill/engine'
+import type { Question } from '../../src/drill/engine'
+import { KEYS_DEF } from '../../src/drill/keys'
+import { PC_ASCII } from '../../src/theory/keyNames'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 import type { KeyMark } from '../../src/ui/components/keyboardLayout'
@@ -24,8 +26,11 @@ const q = (pc: number, midi: number, format: Question['format'] = 'tap'): Questi
   pc,
   midi,
   format,
+  answer: PC_ASCII[pc] as string,
   repeat: false,
-  ...(format === 'name' ? { choices: [pc, (pc + 2) % 12, (pc + 4) % 12, (pc + 5) % 12] } : {}),
+  ...(format === 'name'
+    ? { choices: [pc, (pc + 2) % 12, (pc + 4) % 12, (pc + 5) % 12].map((c) => ({ value: PC_ASCII[c] as string, label: PC_ASCII[c] as string })) }
+    : {}),
 })
 
 const boxed = (pc: number, box: ItemState['box']): ItemState => ({
@@ -186,16 +191,16 @@ describe('level ladder and banner', () => {
   it('with the sticky drillLevel, the banner shows once: a second round at the same level shows none', () => {
     const settings = { ...DEFAULT_SETTINGS, lastDrillLevel: 1 as const }
     const items = { [keyId(0)]: boxed(0, 3), [keyId(5)]: boxed(5, 3) }
-    const first = drillLevel(items, '2026-10-30', settings)
+    const first = drillLevel(KEYS_DEF, items, '2026-10-30', settings) as 1 | 2 | 3 | 4
     expect(levelRose(first, settings.lastDrillLevel)).toBe(true)
     const stored = raisedLevel(first, settings.lastDrillLevel)
-    const second = drillLevel(items, '2026-10-31', { ...settings, lastDrillLevel: stored })
+    const second = drillLevel(KEYS_DEF, items, '2026-10-31', { ...settings, lastDrillLevel: stored })
     expect(second).toBe(2)
     expect(levelRose(second, stored)).toBe(false)
     // C lost later: the level holds at 2 and no banner shows when it is regained.
     const lost = { ...items, [keyId(0)]: boxed(0, 1) }
-    expect(drillLevel(lost, '2026-11-01', { ...settings, lastDrillLevel: stored })).toBe(2)
-    expect(levelRose(drillLevel(items, '2026-11-02', { ...settings, lastDrillLevel: stored }), stored)).toBe(false)
+    expect(drillLevel(KEYS_DEF, lost, '2026-11-01', { ...settings, lastDrillLevel: stored })).toBe(2)
+    expect(levelRose(drillLevel(KEYS_DEF, items, '2026-11-02', { ...settings, lastDrillLevel: stored }), stored)).toBe(false)
   })
 })
 

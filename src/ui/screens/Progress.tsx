@@ -1,4 +1,5 @@
-import { drillLevel } from '../../drill/levels'
+import { drillLevel } from '../../drill/engine'
+import { KEYS_DEF } from '../../drill/keys'
 import { app, resumed, today } from '../state'
 import {
   MASTERY_LEGEND,
@@ -61,7 +62,7 @@ export function Progress() {
         <div class="keys-row">
           <div class="keys-row__head">
             <h2 class="keys-row__title">Keys</h2>
-            <p class="keys-row__level">{keysLevelText(drillLevel(items, date, settings))}</p>
+            <p class="keys-row__level">{keysLevelText(drillLevel(KEYS_DEF, items, date, settings) as 1 | 2 | 3 | 4)}</p>
           </div>
           <div class="keys-row__cells" role="table" aria-label="Key mastery">
             <div class="keys-row__strip" role="row">

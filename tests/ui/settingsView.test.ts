@@ -17,7 +17,8 @@ import {
   withMinorForm,
   withSettings,
 } from '../../src/ui/screens/settingsView'
-import { drillLevel } from '../../src/drill/levels'
+import { drillLevel } from '../../src/drill/engine'
+import { KEYS_DEF } from '../../src/drill/keys'
 import { DEFAULT_SETTINGS, enabledScales, keyId, placeItems, scaleId } from '../../src/srs/items'
 import { emptyState, exportState, parseImport } from '../../src/store/storage'
 import type { AppState } from '../../src/store/storage'
@@ -157,10 +158,10 @@ describe('resetPlacement', () => {
       before.items[keyId(pc)] = { id: keyId(pc), introduced: true, box: 4, support: 0, levelStreak: 0, due: TODAY, history: [] }
     }
     before.settings = { ...before.settings, lastDrillLevel: 4 }
-    expect(drillLevel(before.items, TODAY, before.settings)).toBe(4)
+    expect(drillLevel(KEYS_DEF, before.items, TODAY, before.settings)).toBe(4)
     const after = resetPlacement(before)
     expect(after.settings.lastDrillLevel).toBe(1)
-    expect(drillLevel(after.items, TODAY, after.settings)).toBe(1)
+    expect(drillLevel(KEYS_DEF, after.items, TODAY, after.settings)).toBe(1)
     expect(after.settings).toEqual({ ...before.settings, lastDrillLevel: 1 }) // every other setting kept
     expect(before.settings.lastDrillLevel).toBe(4) // input untouched
   })

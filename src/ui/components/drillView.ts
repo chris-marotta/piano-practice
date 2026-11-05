@@ -1,5 +1,6 @@
 // Pure view helpers for the name-that-key round (DrillRound), shared by the session and Play. No Preact, no window.
-import type { Question } from '../../drill/round'
+import type { Question } from '../../drill/engine'
+import { KEYS_DEF } from '../../drill/keys'
 import { keyName, landmarkRoute, routeText } from '../../theory/keyNames'
 import type { KeyMark } from './keyboardLayout'
 
@@ -8,12 +9,7 @@ export const DRILL_LOW = 48
 export const DRILL_HIGH = 71
 
 /** The line under each ladder step's name (copy from the plan's globals). */
-export const LEVEL_HINTS: Record<1 | 2 | 3 | 4, string> = {
-  1: 'C and F',
-  2: 'D E G A B',
-  3: '♯ and ♭ names',
-  4: '3 seconds a key',
-}
+export const LEVEL_HINTS = KEYS_DEF.levelHints as Record<1 | 2 | 3 | 4, string>
 
 export const NEXT_LABEL = 'Next'
 

@@ -1,5 +1,5 @@
 // Pure view model for the Progress screen (no Preact, no window): unit tested in node.
-import { LEVEL_NAMES } from '../../drill/levels'
+import { LEVEL_NAMES } from '../../drill/keys'
 import { keyId, stateFor } from '../../srs/items'
 import type { Settings } from '../../srs/items'
 import type { ItemState } from '../../srs/scheduler'

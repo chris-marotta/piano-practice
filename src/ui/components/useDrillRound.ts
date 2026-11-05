@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { drillLevel } from '../../drill/levels'
-import { buildRound, gradeFirstAnswer, type Question } from '../../drill/round'
+import { buildRound, drillLevel, gradeFirstAnswer, type Question } from '../../drill/engine'
+import { KEYS_DEF } from '../../drill/keys'
 import { midiStatus } from '../../midi/access'
 import { stateFor } from '../../srs/items'
 import type { Rating } from '../../srs/scheduler'
@@ -29,8 +29,8 @@ export function useDrillRound(
   const [setup] = useState<DrillSetup>(() => {
     const { items, settings } = app.peek()
     const day = today()
-    const level = drillLevel(items, day, settings)
-    const questions = buildRound(items, day, settings, {
+    const level = drillLevel(KEYS_DEF, items, day, settings) as 1 | 2 | 3 | 4
+    const questions = buildRound(KEYS_DEF, items, day, settings, {
       count,
       midi: midiStatus.peek().kind === 'connected',
       rng: Math.random,
@@ -50,7 +50,7 @@ export function useDrillRound(
   const onAnswer = (q: Question, correct: boolean, ms: number) => {
     const { items, settings } = app.peek()
     const day = today()
-    const rating = gradeFirstAnswer(q, answered.current, stateFor(q.itemId, items, day, settings), day, where, correct, ms, setup.level)
+    const rating = gradeFirstAnswer(KEYS_DEF, q, answered.current, stateFor(q.itemId, items, day, settings), day, where, correct, ms, setup.level)
     if (rating) onRateRef.current(q.itemId, rating)
   }
   return { setup, onAnswer }

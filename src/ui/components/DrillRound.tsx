@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { LEVEL_NAMES } from '../../drill/levels'
-import { withRepeat, type Question } from '../../drill/round'
+import { withRepeat, type Question } from '../../drill/engine'
+import { LEVEL_NAMES } from '../../drill/keys'
 import { midiStatus } from '../../midi/access'
 import { onKeyboard } from '../../midi/input'
 import { DRILL_FAST_MS } from '../../play/thresholds'
-import { keyLabel, keyName } from '../../theory/keyNames'
+import { PC_ASCII, keyName } from '../../theory/keyNames'
 import {
   DRILL_HIGH,
   DRILL_LOW,
@@ -225,17 +225,20 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
       </div>
       {q.format === 'name' && q.choices && (
         <div class="drill-choices">
-          {q.choices.map((pc) => (
-            <button
-              key={pc}
-              type="button"
-              class={choiceClass(pc)}
-              aria-disabled={ans.answered}
-              onClick={() => give({ pc, midi: null })}
-            >
-              {keyLabel(pc)}
-            </button>
-          ))}
+          {q.choices.map((c) => {
+            const pc = PC_ASCII.indexOf(c.value)
+            return (
+              <button
+                key={c.value}
+                type="button"
+                class={choiceClass(pc)}
+                aria-disabled={ans.answered}
+                onClick={() => give({ pc, midi: null })}
+              >
+                {c.label}
+              </button>
+            )
+          })}
         </div>
       )}
       {/* Always there, so the why line arrives without moving the keyboard. */}
