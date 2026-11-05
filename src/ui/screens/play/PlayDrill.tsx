@@ -1,11 +1,13 @@
 import { useState } from 'preact/hooks'
+import type { DrillDef } from '../../../drill/engine'
 import { rateItem } from '../../../session/record'
 import type { Rating } from '../../../srs/scheduler'
 import { DrillRound } from '../../components/DrillRound'
+import type { DrillUi } from '../../components/drillUi'
 import { useDrillRound } from '../../components/useDrillRound'
 import { today, update } from '../../state'
 import { octavesSel, playTarget } from './playState'
-import { KEYS_ROUND_QUESTIONS, pickerSummary } from './playView'
+import { pickerSummary } from './playView'
 
 export const NEXT_ROUND_LABEL = 'Next round'
 
@@ -14,13 +16,25 @@ function rateKey(itemId: string, rating: Rating): void {
   update((st) => rateItem(st, itemId, rating, today()))
 }
 
+interface Props {
+  def: DrillDef
+  ui: DrillUi
+  /** Questions per round. */
+  count: number
+  /** Staff's exact-octave setting; Keys has none. */
+  exactOctave?: boolean
+}
+
 /** One round, built on mount (useDrillRound), with the summary line above it. */
-function KeysRound({ onNext }: { onNext: () => void }) {
-  const { setup, onAnswer } = useDrillRound(KEYS_ROUND_QUESTIONS, 'play', rateKey)
+function DrillRoundOnce({ def, ui, count, exactOctave = false, onNext }: Props & { onNext: () => void }) {
+  const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey)
   return (
     <div class="play-keys">
       <p class="play-keys__summary">{pickerSummary(playTarget.value, octavesSel.value, 'keys', 'rh', setup.level)}</p>
       <DrillRound
+        def={def}
+        ui={ui}
+        exactOctave={exactOctave}
         questions={setup.questions}
         level={setup.level}
         unlocked={setup.unlocked}
@@ -33,10 +47,10 @@ function KeysRound({ onNext }: { onNext: () => void }) {
 }
 
 /**
- * Play's Keys mode: name-that-key rounds of 8, one after another (spec §6.6). Only keys that are due, or answered
+ * Play's drill mode (Keys: name-that-key rounds of 8), one round after another (spec §6.6). Only keys that are due, or answered
  * wrong, move a box here (shouldGrade 'play'). "Next round" mounts a fresh round at the level the ratings now give.
  */
-export function PlayKeys() {
+export function PlayDrill(props: Props) {
   const [round, setRound] = useState(0)
-  return <KeysRound key={round} onNext={() => setRound(round + 1)} />
+  return <DrillRoundOnce key={round} {...props} onNext={() => setRound(round + 1)} />
 }

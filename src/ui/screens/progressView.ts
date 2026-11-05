@@ -1,5 +1,5 @@
 // Pure view model for the Progress screen (no Preact, no window): unit tested in node.
-import { LEVEL_NAMES } from '../../drill/keys'
+import { KEYS_DEF } from '../../drill/keys'
 import { keyId, stateFor } from '../../srs/items'
 import type { Settings } from '../../srs/items'
 import type { ItemState } from '../../srs/scheduler'
@@ -85,8 +85,8 @@ export function keyCells(items: Record<string, ItemState>, today: string, settin
 }
 
 /** The line under the Keys row: where the name-that-key ladder stands. */
-export function keysLevelText(level: 1 | 2 | 3 | 4): string {
-  return `Level ${level} of 4 · ${LEVEL_NAMES[level]}`
+export function keysLevelText(level: number): string {
+  return `Level ${level} of 4 · ${KEYS_DEF.levelNames[level]}`
 }
 
 export const MASTERY_LEGEND: { shade: 1 | 2 | 3 | 4 | 5; label: string }[] = [

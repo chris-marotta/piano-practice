@@ -1,8 +1,10 @@
 import { useEffect } from 'preact/hooks'
 import { stopAll } from '../../audio/piano'
+import { KEYS_DEF } from '../../drill/keys'
 import { midiStatus } from '../../midi/access'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
+import { KEYS_UI } from '../components/keysUi'
 import { MidiChip } from '../components/MidiChip'
 import { app, currentSession, route, today, update } from '../state'
 import { useWakeLock } from '../useWakeLock'
@@ -80,7 +82,7 @@ export function Session() {
 
   let body
   if (step.kind === 'drill')
-    body = <DrillStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
+    body = <DrillStep key={i} def={KEYS_DEF} ui={KEYS_UI} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
   else if (step.kind === 'deck')
     body = <DeckStep key={i} step={step} onRate={(id, r) => rateInStep(i, id, r)} onDone={() => advance(i)} />
   else if (step.kind === 'scale')

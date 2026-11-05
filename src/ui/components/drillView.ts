@@ -1,15 +1,11 @@
 // Pure view helpers for the name-that-key round (DrillRound), shared by the session and Play. No Preact, no window.
-import type { Question } from '../../drill/engine'
-import { KEYS_DEF } from '../../drill/keys'
+import { isCorrect, type DrillDef, type Given, type Question, type Verdict } from '../../drill/engine'
 import { keyName, landmarkRoute, routeText } from '../../theory/keyNames'
 import type { KeyMark } from './keyboardLayout'
 
 /** The drill keyboard: C3 to B4, two octaves (spec §6.2). */
 export const DRILL_LOW = 48
 export const DRILL_HIGH = 71
-
-/** The line under each ladder step's name (copy from the plan's globals). */
-export const LEVEL_HINTS = KEYS_DEF.levelHints as Record<1 | 2 | 3 | 4, string>
 
 export const NEXT_LABEL = 'Next'
 
@@ -18,27 +14,41 @@ const isLandmark = (midi: number): boolean => pcOf(midi) === 0 || pcOf(midi) ===
 
 /**
  * One question's answer. Only the first answer counts: `answer` leaves an answered state as it is.
- * `pc` is what was given (null on a timeout); `midi` the key tapped or played (null for a name pick or a timeout).
+ * `given` is what the player gave; `verdict` is the def's judgement of it, `correct` that verdict under the
+ * exact-octave setting.
  */
 export type AnswerState =
   | { answered: false }
-  | { answered: true; correct: boolean; pc: number | null; midi: number | null; ms: number }
+  | { answered: true; verdict: Verdict; correct: boolean; given: Given; ms: number }
 
-/** What a level-4 timeout gives: no key, never right. */
-export const TIMED_OUT = { pc: null, midi: null } as const
+/** What a speed-level timeout gives: nothing, never right. */
+export const TIMED_OUT: Given = { kind: 'timeout' }
 
 /**
- * Every tap, name pick, note and timeout goes through here. Any octave of the asked pitch class is right.
+ * Every tap, name pick, note and timeout goes through here, judged by the def.
  * Once answered, the same state comes back (a double tap, keys tapped after answering, a late MIDI note).
  */
 export function answer(
   s: AnswerState,
   q: Question,
-  given: { pc: number | null; midi: number | null },
+  given: Given,
   ms: number,
+  def: DrillDef,
+  exactOctave: boolean,
 ): AnswerState {
   if (s.answered) return s
-  return { answered: true, correct: given.pc === q.pc, pc: given.pc, midi: given.midi, ms }
+  const verdict = def.judge(q, given)
+  return { answered: true, verdict, correct: isCorrect(verdict, exactOctave), given, ms }
+}
+
+/** The speed level's per-question limit in ms (the def's fastMs), or null below it. DrillRound's timer reads this. */
+export function timeLimit(def: DrillDef, level: number): number | null {
+  return level === def.levelCount ? def.fastMs : null
+}
+
+/** The key a tap or note gave (null for a name pick or a timeout). */
+export function givenMidi(given: Given): number | null {
+  return given.kind === 'key' ? given.midi : null
 }
 
 /** The octave of `midi` that falls on the drill keyboard (a Roli has more keys than the screen shows). */
@@ -84,7 +94,7 @@ export function answerMarks(q: Question, answeredMidi: number | null, correct: b
   return marks
 }
 
-/** The question line (copy verbatim from the plan's globals). */
+/** The Keys question line (copy verbatim from the plan's globals). */
 export function promptText(q: Question): string {
   if (q.format === 'name') return 'Which key is this?'
   if (q.format === 'tap') return `Tap ${keyName(q.pc)}`
@@ -96,10 +106,12 @@ export function listeningText(device: string): string {
   return `● Listening: ${device}`
 }
 
-/** The why line after an answer; a wrong 'play' first names what was played. */
+/** The Keys why line after an answer; a wrong 'play' first names what was played. */
 export function whyText(q: Question, s: AnswerState): string {
   const route = routeText(q.pc)
-  if (q.format === 'play' && s.answered && !s.correct && s.pc !== null) return `You played ${keyName(s.pc)}. ${route}`
+  if (q.format === 'play' && s.answered && !s.correct && s.given.kind === 'key') {
+    return `You played ${keyName(((s.given.midi % 12) + 12) % 12)}. ${route}`
+  }
   return route
 }
 
@@ -112,8 +124,8 @@ export function levelRose(level: number, lastLevel: number): boolean {
 }
 
 /** The highest level reached, to store as `lastDrillLevel`: it only ever rises. */
-export function raisedLevel(level: 1 | 2 | 3 | 4, lastLevel: 1 | 2 | 3 | 4): 1 | 2 | 3 | 4 {
-  return Math.max(level, lastLevel) as 1 | 2 | 3 | 4
+export function raisedLevel(level: number, lastLevel: number): number {
+  return Math.max(level, lastLevel)
 }
 
 /** The button under an answer: Next, and on the last question the caller's finish label. */

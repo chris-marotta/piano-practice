@@ -427,7 +427,7 @@ export function pickerSummary(
   octaves: 1 | 2,
   mode: PlayMode,
   hand: PlayHand,
-  drillLevel: 1 | 2 | 3 | 4 = 1,
+  drillLevel = 1,
 ): string {
   if (mode === 'keys') return `Keys · Level ${drillLevel}`
   if (target.kind === 'none') return 'Free play'

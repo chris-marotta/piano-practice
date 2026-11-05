@@ -1,10 +1,12 @@
 import { useEffect } from 'preact/hooks'
+import { KEYS_DEF } from '../../../drill/keys'
 import { loadPiano, stopAll } from '../../../audio/piano'
 import { audioReady, unlockAudio } from '../../../audio/unlock'
 import { midiStatus } from '../../../midi/access'
 import { clearKeyboard, emitKeyboard, heldNotes, onKeyboard } from '../../../midi/input'
 import { formatNote, formatScale } from '../../../theory/format'
 import { keyboardBox, keyboardFitVars } from '../../components/keyboardLayout'
+import { KEYS_UI } from '../../components/keysUi'
 import { MidiChip } from '../../components/MidiChip'
 import { Segmented } from '../../components/Segmented'
 import { app, update } from '../../state'
@@ -13,7 +15,7 @@ import { withSettings } from '../settingsView'
 import { Toggle } from '../steps/Toggle'
 import { useDrone } from '../steps/useAudio'
 import { PickerSummary, PlayPicker } from './PlayPicker'
-import { PlayKeys } from './PlayKeys'
+import { PlayDrill } from './PlayDrill'
 import {
   fitted,
   hand,
@@ -35,6 +37,7 @@ import {
   followsNotes,
   guideAvailable,
   guidedStatus,
+  KEYS_ROUND_QUESTIONS,
   pickerSummary,
   playMarks,
   reserveRowsFor,
@@ -190,7 +193,7 @@ export function Play() {
       </header>
 
       {keys ? (
-        <PlayKeys />
+        <PlayDrill def={KEYS_DEF} ui={KEYS_UI} count={KEYS_ROUND_QUESTIONS} />
       ) : (
         <>
           {collapsed ? (

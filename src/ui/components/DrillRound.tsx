@@ -1,30 +1,24 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { withRepeat, type Question } from '../../drill/engine'
-import { LEVEL_NAMES } from '../../drill/keys'
+import { withRepeat, type DrillDef, type Given, type Question } from '../../drill/engine'
 import { midiStatus } from '../../midi/access'
 import { onKeyboard } from '../../midi/input'
-import { DRILL_FAST_MS } from '../../play/thresholds'
-import { PC_ASCII, keyName } from '../../theory/keyNames'
+import type { DrillUi } from './drillUi'
 import {
-  DRILL_HIGH,
-  DRILL_LOW,
-  LEVEL_HINTS,
   TIMED_OUT,
   answer,
-  answerMarks,
   belongsToQuestion,
   listeningText,
   nextLabel,
-  promptText,
-  whyText,
+  timeLimit,
   type AnswerState,
 } from './drillView'
-import { Keyboard, type KeyMark } from './Keyboard'
 
 interface Props {
+  def: DrillDef
+  ui: DrillUi
   /** The round as built; DrillRound appends each missed key's practice repeat itself (withRepeat). Key it per round. */
   questions: Question[]
-  level: 1 | 2 | 3 | 4
+  level: number
   /** Once per question, on its first answer (repeats included: the caller decides what to grade). */
   onAnswer: (q: Question, correct: boolean, ms: number) => void
   /** Next on the last question. */
@@ -33,50 +27,28 @@ interface Props {
   finishLabel: string
   /** Show "Level {level} unlocked" above the ladder (the level rose since the last round). */
   unlocked?: boolean
+  /** Count a right letter in the wrong octave as wrong (Staff's setting; Keys has none). */
+  exactOctave?: boolean
 }
-
-const LEVELS = [1, 2, 3, 4] as const
-
-/** Room for the black keys to be tapped on a two-octave keyboard (white keys up to 72 px). */
-const DRILL_KEY_PX = 72
 
 const UNANSWERED: AnswerState = { answered: false }
 
-function Ladder({ level }: { level: 1 | 2 | 3 | 4 }) {
+function Ladder({ def, level }: { def: DrillDef; level: number }) {
+  const levels = Array.from({ length: def.levelCount }, (_, i) => i + 1)
   return (
-    <ol class="drill-ladder" aria-label={`Level ${level} of 4`}>
-      {LEVELS.map((n) => (
+    <ol class="drill-ladder" aria-label={`Level ${level} of ${def.levelCount}`}>
+      {levels.map((n) => (
         <li
           key={n}
           class={`drill-ladder__step${n === level ? ' drill-ladder__step--current' : n < level ? ' drill-ladder__step--done' : ''}`}
           aria-current={n === level ? 'step' : undefined}
         >
           <span class="drill-ladder__num">Level {n}</span>
-          <span class="drill-ladder__name">{LEVEL_NAMES[n]}</span>
-          <span class="drill-ladder__hint">{LEVEL_HINTS[n]}</span>
+          <span class="drill-ladder__name">{def.levelNames[n]}</span>
+          <span class="drill-ladder__hint">{def.levelHints[n]}</span>
         </li>
       ))}
     </ol>
-  )
-}
-
-/** The prompt with the key's name in the accent colour ("Tap **A**"). */
-function Prompt({ q }: { q: Question }) {
-  const text = promptText(q)
-  const name = keyName(q.pc)
-  const at = q.format === 'name' ? -1 : text.indexOf(name)
-  return (
-    <h1 class="drill__prompt">
-      {at < 0 ? (
-        text
-      ) : (
-        <>
-          {text.slice(0, at)}
-          <span class="drill__name">{name}</span>
-          {text.slice(at + name.length)}
-        </>
-      )}
-    </h1>
   )
 }
 
@@ -85,7 +57,7 @@ function Prompt({ q }: { q: Question }) {
  * Only the first answer to a question counts: every pick, tap, note and timeout goes through `answer`, which
  * ignores anything after the first, and nothing moves on until Next. A miss gets one practice repeat at the end.
  */
-export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, unlocked = false }: Props) {
+export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, finishLabel, unlocked = false, exactOctave = false }: Props) {
   const [round, setRound] = useState(questions)
   const [index, setIndex] = useState(0)
   const [ans, setAns] = useState<AnswerState>(UNANSWERED)
@@ -99,13 +71,13 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
   onAnswerRef.current = onAnswer
   const nextBtn = useRef<HTMLButtonElement>(null)
 
-  const give = (given: { pc: number | null; midi: number | null }, at = performance.now()) => {
+  const give = (given: Given, at = performance.now()) => {
     const i = indexRef.current
     const q = roundRef.current[i]
     if (!q) return
     // A note stamped before this question began (the last one's late press) isn't an answer to it.
     if (!belongsToQuestion(at, startRef.current)) return
-    const s = answer(ansRef.current, q, given, Math.round(at - startRef.current))
+    const s = answer(ansRef.current, q, given, Math.round(at - startRef.current), def, exactOctave)
     if (s === ansRef.current || !s.answered) return
     ansRef.current = s
     setAns(s)
@@ -147,17 +119,18 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
         if (e.type !== 'on') return
         const q = roundRef.current[indexRef.current]
         if (!q || q.format === 'name') return
-        giveRef.current({ pc: ((e.midi % 12) + 12) % 12, midi: e.midi }, e.t)
+        giveRef.current({ kind: 'key', midi: e.midi }, e.t)
       }),
     [],
   )
 
-  // Level 4: 3 seconds a key, then it counts as wrong.
+  // The speed level: the def's fastMs a question, then it counts as wrong.
+  const limit = timeLimit(def, level)
   useEffect(() => {
-    if (level !== 4 || ans.answered) return
-    const t = setTimeout(() => giveRef.current(TIMED_OUT, startRef.current + DRILL_FAST_MS), DRILL_FAST_MS)
+    if (limit === null || ans.answered) return
+    const t = setTimeout(() => giveRef.current(TIMED_OUT, startRef.current + limit), limit)
     return () => clearTimeout(t)
-  }, [level, index, ans.answered])
+  }, [limit, index, ans.answered])
 
   // After an answer, Next takes the focus so Enter / Space moves on.
   useEffect(() => {
@@ -167,17 +140,12 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
   const q = round[index]
   if (!q) return null
   const status = midiStatus.value
-  const marks: KeyMark[] = ans.answered
-    ? answerMarks(q, ans.midi, ans.correct)
-    : q.format === 'name'
-      ? [{ midi: q.midi, hand: 'none' }]
-      : []
   const tappable = q.format !== 'name'
 
-  const choiceClass = (pc: number): string => {
+  const choiceClass = (value: string): string => {
     if (!ans.answered) return 'drill-choice'
-    if (pc === q.pc) return 'drill-choice drill-choice--right'
-    if (pc === ans.pc) return 'drill-choice drill-choice--wrong'
+    if (value === q.answer) return 'drill-choice drill-choice--right'
+    if (ans.given.kind === 'choice' && ans.given.value === value) return 'drill-choice drill-choice--wrong'
     return 'drill-choice drill-choice--other'
   }
 
@@ -190,55 +158,46 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
               Level {level} unlocked
             </p>
           )}
-          <Ladder level={level} />
+          <Ladder def={def} level={level} />
         </div>
       )}
       <header class="drill__head">
-        <span class="drill__kicker">NAME THAT KEY</span>
+        <span class="drill__kicker">{ui.kicker}</span>
         <span class="drill__count">
           {index + 1} / {round.length}
         </span>
       </header>
       <div class="drill__ask">
-        <Prompt q={q} />
+        <ui.Ask q={q} ans={ans} />
         {q.format === 'play' && status.kind === 'connected' && (
           <p class="drill__listening">{listeningText(status.name)}</p>
         )}
       </div>
-      {level === 4 && (
+      {limit !== null && (
         <div class="drill__timer" aria-hidden="true">
           <span
             key={index}
-            style={{ animationDuration: `${DRILL_FAST_MS}ms` }}
-            class={`drill__timer-fill${!ans.answered ? '' : ans.pc === null ? ' is-out' : ' is-stopped'}`}
+            style={{ animationDuration: `${limit}ms` }}
+            class={`drill__timer-fill${!ans.answered ? '' : ans.given.kind === 'timeout' ? ' is-out' : ' is-stopped'}`}
           />
         </div>
       )}
       <div class={`drill__board${!ans.answered && q.format === 'name' ? ' drill__board--ask' : ''}`}>
-        <Keyboard
-          low={DRILL_LOW}
-          high={DRILL_HIGH}
-          marks={marks}
-          maxKeyPx={DRILL_KEY_PX}
-          {...(tappable ? { onKeyTap: (midi: number) => give({ pc: midi % 12, midi }) } : {})}
-        />
+        <ui.Board q={q} ans={ans} {...(tappable ? { onKey: (midi: number) => give({ kind: 'key', midi }) } : {})} />
       </div>
       {q.format === 'name' && q.choices && (
         <div class="drill-choices">
-          {q.choices.map((c) => {
-            const pc = PC_ASCII.indexOf(c.value)
-            return (
-              <button
-                key={c.value}
-                type="button"
-                class={choiceClass(pc)}
-                aria-disabled={ans.answered}
-                onClick={() => give({ pc, midi: null })}
-              >
-                {c.label}
-              </button>
-            )
-          })}
+          {q.choices.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              class={choiceClass(c.value)}
+              aria-disabled={ans.answered}
+              onClick={() => give({ kind: 'choice', value: c.value })}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
       )}
       {/* Always there, so the why line arrives without moving the keyboard. */}
@@ -246,7 +205,7 @@ export function DrillRound({ questions, level, onAnswer, onFinish, finishLabel, 
         {ans.answered && (
           <>
             <p class={`drill__why${ans.correct ? ' drill__why--right' : ' drill__why--wrong'}`} role="status">
-              <b>Why:</b> {whyText(q, ans)}
+              <b>Why:</b> {ui.whyText(q, ans, exactOctave)}
             </p>
             <button ref={nextBtn} type="button" class="btn btn--primary btn--lg drill__next" onClick={next}>
               {nextLabel(index, round.length, finishLabel)}

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { drillLevel } from '../../src/drill/engine'
-import type { Question } from '../../src/drill/engine'
+import type { DrillDef, Question } from '../../src/drill/engine'
 import { KEYS_DEF } from '../../src/drill/keys'
 import { PC_ASCII } from '../../src/theory/keyNames'
 import { DEFAULT_SETTINGS, keyId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
 import type { KeyMark } from '../../src/ui/components/keyboardLayout'
+import { KEYS_UI } from '../../src/ui/components/keysUi'
 import {
-  LEVEL_HINTS,
   TIMED_OUT,
   answer,
   answerMarks,
@@ -16,8 +16,7 @@ import {
   raisedLevel,
   listeningText,
   nextLabel,
-  promptText,
-  whyText,
+  timeLimit,
   type AnswerState,
 } from '../../src/ui/components/drillView'
 
@@ -113,66 +112,106 @@ describe('answerMarks', () => {
 
 describe('promptText', () => {
   it('A: Which key is this?', () => {
-    expect(promptText(q(4, E3, 'name'))).toBe('Which key is this?')
+    expect(KEYS_UI.promptText(q(4, E3, 'name'))).toBe('Which key is this?')
   })
   it('B: Tap {name}', () => {
-    expect(promptText(q(9, 57, 'tap'))).toBe('Tap A')
-    expect(promptText(q(8, Gs3, 'tap'))).toBe('Tap G♯')
+    expect(KEYS_UI.promptText(q(9, 57, 'tap'))).toBe('Tap A')
+    expect(KEYS_UI.promptText(q(8, Gs3, 'tap'))).toBe('Tap G♯')
   })
   it('C: Play {name} on your piano, with the listening chip', () => {
-    expect(promptText(q(8, Gs3, 'play'))).toBe('Play G♯ on your piano')
+    expect(KEYS_UI.promptText(q(8, Gs3, 'play'))).toBe('Play G♯ on your piano')
     expect(listeningText('ROLI Piano')).toBe('● Listening: ROLI Piano')
   })
 })
 
 describe('answer: first answer only', () => {
   const blank: AnswerState = { answered: false }
+  const key = (midi: number) => ({ kind: 'key', midi }) as const
 
-  it('records the first answer', () => {
-    expect(answer(blank, q(4, E3), { pc: 4, midi: E3 }, 1200)).toEqual({ answered: true, correct: true, pc: 4, midi: E3, ms: 1200 })
-    expect(answer(blank, q(4, E3), { pc: 5, midi: F3 }, 900)).toMatchObject({ answered: true, correct: false, midi: F3 })
+  it('records the first answer with its verdict', () => {
+    expect(answer(blank, q(4, E3), key(E3), 1200, KEYS_DEF, false)).toEqual({
+      answered: true,
+      verdict: 'right',
+      correct: true,
+      given: key(E3),
+      ms: 1200,
+    })
+    expect(answer(blank, q(4, E3), key(F3), 900, KEYS_DEF, false)).toMatchObject({ answered: true, verdict: 'wrong', correct: false, given: key(F3) })
   })
 
   it('a second call returns the same state (double tap, a late MIDI note)', () => {
-    const first = answer(blank, q(4, E3), { pc: 5, midi: F3 }, 900)
-    expect(answer(first, q(4, E3), { pc: 5, midi: F3 }, 950)).toBe(first) // double tap
-    expect(answer(first, q(4, E3), { pc: 4, midi: E3 }, 1400)).toBe(first) // a right note after a wrong tap
+    const first = answer(blank, q(4, E3), key(F3), 900, KEYS_DEF, false)
+    expect(answer(first, q(4, E3), key(F3), 950, KEYS_DEF, false)).toBe(first) // double tap
+    expect(answer(first, q(4, E3), key(E3), 1400, KEYS_DEF, false)).toBe(first) // a right note after a wrong tap
   })
 
   it("'tap' with the right pitch class in another octave is correct", () => {
-    expect(answer(blank, q(4, E3, 'tap'), { pc: 4, midi: E3 + 12 }, 800)).toMatchObject({ correct: true })
+    expect(answer(blank, q(4, E3, 'tap'), key(E3 + 12), 800, KEYS_DEF, false)).toMatchObject({ correct: true })
   })
 
-  it("'name' answers have no key", () => {
-    expect(answer(blank, q(4, E3, 'name'), { pc: 4, midi: null }, 800)).toMatchObject({ correct: true, midi: null })
+  it("'name' picks go through the def's judge", () => {
+    const pick = { kind: 'choice', value: 'E' } as const
+    expect(answer(blank, q(4, E3, 'name'), pick, 800, KEYS_DEF, false)).toMatchObject({ correct: true, given: pick })
+    expect(answer(blank, q(4, E3, 'name'), { kind: 'choice', value: 'F' }, 800, KEYS_DEF, false)).toMatchObject({ correct: false, verdict: 'wrong' })
   })
 
   it('a timeout is wrong, with no key', () => {
-    expect(answer(blank, q(4, E3), TIMED_OUT, 3000)).toEqual({ answered: true, correct: false, pc: null, midi: null, ms: 3000 })
+    expect(answer(blank, q(4, E3), TIMED_OUT, 3000, KEYS_DEF, false)).toEqual({
+      answered: true,
+      verdict: 'wrong',
+      correct: false,
+      given: { kind: 'timeout' },
+      ms: 3000,
+    })
+  })
+
+  it("otherOctave counts as right only when the exact octave is off (a stub def's judge)", () => {
+    const stub: DrillDef = { ...KEYS_DEF, judge: () => 'otherOctave' }
+    expect(answer(blank, q(4, E3), key(E3 + 12), 800, stub, false)).toMatchObject({ verdict: 'otherOctave', correct: true })
+    expect(answer(blank, q(4, E3), key(E3 + 12), 800, stub, true)).toMatchObject({ verdict: 'otherOctave', correct: false })
+  })
+})
+
+describe('timeLimit: the speed level reads the def', () => {
+  it('Keys: 3 seconds at level 4 only', () => {
+    expect(timeLimit(KEYS_DEF, 4)).toBe(3000)
+    expect(timeLimit(KEYS_DEF, 3)).toBeNull()
+  })
+  it("a def with 6 levels and fastMs 4000 limits level 6, not level 4", () => {
+    const six: DrillDef = { ...KEYS_DEF, levelCount: 6, fastMs: 4000 }
+    expect(timeLimit(six, 6)).toBe(4000)
+    expect(timeLimit(six, 4)).toBeNull()
   })
 })
 
 describe('whyText', () => {
-  const answered = (pc: number | null, correct: boolean): AnswerState => ({ answered: true, correct, pc, midi: null, ms: 1 })
+  // What the player gave: null is a timeout, else the key played (any octave of that pitch class).
+  const answered = (pc: number | null, correct: boolean): AnswerState => ({
+    answered: true,
+    verdict: correct ? 'right' : 'wrong',
+    correct,
+    given: pc === null ? { kind: 'timeout' } : { kind: 'key', midi: 60 + pc },
+    ms: 1,
+  })
 
   it('is the route sentence', () => {
-    expect(whyText(q(4, E3, 'tap'), answered(5, false))).toBe('From C (left of the two black keys): C, D, E.')
-    expect(whyText(q(8, Gs3, 'name'), answered(8, true))).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(4, E3, 'tap'), answered(5, false), false)).toBe('From C (left of the two black keys): C, D, E.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'name'), answered(8, true), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 
   it("a wrong 'play' names what was played", () => {
-    expect(whyText(q(8, Gs3, 'play'), answered(7, false))).toBe('You played G. G♯ is the black key just right of G. Also called A♭.')
-    expect(whyText(q(8, Gs3, 'play'), answered(8, true))).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(7, false), false)).toBe('You played G. G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(8, true), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 
   it('a timed-out play names nothing', () => {
-    expect(whyText(q(8, Gs3, 'play'), answered(null, false))).toBe('G♯ is the black key just right of G. Also called A♭.')
+    expect(KEYS_UI.whyText(q(8, Gs3, 'play'), answered(null, false), false)).toBe('G♯ is the black key just right of G. Also called A♭.')
   })
 })
 
 describe('level ladder and banner', () => {
   it('hints for each level', () => {
-    expect(LEVEL_HINTS).toEqual({ 1: 'C and F', 2: 'D E G A B', 3: '♯ and ♭ names', 4: '3 seconds a key' })
+    expect(KEYS_DEF.levelHints).toEqual({ 1: 'C and F', 2: 'D E G A B', 3: '♯ and ♭ names', 4: '3 seconds a key' })
   })
 
   it('the banner shows only when the level rose since the last round', () => {
@@ -191,16 +230,16 @@ describe('level ladder and banner', () => {
   it('with the sticky drillLevel, the banner shows once: a second round at the same level shows none', () => {
     const settings = { ...DEFAULT_SETTINGS, lastDrillLevel: 1 as const }
     const items = { [keyId(0)]: boxed(0, 3), [keyId(5)]: boxed(5, 3) }
-    const first = drillLevel(KEYS_DEF, items, '2026-10-30', settings) as 1 | 2 | 3 | 4
+    const first = drillLevel(KEYS_DEF, items, '2026-10-30', settings)
     expect(levelRose(first, settings.lastDrillLevel)).toBe(true)
     const stored = raisedLevel(first, settings.lastDrillLevel)
-    const second = drillLevel(KEYS_DEF, items, '2026-10-31', { ...settings, lastDrillLevel: stored })
+    const second = drillLevel(KEYS_DEF, items, '2026-10-31', { ...settings, [KEYS_DEF.levelSetting]: stored })
     expect(second).toBe(2)
     expect(levelRose(second, stored)).toBe(false)
     // C lost later: the level holds at 2 and no banner shows when it is regained.
     const lost = { ...items, [keyId(0)]: boxed(0, 1) }
-    expect(drillLevel(KEYS_DEF, lost, '2026-11-01', { ...settings, lastDrillLevel: stored })).toBe(2)
-    expect(levelRose(drillLevel(KEYS_DEF, items, '2026-11-02', { ...settings, lastDrillLevel: stored }), stored)).toBe(false)
+    expect(drillLevel(KEYS_DEF, lost, '2026-11-01', { ...settings, [KEYS_DEF.levelSetting]: stored })).toBe(2)
+    expect(levelRose(drillLevel(KEYS_DEF, items, '2026-11-02', { ...settings, [KEYS_DEF.levelSetting]: stored }), stored)).toBe(false)
   })
 })
 
