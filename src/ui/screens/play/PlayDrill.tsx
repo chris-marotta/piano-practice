@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import type { DrillDef } from '../../../drill/engine'
 import { rateItem } from '../../../session/record'
 import type { Rating } from '../../../srs/scheduler'
@@ -6,7 +6,7 @@ import { DrillRound } from '../../components/DrillRound'
 import type { DrillUi } from '../../components/drillUi'
 import { useDrillRound } from '../../components/useDrillRound'
 import { today, update } from '../../state'
-import { headSummary, octavesSel, playTarget } from './playState'
+import { octavesSel, playTarget } from './playState'
 import { pickerSummary } from './playView'
 
 export const NEXT_ROUND_LABEL = 'Next round'
@@ -25,20 +25,20 @@ interface Props {
   mode: 'keys' | 'staff'
   /** Staff's exact-octave setting; Keys has none. */
   exactOctave?: boolean
-  /** Put the summary line in the Play header (`headSummary`) instead of above the round: Staff, to fit 820 px. */
-  summaryInHead?: boolean
+  /**
+   * Show the summary in the round's head row (beside the kicker) instead of as a line above it: Staff, so a name
+   * question fits 820 px. (The Play header has no room for it once a keyboard is connected: it wraps.)
+   */
+  summaryInRound?: boolean
 }
 
 /** One round, built on mount (useDrillRound), with the summary line above it. */
-function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInHead = false, onNext }: Props & { onNext: () => void }) {
+function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInRound = false, onNext }: Props & { onNext: () => void }) {
   const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey)
   const summary = pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level)
-  useLayoutEffect(() => {
-    if (summaryInHead) headSummary.value = summary
-  }, [summaryInHead, summary])
   return (
     <div class="play-keys">
-      {!summaryInHead && <p class="play-keys__summary">{summary}</p>}
+      {!summaryInRound && <p class="play-keys__summary">{summary}</p>}
       <DrillRound
         def={def}
         ui={ui}
@@ -49,6 +49,7 @@ function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInHe
         onAnswer={onAnswer}
         onFinish={onNext}
         finishLabel={NEXT_ROUND_LABEL}
+        {...(summaryInRound ? { headNote: summary } : {})}
       />
     </div>
   )

@@ -29,6 +29,8 @@ interface Props {
   unlocked?: boolean
   /** Count a right letter in the wrong octave as wrong (Staff's setting; Keys has none). */
   exactOctave?: boolean
+  /** A short line in the head row between the kicker and the count (Play Staff's "Staff · Level n"). */
+  headNote?: string
 }
 
 const UNANSWERED: AnswerState = { answered: false }
@@ -62,7 +64,7 @@ function Ladder({ def, level }: { def: DrillDef; level: number }) {
  * Only the first answer to a question counts: every pick, tap, note and timeout goes through `answer`, which
  * ignores anything after the first, and nothing moves on until Next. A miss gets one practice repeat at the end.
  */
-export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, finishLabel, unlocked = false, exactOctave = false }: Props) {
+export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, finishLabel, unlocked = false, exactOctave = false, headNote }: Props) {
   const [round, setRound] = useState(questions)
   const [index, setIndex] = useState(0)
   const [ans, setAns] = useState<AnswerState>(UNANSWERED)
@@ -185,6 +187,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
       )}
       <header class="drill__head">
         <span class="drill__kicker">{ui.kicker}</span>
+        {headNote && <span class="drill__note">{headNote}</span>}
         <span class="drill__count">
           {index + 1} / {round.length}
         </span>

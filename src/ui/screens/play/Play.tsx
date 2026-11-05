@@ -21,7 +21,6 @@ import { PlayDrill } from './PlayDrill'
 import {
   fitted,
   hand,
-  headSummary,
   keyWindow,
   mode,
   octavesSel,
@@ -192,7 +191,6 @@ export function Play() {
             {hint}
           </p>
         )}
-        {m === 'staff' && <p class="play-keys__summary play-head__summary">{headSummary.value}</p>}
         {m === 'staff' && (
           <Toggle
             label="Exact octave"
@@ -214,7 +212,7 @@ export function Play() {
           ui={STAFF_UI}
           count={STAFF_ROUND_QUESTIONS}
           mode="staff"
-          summaryInHead
+          summaryInRound
           exactOctave={app.value.settings.staffExactOctave}
         />
       ) : (

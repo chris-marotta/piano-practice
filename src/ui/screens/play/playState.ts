@@ -37,8 +37,6 @@ export const toggles = signal<PlayToggles>(DEFAULT_TOGGLES)
  * the next note folds it again. Play resets it to open on the way in and out, so leaving the tab never leaves it folded.
  */
 export const pickerCollapsed = signal(false)
-/** Staff mode's "Staff · Level n" line for the Play header (the round sets it), so the round keeps the screen's height. */
-export const headSummary = signal('')
 
 /** A new object only when the selection changes (guide.ts caches per target object). */
 export const playTarget = computed<PlayTarget>(() => {

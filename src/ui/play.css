@@ -405,8 +405,3 @@
     min-height: var(--tap);
   }
 }
-
-/* Staff mode: "Staff · Level n" sits in the header beside Exact octave, so the round keeps 820 px for the question. */
-.play-head__summary {
-  align-self: center;
-}

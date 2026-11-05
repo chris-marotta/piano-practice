@@ -6,7 +6,10 @@ import { Keyboard } from './Keyboard'
 import { Staff } from './Staff'
 import { STAFF_WINDOWS, staffAnswerMarks, staffNotes, staffWhyText } from './staffDrillView'
 
-/** Room for the black keys to be tapped: a window is 19 white keys, about 58 px each at 1180 wide. */
+/**
+ * The widest a white key may grow. A window is 19 white keys; what binds is the keyboard's height cap in drill.css
+ * (measured at 1180x820: 53.5 px white keys in a session, 46.5 px in Play), not this.
+ */
 const STAFF_KEY_PX = 72
 
 function promptText(q: Question): string {

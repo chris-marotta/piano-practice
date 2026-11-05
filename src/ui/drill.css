@@ -121,6 +121,13 @@
   color: var(--muted);
 }
 
+/* Play Staff's "Staff · Level n", in the head row so it costs no height. */
+.drill__note {
+  margin-right: auto;
+  color: var(--text);
+  letter-spacing: 0;
+}
+
 .drill__ask {
   display: flex;
   flex-wrap: wrap;
@@ -286,7 +293,14 @@
   flex: none;
 }
 
-/* The staff drill's keyboard is capped a little lower than Keys' so the ladder, staff, keys and choices share one iPad screen. */
+/* The staff drill's keyboard is capped lower than Keys' so the ladder, staff, keys and why line share one iPad screen
+   (R-T7a). Measured at 1180x820 after the fix wave: Play's question 1 (ladder, two-line why) fills 820 px exactly at
+   200 px (white keys 46.5 px); the session has no Play header, so it takes 230 px (white keys 53.5 px) and its question 1
+   still fits 1180x820 and 1280x760. */
 .staff-board .keyboard {
   max-height: 200px;
+}
+
+.step--drill .staff-board .keyboard {
+  max-height: 230px;
 }
