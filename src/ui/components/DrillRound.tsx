@@ -154,6 +154,23 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
     return 'drill-choice drill-choice--other'
   }
 
+  const choices = q.format === 'name' && q.choices && (
+    <div class="drill-choices">
+      {q.choices.map((c) => (
+        <button
+          key={c.value}
+          type="button"
+          class={choiceClass(c.value)}
+          aria-disabled={ans.answered}
+          onClick={() => give({ kind: 'choice', value: c.value })}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
+  )
+  const choicesInAsk = ui.choicesInAsk === true
+
   return (
     <div class="drill">
       {index === 0 && (
@@ -173,7 +190,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
         </span>
       </header>
       <div class="drill__ask">
-        <ui.Ask q={q} ans={ans} />
+        <ui.Ask q={q} ans={ans} {...(choicesInAsk && choices ? { choices } : {})} />
         {q.format === 'play' && status.kind === 'connected' && (
           <p class="drill__listening">{listeningText(status.name)}</p>
         )}
@@ -190,21 +207,7 @@ export function DrillRound({ def, ui, questions, level, onAnswer, onFinish, fini
       <div class={`drill__board${!ans.answered && q.format === 'name' ? ' drill__board--ask' : ''}`}>
         <ui.Board q={q} ans={ans} {...(tappable ? { onKey: (midi: number) => give({ kind: 'key', midi }) } : {})} />
       </div>
-      {q.format === 'name' && q.choices && (
-        <div class="drill-choices">
-          {q.choices.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              class={choiceClass(c.value)}
-              aria-disabled={ans.answered}
-              onClick={() => give({ kind: 'choice', value: c.value })}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {!choicesInAsk && choices}
       {/* Always there, so the why line arrives without moving the keyboard. */}
       <div class="drill__after">
         {ans.answered && (

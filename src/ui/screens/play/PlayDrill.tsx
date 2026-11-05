@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useLayoutEffect, useState } from 'preact/hooks'
 import type { DrillDef } from '../../../drill/engine'
 import { rateItem } from '../../../session/record'
 import type { Rating } from '../../../srs/scheduler'
@@ -6,7 +6,7 @@ import { DrillRound } from '../../components/DrillRound'
 import type { DrillUi } from '../../components/drillUi'
 import { useDrillRound } from '../../components/useDrillRound'
 import { today, update } from '../../state'
-import { octavesSel, playTarget } from './playState'
+import { headSummary, octavesSel, playTarget } from './playState'
 import { pickerSummary } from './playView'
 
 export const NEXT_ROUND_LABEL = 'Next round'
@@ -25,14 +25,20 @@ interface Props {
   mode: 'keys' | 'staff'
   /** Staff's exact-octave setting; Keys has none. */
   exactOctave?: boolean
+  /** Put the summary line in the Play header (`headSummary`) instead of above the round: Staff, to fit 820 px. */
+  summaryInHead?: boolean
 }
 
 /** One round, built on mount (useDrillRound), with the summary line above it. */
-function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, onNext }: Props & { onNext: () => void }) {
+function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInHead = false, onNext }: Props & { onNext: () => void }) {
   const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey)
+  const summary = pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level)
+  useLayoutEffect(() => {
+    if (summaryInHead) headSummary.value = summary
+  }, [summaryInHead, summary])
   return (
     <div class="play-keys">
-      <p class="play-keys__summary">{pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level)}</p>
+      {!summaryInHead && <p class="play-keys__summary">{summary}</p>}
       <DrillRound
         def={def}
         ui={ui}

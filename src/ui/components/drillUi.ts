@@ -9,8 +9,13 @@ export interface DrillUi {
   kicker: string
   /** The question line as plain text. */
   promptText(q: Question): string
-  /** The question itself: the prompt for Keys, the staff and prompt for Staff. */
-  Ask(p: { q: Question; ans: AnswerState }): ComponentChildren
+  /**
+   * The question itself: the prompt for Keys, the staff and prompt for Staff. With `choicesInAsk`, a name question's
+   * answer buttons arrive here as `choices` and the Ask places them; otherwise DrillRound puts them under the keyboard.
+   */
+  Ask(p: { q: Question; ans: AnswerState; choices?: ComponentChildren }): ComponentChildren
+  /** Staff: the name choices go in the ask row beside the staff, so a name question fits the iPad screen. */
+  choicesInAsk?: boolean
   /** The keyboard with its marks; `onKey` is set when keys can answer (tap and play questions). */
   Board(p: { q: Question; ans: AnswerState; onKey?: (midi: number) => void }): ComponentChildren
   /** The why line after an answer. Keys ignores `exactOctave`. */

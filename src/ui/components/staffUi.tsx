@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact'
 import type { Question } from '../../drill/engine'
 import type { DrillUi } from './drillUi'
 import type { AnswerState } from './drillView'
@@ -14,11 +15,14 @@ function promptText(q: Question): string {
   return 'Play this note on your piano'
 }
 
-function Ask({ q, ans }: { q: Question; ans: AnswerState }) {
+function Ask({ q, ans, choices }: { q: Question; ans: AnswerState; choices?: ComponentChildren }) {
   if (!q.staff) return null
   return (
     <div class="staff-ask">
-      <h1 class="drill__prompt">{promptText(q)}</h1>
+      <div class="staff-ask__side">
+        <h1 class="drill__prompt">{promptText(q)}</h1>
+        {choices}
+      </div>
       <Staff
         clef={q.staff.clef}
         size="drill"
@@ -49,6 +53,7 @@ export const STAFF_UI: DrillUi = {
   kicker: 'READ THE NOTE',
   promptText,
   Ask,
+  choicesInAsk: true,
   Board,
   whyText: staffWhyText,
 }

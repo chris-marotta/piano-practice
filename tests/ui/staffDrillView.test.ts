@@ -161,3 +161,11 @@ describe('STAFF_UI', () => {
     expect(STAFF_UI.promptText(ask('treble', 'C4', 'play'))).toBe('Play this note on your piano')
   })
 })
+
+describe('name choices placement (I2)', () => {
+  it('Staff puts a name question\'s choices in the ask row beside the staff; Keys keeps them under the keyboard', async () => {
+    const { KEYS_UI } = await import('../../src/ui/components/keysUi')
+    expect(STAFF_UI.choicesInAsk).toBe(true)
+    expect(KEYS_UI.choicesInAsk).toBeUndefined()
+  })
+})
