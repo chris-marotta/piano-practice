@@ -2,6 +2,7 @@ import { useMemo } from 'preact/hooks'
 import { sessionChanges } from '../../session/changes'
 import { EAR_IDS, KEY_IDS, STAFF_IDS } from '../../srs/items'
 import { streak } from '../../store/streak'
+import { BackupLine } from '../components/BackupLine'
 import { app, currentSession, route, today, type CurrentSession } from '../state'
 import { streakLabel } from './todayView'
 
@@ -48,6 +49,7 @@ export function Done({ session }: Props) {
         <button type="button" class="btn btn--primary btn--start" onClick={backToToday}>
           Back to Today
         </button>
+        <BackupLine where="done" />
       </div>
       <div class="today__plan done__changes">
         <h2 class="today__label">What moved</h2>

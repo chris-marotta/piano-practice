@@ -1,7 +1,9 @@
 import type { ComponentChildren } from 'preact'
 import { useRef, useState } from 'preact/hooks'
+import { backup } from '../../backup/fileBackup'
 import { disconnectMidi, midiStatus } from '../../midi/access'
 import { exportState, parseImport, type AppState } from '../../store/storage'
+import { BackupLine } from '../components/BackupLine'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MidiChip } from '../components/MidiChip'
 import { Segmented } from '../components/Segmented'
@@ -340,6 +342,14 @@ export function Settings() {
             <p class="settings__error" role="alert">
               Import failed: {importError}
             </p>
+          )}
+          {backup.status.value.kind !== 'unsupported' && (
+            <Row
+              label="Auto-backup"
+              hint="Keeps one file up to date after every change. Save it in Dropbox to keep a copy off this laptop."
+            >
+              <BackupLine where="settings" />
+            </Row>
           )}
           <Row label="Redo placement" hint="Mark every scale Solid, Shaky or Don't know again.">
             <button
