@@ -15,10 +15,17 @@ export type BackupStatus =
 // mixed: this browser also has progress the file lacks, so importing the file would lose it.
 export type BackupPrompt = { kind: 'ahead'; file: AppState; mixed: boolean } | { kind: 'foreign' }
 
+export interface BackupWritable {
+  write(data: string): Promise<void>
+  close(): Promise<void>
+  /** Discards the write (Chrome's FileSystemWritableFileStream has it), so no .crswap is left behind. */
+  abort?(): Promise<void>
+}
+
 export interface BackupHandle {
   readonly name: string
   getFile(): Promise<{ text(): Promise<string> }>
-  createWritable(): Promise<{ write(data: string): Promise<void>; close(): Promise<void> }>
+  createWritable(): Promise<BackupWritable>
   queryPermission(d: { mode: 'readwrite' }): Promise<PermissionState>
   requestPermission(d: { mode: 'readwrite' }): Promise<PermissionState>
 }
@@ -63,8 +70,8 @@ export function createBackup(deps: BackupDeps): BackupController {
   /** One write is waiting behind the running one (only one is kept). */
   let queued = false
   // Bumped on stop, on a handle swap and on every guard run. A read or write that started under
-  // an older generation finishes silently: it never changes status (R3) and never closes, so a
-  // write abandoned mid-flight never commits to the file.
+  // an older generation finishes silently: it never changes status (R3) and never closes (it is
+  // aborted instead), so a write abandoned mid-flight never commits to the file.
   let gen = 0
 
   const canWrite = () =>
@@ -95,15 +102,21 @@ export function createBackup(deps: BackupDeps): BackupController {
     const h = handle
     if (!h || !app || !canWrite()) return
     const g = gen
+    let w: BackupWritable | null = null
+    // A dropped writable is aborted so Chrome removes its temp file; abort errors don't matter.
+    const drop = async () => {
+      await w?.abort?.().catch(() => {})
+    }
     try {
-      const w = await h.createWritable()
-      if (g !== gen) return
+      w = await h.createWritable()
+      if (g !== gen) return await drop()
       await w.write(exportState(app.peek())) // the state as it is now, not when the write was asked for
-      if (g !== gen) return
+      if (g !== gen) return await drop()
       await w.close()
-      if (g !== gen) return
+      if (g !== gen) return // closed: the write is in the file, nothing to abort
       status.value = { kind: 'on', name: h.name, savedAt: deps.now() }
     } catch {
+      await drop()
       if (g === gen) status.value = { kind: 'failed', name: h.name }
     }
   }
@@ -240,11 +253,21 @@ export function createBackup(deps: BackupDeps): BackupController {
 
     async stop() {
       if (status.peek().kind === 'unsupported') return
-      invalidate() // drops the pending timer and any queued write
+      const name = handle?.name ?? ''
+      // First make sure nothing writes after Stop, whatever happens next: drops the pending timer,
+      // any queued write and the guard pass.
+      invalidate()
+      const g = gen
       handle = null
       prompt.value = null
-      status.value = { kind: 'off' }
-      await deps.store.clear() // forgets the handle; never touches the file
+      try {
+        await deps.store.clear() // forgets the handle; never touches the file
+      } catch {
+        // The handle is still stored, so backup would come back on the next start: say so.
+        if (g === gen) status.value = { kind: 'failed', name }
+        return
+      }
+      if (g === gen) status.value = { kind: 'off' } // unless choose() ran meanwhile
     },
 
     async resolvePrompt(choice) {

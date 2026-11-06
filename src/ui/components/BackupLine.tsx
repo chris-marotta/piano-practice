@@ -20,7 +20,8 @@ export function BackupLine({ where }: { where: 'settings' | 'done' }) {
       <p class="settings__note" role="status">
         {line.text}
       </p>
-      <button type="button" class="btn" onClick={() => void RUN[line.action]()}>
+      {/* The controller reports failure through `status`, so a rejection needs no handling here. */}
+      <button type="button" class="btn" onClick={() => void RUN[line.action]().catch(() => {})}>
         {LABEL[line.action]}
       </button>
     </div>

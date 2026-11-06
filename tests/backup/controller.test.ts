@@ -52,6 +52,8 @@ interface FakeHandle extends BackupHandle {
   requestPermissionCalls: number
   /** Most writables open at once. */
   maxOpen: number
+  /** Each writable created, in order: whether it was closed (committed) or aborted. */
+  writables: { closed: boolean; aborted: boolean }[]
   /** While true, each write() waits for release(). */
   holdWrites: boolean
   /** While true, each text() waits for release(). */
@@ -80,6 +82,7 @@ function fakeHandle(
     getFileCalls: 0,
     requestPermissionCalls: 0,
     maxOpen: 0,
+    writables: [],
     holdWrites: false,
     holdReads: false,
     release() {
@@ -102,6 +105,8 @@ function fakeHandle(
       open++
       h.maxOpen = Math.max(h.maxOpen, open)
       let buffer = ''
+      const rec = { closed: false, aborted: false }
+      h.writables.push(rec)
       return {
         write: async (data: string) => {
           h.writes.push(data)
@@ -114,7 +119,11 @@ function fakeHandle(
         },
         close: async () => {
           open--
+          rec.closed = true
           h.commits.push(buffer)
+        },
+        abort: async () => {
+          rec.aborted = true
         },
       }
     },
@@ -318,6 +327,7 @@ describe('writes', () => {
     expect(backup.status.value).toEqual({ kind: 'failed', name: h.name })
     const calls = h.createWritableCalls
     expect(calls).toBe(1)
+    expect(h.writables[0]).toEqual({ closed: false, aborted: true }) // M2: no .crswap left behind
     for (let i = 0; i < 5; i++) {
       app.value = bump(app.value)
       await vi.advanceTimersByTimeAsync(2500)
@@ -388,6 +398,42 @@ describe('stop', () => {
     expect(h.createWritableCalls).toBe(1)
   })
 
+  it('M1: stop when store.clear() rejects → resolves, failed with the name, nothing written afterwards', async () => {
+    const h = fakeHandle()
+    const { backup, app, store } = setup(h)
+    await backup.init(app)
+    app.value = bump(app.value) // a pending debounce
+    await vi.advanceTimersByTimeAsync(1000)
+    store.clear = async () => {
+      store.clearCalls++
+      throw new Error('idb gone')
+    }
+    await expect(backup.stop()).resolves.toBeUndefined()
+    expect(store.clearCalls).toBe(1)
+    expect(backup.status.value).toEqual({ kind: 'failed', name: h.name })
+    expect(backup.prompt.value).toBeNull()
+    await vi.advanceTimersByTimeAsync(5000)
+    app.value = bump(app.value)
+    await vi.advanceTimersByTimeAsync(5000)
+    await backup.flush()
+    expect(h.createWritableCalls).toBe(1)
+    expect(h.writes).toHaveLength(1)
+  })
+
+  it('M1: status is not off until store.clear() has succeeded', async () => {
+    const h = fakeHandle()
+    const { backup, app, store } = setup(h)
+    await backup.init(app)
+    let finish!: () => void
+    store.clear = () => new Promise<void>((r) => (finish = r))
+    const stopped = backup.stop()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(backup.status.value.kind).not.toBe('off')
+    finish()
+    await stopped
+    expect(backup.status.value).toEqual({ kind: 'off' })
+  })
+
   it('stop clears an open prompt', async () => {
     const h = fakeHandle({ text: 'not json' })
     const { backup, app } = setup(h)
@@ -414,6 +460,7 @@ describe('stop', () => {
     expect(backup.status.value).toEqual({ kind: 'off' })
     expect(h.createWritableCalls).toBe(2) // queued write dropped
     expect(h.commits).toHaveLength(1) // the abandoned write is never closed
+    expect(h.writables[1]).toEqual({ closed: false, aborted: true }) // M2: aborted instead
     app.value = bump(app.value)
     await vi.advanceTimersByTimeAsync(5000)
     expect(h.createWritableCalls).toBe(2)
@@ -425,6 +472,7 @@ describe('stop', () => {
     const { backup, app } = setup(h)
     const initDone = backup.init(app)
     await vi.advanceTimersByTimeAsync(0)
+    expect(h.getFileCalls).toBe(1) // the read has started
     await backup.stop()
     h.release()
     await initDone
@@ -442,6 +490,25 @@ describe('choose', () => {
     expect(backup.status.value).toEqual({ kind: 'off' })
     expect(store.setCalls).toBe(0)
     expect(store.stored).toBeNull()
+  })
+
+  it('choose, picker cancelled while on → still on with the same name and savedAt; one change → one write after 2000 ms', async () => {
+    const h = fakeHandle()
+    const { backup, app, store } = setup(h, async () => null)
+    await backup.init(app)
+    const before = backup.status.value
+    expect(before).toEqual({ kind: 'on', name: h.name, savedAt: 1000 })
+    await backup.choose()
+    expect(backup.status.value).toEqual(before)
+    expect(store.setCalls).toBe(0)
+    app.value = bump(app.value)
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(h.writes).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(h.writes).toHaveLength(2)
+    expect(h.writes[1]).toBe(exportState(app.value))
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(h.writes).toHaveLength(2)
   })
 
   it('choose, new handle with an empty file → store.set called, on, one write', async () => {
