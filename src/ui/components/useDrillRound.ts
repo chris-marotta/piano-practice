@@ -25,7 +25,7 @@ export interface DrillSetup {
  * (it only ever rises). `onAnswer` is DrillRound's: it grades each key's first answer only (gradeFirstAnswer) and hands the
  * rating to `onRate`. `pick` (Play's level picker) drills that level instead, locked or not; above the unlocked level
  * it is practice only (practiceOnly): nothing is graded and the level reached isn't raised. `tonic` (Ear) is the round's key,
- handed to buildRound (used from EAR_KEY_LEVEL on).
+ * handed to buildRound (used from EAR_KEY_LEVEL on).
  */
 export function useDrillRound(
   def: DrillDef,

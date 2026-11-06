@@ -9,6 +9,7 @@ import {
   keyAriaLabel,
   keyboardAspect,
   keyboardBox,
+  keyboardExtent,
   keyboardFitVars,
   keyboardMaxWidth,
   minRenderWidth,
@@ -428,3 +429,41 @@ describe('keyLooks: sustained (ringing under the pedal)', () => {
     expect(keyLooks([{ midi: 62, hand: 'none', state: 'sustained' }, { midi: 62, hand: 'rh' }], 60, 71).get(62)).toMatchObject({ fill: 'rh', glow: null })
   })
 })
+
+describe('keyboardExtent (the viewBox: the drawn keys plus 2 units each side, ruling R-C12)', () => {
+  const span = (low: number, high: number) => {
+    const { x, width } = keyboardExtent(low, high)
+    return { from: x, to: x + width }
+  }
+  it('an F♯ ear board (66..78) shows both F♯ keys whole, with the 2-unit margin', () => {
+    const { from, to } = span(66, 78)
+    const rects = keyRects(66, 78)
+    const low = rects.find((r) => r.midi === 66)!
+    const high = rects.find((r) => r.midi === 78)!
+    expect(low.x).toBeLessThan(0) // the edge black key reaches past the first white key
+    expect(from).toBe(low.x - 2)
+    expect(high.x + high.w).toBeGreaterThan(whiteKeys(66, 78).length * KEY.whiteW)
+    expect(to).toBe(high.x + high.w + 2)
+    for (const r of rects) {
+      expect(r.x).toBeGreaterThanOrEqual(from)
+      expect(r.x + r.w).toBeLessThanOrEqual(to)
+    }
+  })
+  it('a B♭ board (58..70) too', () => {
+    const { from, to } = span(58, 70)
+    for (const r of keyRects(58, 70)) {
+      expect(r.x).toBeGreaterThanOrEqual(from + 2)
+      expect(r.x + r.w).toBeLessThanOrEqual(to - 2)
+    }
+  })
+  it('white-edged boards keep the old viewBox exactly: -2 .. white keys × 40 + 2', () => {
+    // C ear board, the Keys drill (48..71), both Staff windows, a Play window, keyboardRange's C..B.
+    for (const [low, high] of [[60, 72], [48, 71], [53, 84], [36, 64], [55, 79], [60, 71], [36, 95]] as const) {
+      expect(keyboardExtent(low, high)).toEqual({ x: -2, width: whiteKeys(low, high).length * KEY.whiteW + 4 })
+    }
+  })
+  it('keyboardBox reports the same width', () => {
+    expect(keyboardBox(66, 78, []).width).toBe(keyboardExtent(66, 78).width)
+  })
+})
+

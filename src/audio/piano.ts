@@ -26,10 +26,20 @@ function sampleUrls(): Record<string, string> {
   return urls
 }
 
-/** Resolves true when the sampler is loaded, false on error or after 10 s. Never rejects; idempotent. */
+/**
+ * Resolves true when the sampler is loaded, false on error or after 10 s. Never rejects. A load in flight or loaded is
+ * shared; a load that failed (an error, or the sampler can't be built) is dropped, so the next call (Retry) tries again.
+ * After the 10 s timeout the load stays in flight: a late onload still sets the sampler, a late error drops it.
+ */
 export function loadPiano(): Promise<boolean> {
   if (loadPromise) return loadPromise
-  loadPromise = new Promise<boolean>((resolve) => {
+  let failed = false
+  let mine: Promise<boolean> | null = null
+  const drop = () => {
+    failed = true
+    if (loadPromise === mine) loadPromise = null
+  }
+  mine = new Promise<boolean>((resolve) => {
     let settled = false
     const finish = (ok: boolean) => {
       if (settled) return
@@ -48,13 +58,19 @@ export function loadPiano(): Promise<boolean> {
           sampler = s
           finish(true)
         },
-        onerror: () => finish(false),
+        onerror: () => {
+          drop()
+          finish(false)
+        },
       }).toDestination()
     } catch {
+      drop()
       finish(false)
     }
   })
-  return loadPromise
+  // A synchronous failure ran before `mine` was assigned: don't cache it.
+  loadPromise = failed ? null : mine
+  return mine
 }
 
 /** The loaded sampler once audio is unlocked, else null. */

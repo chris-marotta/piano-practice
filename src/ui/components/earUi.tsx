@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { playCompare, playEarPrompt, playHome, playWalk, stopEar } from '../../audio/ear'
 import { loadPiano } from '../../audio/piano'
 import { audioReady, unlockAudio } from '../../audio/unlock'
@@ -19,13 +19,18 @@ export const COMPARE_LABEL = 'Compare'
 export const RETRY_LABEL = 'Retry'
 export const NOT_READY_TEXT = "The piano sound isn't ready."
 
-/** The question's own prompt again (tonic and note at L1–5, the note alone at L6; never "This is home"). */
-function replay(q: Question): void {
+/**
+ * The question's own prompt again (tonic and note at L1–5, the note alone at L6; never "This is home").
+ * `current` says whether `q` is still on screen: Next (or the round's end) inside the unlock's await drops the replay,
+ * so the old question's prompt never plays over the new one.
+ */
+function replay(q: Question, current: () => boolean): void {
   const ear = q.ear
   if (!ear) return
   void (async () => {
     try {
       if (!audioReady.value) await unlockAudio() // an iPad interruption suspended the context: this tap brings it back
+      if (!current()) return
       await playEarPrompt({ tonic: ear.tonic, target: ear.target, withTonic: ear.withTonic, home: false })
     } catch {
       // ear audio never throws into the UI
@@ -33,12 +38,13 @@ function replay(q: Question): void {
   })()
 }
 
-function hearHome(q: Question): void {
+function hearHome(q: Question, current: () => boolean): void {
   const ear = q.ear
   if (!ear) return
   void (async () => {
     try {
       if (!audioReady.value) await unlockAudio()
+      if (!current()) return
       playHome(ear.tonic)
     } catch {
       // never throws into the UI
@@ -63,6 +69,16 @@ function Ask({ q, ans, prompt, retry, first, level }: AskProps) {
   // audio first (the app-wide unlock listener, with a keyboard connected), and the button must not turn into the
   // not-ready line under the finger before its click lands. Cleared once the prompt runs again.
   const locked = useRef(false)
+  // The question on screen (null once the round is gone), for the replays that await an unlock first.
+  const shown = useRef<Question | null>(q)
+  shown.current = q
+  useEffect(
+    () => () => {
+      shown.current = null
+    },
+    [],
+  )
+  const isShown = () => shown.current === q
   const ready = audioReady.value
   if (prompt !== 'silent') locked.current = false
   else if (!ready) locked.current = true
@@ -86,7 +102,7 @@ function Ask({ q, ans, prompt, retry, first, level }: AskProps) {
   }
   const hearAgain = () => {
     if (prompt === 'waiting') retry()
-    else replay(q)
+    else replay(q, isShown)
   }
   const given = earGiven(q, ans)
   const compare = ans.answered && !ans.correct && given !== null
@@ -115,8 +131,16 @@ function Ask({ q, ans, prompt, retry, first, level }: AskProps) {
         <button type="button" class="btn btn--primary btn--lg ear-ask__hear" onClick={hearAgain}>
           {HEAR_AGAIN_LABEL}
         </button>
+        {/* Only from the onset: before it, playing home would cut the prompt's note while the clock still starts there. */}
         {level === 6 && (
-          <button type="button" class="btn btn--lg" onClick={() => hearHome(q)}>
+          <button
+            type="button"
+            class="btn btn--lg ear-ask__home"
+            aria-disabled={prompt !== 'ready'}
+            onClick={() => {
+              if (prompt === 'ready') hearHome(q, isShown)
+            }}
+          >
             {HEAR_HOME_LABEL}
           </button>
         )}

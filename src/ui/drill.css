@@ -321,6 +321,12 @@
   cursor: progress;
 }
 
+/* Hear home waits for the prompt's note (it would cut it). */
+.ear-ask__home[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .ear-ask__text {
   display: flex;
   flex-direction: column;

@@ -3,7 +3,6 @@ import { createPressTracker, type PressTracker, type ReleaseKind } from './press
 import {
   BADGE_GAP,
   BADGE_R,
-  KEY,
   SUB_ROW,
   badgeSlots,
   badgeSlotsAbove,
@@ -12,6 +11,7 @@ import {
   keyRects,
   rootDotGeometry,
   rootDotLookFor,
+  keyboardExtent,
   keyboardMaxWidth,
   minRenderWidth,
   verticalLayout,
@@ -127,11 +127,12 @@ export function Keyboard({
 }: Props) {
   const rects = keyRects(low, high)
   const whiteCount = whiteKeys(low, high).length
-  const width = whiteCount * KEY.whiteW
   const badges = badgeSlots(marks, low)
   const above = badgesAbove ? badgeSlotsAbove(marks, low) : null
   const { keyTop, keyBottom, height } = verticalLayout(above ? { rhRows: above.rows, lhRows: 0 } : badges, reserveRows)
-  const viewBoxWidth = width + 4
+  // The keys' own extent (an edge black key reaches past the white keys) plus a 2-unit margin.
+  const extent = keyboardExtent(low, high)
+  const viewBoxWidth = extent.width
 
   const looks = keyLooks(marks, low, high)
   const rootKeys = new Set(marks.filter((m) => m.root).map((m) => m.midi))
@@ -254,7 +255,7 @@ export function Keyboard({
     <div class="keyboard-scroll">
       <svg
         class={onKeyPress ? 'keyboard keyboard--pressable' : 'keyboard'}
-        viewBox={`-2 0 ${viewBoxWidth} ${height}`}
+        viewBox={`${extent.x} 0 ${viewBoxWidth} ${height}`}
         width="100%"
         preserveAspectRatio="xMidYMid meet"
         style={{

@@ -306,7 +306,23 @@ export function keyboardMaxWidth(whiteCount: number, maxKeyPx: number, viewBoxWi
   return `min(${whiteCount * maxKeyPx}px, calc(var(--kb-max-h, 100000px) * ${keyboardAspect(viewBoxWidth, height)}))`
 }
 
-/** The SVG Keyboard draws for these props, in units (the viewBox: white keys plus the 4-unit edge, and its height). */
+/** The viewBox's margin beyond the outermost key edge, each side. */
+const EDGE = 2
+
+/**
+ * The viewBox's horizontal extent: the drawn keys' rectangles plus a 2-unit margin each side. A board that starts or
+ * ends on a black key (an Ear board on F♯) draws that key half past the white keys, so it must widen the box.
+ * A white-edged board gets -2 .. white keys + 2, as it always had.
+ */
+export function keyboardExtent(low: number, high: number): { x: number; width: number } {
+  const rects = keyRects(low, high)
+  if (rects.length === 0) return { x: -EDGE, width: 2 * EDGE }
+  const min = Math.min(...rects.map((r) => r.x))
+  const max = Math.max(...rects.map((r) => r.x + r.w))
+  return { x: min - EDGE, width: max - min + 2 * EDGE }
+}
+
+/** The SVG Keyboard draws for these props, in units (the viewBox: the keys plus the 2-unit edges, and its height). */
 export function keyboardBox(
   low: number,
   high: number,
@@ -314,7 +330,7 @@ export function keyboardBox(
   reserveRows: ReserveRows = false,
 ): { whiteCount: number; width: number; height: number } {
   const whiteCount = whiteKeys(low, high).length
-  return { whiteCount, width: whiteCount * KEY.whiteW + 4, height: verticalLayout(badgeSlots(marks, low), reserveRows).height }
+  return { whiteCount, width: keyboardExtent(low, high).width, height: verticalLayout(badgeSlots(marks, low), reserveRows).height }
 }
 
 /**
