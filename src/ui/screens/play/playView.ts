@@ -65,12 +65,11 @@ export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
 }
 
 /**
- * The mode to open Play in when something hands it a picked target (the circle page's "Play it"). Keys ignores the
- * target, so landing in Keys (or Staff) would hide the pick behind a drill round: go to Free instead. Ear uses the pick's root as
- * its key (R-E3), so it stays; others are kept.
+ * The mode to open Play in when something hands it a picked target (the circle page's "Play it"). Keys and Staff
+ * ignore the target, so landing in them would hide the pick behind a drill round: go to Free instead. Ear uses the
+ * pick's root as its key (R-E3), so it stays; others are kept.
  */
 export function modeForPickedTarget(mode: PlayMode): PlayMode {
-  // Ear takes the picked target's root as its key (R-E3), so it stays.
   return mode === 'keys' || mode === 'staff' ? 'free' : mode
 }
 

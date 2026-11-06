@@ -33,6 +33,22 @@ describe('ear tables', () => {
     expect(EAR_DEGREES[6]?.feel).toBe('The odd one out: it leans up into 5, then 6–7–8.')
     expect(EAR_DEGREES[0]?.feel).toBe('Home: everything settles here.')
   })
+  it('all 12 feel phrases match the constraint table verbatim', () => {
+    expect(Object.fromEntries(EAR_DEGREES.map((d) => [d.degree, d.feel]))).toEqual({
+      '1': 'Home: everything settles here.',
+      b2: 'Tense and dark: it slides down ♭2–1.',
+      '2': 'Unsettled: it steps down 2–1 home.',
+      b3: 'The minor colour: it slides down ♭3–2–1.',
+      '3': 'Bright and settled: it steps down 3–2–1.',
+      '4': 'It wants to fall: 4–3–2–1.',
+      '#4': 'The odd one out: it leans up into 5, then 6–7–8.',
+      '5': 'Stable: it walks up 5–6–7–8 home.',
+      b6: 'Dark: it sinks into 5, then 6–7–8.',
+      '6': 'Warm: it walks up 6–7–8.',
+      b7: 'Bluesy: it drops to 6, then 7–8.',
+      '7': 'It leans up into home.',
+    })
+  })
   it('levels flatten to 12 distinct degrees', () => {
     const flat = ([1, 2, 3, 4, 5] as const).flatMap((l) => EAR_LEVEL_DEGREES[l])
     expect(new Set(flat).size).toBe(12)
@@ -81,6 +97,9 @@ describe('earSpelling', () => {
     expect(earSpelling('G#', '#4')).toBe('D')
     expect(earSpelling('Db', 'b6')).toBe('A')
   })
+  it('keeps a single-accidental spelling (only doubles are simplified)', () => {
+    expect(earSpelling('Db', 'b3')).toBe('Fb')
+  })
 })
 
 describe('routes and walk home', () => {
@@ -89,6 +108,10 @@ describe('routes and walk home', () => {
     expect(earRoute(60, 'b3')).toEqual([60, 62])
     expect(earRoute(60, '1')).toEqual([60])
     expect(earRoute(60, '7')).toEqual([60, 62, 64, 65, 67, 69])
+    expect(earRoute(60, 'b2')).toEqual([60])
+    expect(earRoute(55, 'b2')).toEqual([55])
+    expect(earRoute(60, '#4')).toEqual([60, 62, 64, 65])
+    expect(earRoute(55, '#4')).toEqual([55, 57, 59, 60])
   })
   it('walkHome matches the table', () => {
     const table: Record<EarDegree, number[]> = {

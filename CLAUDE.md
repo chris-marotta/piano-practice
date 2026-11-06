@@ -1,6 +1,6 @@
 # CLAUDE.md — Piano Practice
 
-Static Preact + TypeScript app for daily piano scale practice (iPad-first, landscape 1180 x 820).
+Static Preact + TypeScript app for daily piano scale practice (laptop Chrome, 1280 x 760 and up; DR-006).
 Notes, design docs, and session history live in the vault:
 `~/Library/CloudStorage/Dropbox/MAROTTA-vault/Projects/Piano Practice/docs/summaries/HOME.md`
 
@@ -44,6 +44,16 @@ Dev server port 5230 (registered as `piano` in the vault `.claude/launch.json`).
 - UI: `src/ui/components/DrillRound.tsx` + `drillView.ts` + `useDrillRound.ts` (one round, shared by the session's `steps/DrillStep.tsx` and Play's `play/PlayKeys.tsx`, so both grade the same way), `Wheel.tsx`, `WhyPicture.tsx`, `steps/DeckStep.tsx` (the warm-up flip deck), `library/CirclePanel.tsx`.
 - Session order: drill → deck → each scale and its chord set → free play (`session/builder.ts`). Session scales are always one octave (`SESSION_OCTAVES`); `settings.octaves` is gone and an old saved value is ignored.
 - Settings added: `playLabels` (`'off' | 'names' | 'degrees'`, default names), `lastDrillLevel` (1–4, only rises; Redo placement resets it).
+
+## Phase 5 modules (ear)
+
+- `src/theory/ear.ts` — the 12 scale degrees (`EAR_DEGREES`: label, why name, feel phrase, walk home), levels (`EAR_LEVEL_DEGREES`), tonic placement, spelling (`earSpelling`), routes, choices. The only ear module that imports tonal.
+- `src/audio/earSchedule.ts` (prompt, walk-home, compare and home events; ear voices) + `earPump.ts` (lookahead pump behind an injected sampler and clock, node-testable) + `ear.ts` (Tone wiring: `playEarPrompt`, `playWalk`, `playCompare`, `playHome`, `stopEar`). All ear times are on the raw context clock (`Tone.immediate()`), not `Tone.now()`.
+- `src/drill/ear.ts` — `EAR_DEF`, the find-the-note drill on the shared drill engine.
+- UI: `src/ui/components/earDrillView.ts` (pure: board, prompt and why text, marks) + `earUi.tsx` (`EAR_UI`: the sound buttons and one-octave board) + `earStart.ts` (starting a prompt: waits for the piano load, drops a superseded start). DrillUi gained optional `startQuestion` (plays the prompt, resolves to the onset; the question's clock starts there), `onAnswered` and `onLeave` hooks; Keys and Staff don't set them.
+- Ear items are a new id family, `ear:<degree>` (`ear:5`, `ear:b3`, `ear:#4`); parse them with `parseEarId`, not `parseId`.
+- Session order: drill → staff → ear → deck → each scale and its chord set → free play.
+- Settings added: `earExactOctave` (default false), `lastEarLevel` (1–6, sticky like `lastDrillLevel`; Redo placement resets it).
 
 ## Dev hooks (DEV builds only, stripped from `dist/`)
 
