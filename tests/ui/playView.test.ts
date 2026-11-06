@@ -806,7 +806,12 @@ describe('Ear mode', () => {
   it('the summary: "Ear · Level 4 · Key of A", with " · practice" when above the unlocked level', () => {
     expect(pickerSummary(NONE, 1, 'ear', 'rh', 4, false, 'A')).toBe('Ear · Level 4 · Key of A')
     expect(pickerSummary(NONE, 1, 'ear', 'rh', 4, true, 'A')).toBe('Ear · Level 4 · Key of A · practice')
-    expect(pickerSummary(NONE, 1, 'ear', 'rh', 2, false, 'Bb')).toBe('Ear · Level 2 · Key of B♭')
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 5, false, 'Bb')).toBe('Ear · Level 5 · Key of B♭')
+  })
+
+  it('the key named is the key drilled: levels below 4 are in C whatever the root (R-C19)', () => {
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 2, false, 'A')).toBe('Ear · Level 2 · Key of C')
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 4, false, 'A')).toBe('Ear · Level 4 · Key of A')
   })
 
   it('a round is 6 questions', () => {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  drillPick,
   fitted,
   hand,
   keyWindow,
@@ -71,5 +72,11 @@ describe('playState: octaves and the keyboard window', () => {
     expect(keyWindow.value).not.toEqual(fitted.value)
     resetWindow()
     expect(keyWindow.value).toEqual(fitted.value)
+  })
+})
+
+describe('playState: drillPick', () => {
+  it('has a level pick per drill, null (the unlocked level) by default', () => {
+    expect(drillPick.value).toEqual({ keys: null, staff: null, ear: null })
   })
 })

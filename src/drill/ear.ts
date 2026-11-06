@@ -36,12 +36,17 @@ const LEVEL_ONE = EAR_LEVEL_DEGREES[1].map(earId)
 const SEMIS = new Map(EAR_DEGREES.map((d) => [d.degree, d.semis]))
 const LABEL = new Map(EAR_DEGREES.map((d) => [d.degree, d.label]))
 
+/** The key a round at `level` is drilled in: C below EAR_KEY_LEVEL, else the round's tonic (C when none). */
+export function earRoot(level: number, tonic?: string): string {
+  return level >= EAR_KEY_LEVEL ? (tonic ?? 'C') : 'C'
+}
+
 /** Without a `ctx` the question is level 1 in C. Levels below EAR_KEY_LEVEL stay in C whatever the round's tonic. */
 function buildQuestion(itemId: string, format: DrillFormat, rng: () => number, _prevMidi?: number, ctx?: QuestionContext): Question {
   const degree = parseEarId(itemId)
   if (degree === null) throw new Error(`Not an ear item id: "${itemId}"`)
   const level = ctx?.level ?? 1
-  const root = level >= EAR_KEY_LEVEL ? (ctx?.tonic ?? 'C') : 'C'
+  const root = earRoot(level, ctx?.tonic)
   const tonic = earTonicMidi(root)
   const target = earTarget(tonic, degree)
   const question: Question = {

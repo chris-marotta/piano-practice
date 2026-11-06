@@ -1,5 +1,6 @@
 // Pure view model for the Play tab (no Preact, no window): unit tested in node.
 import type { MidiStatus } from '../../../midi/access'
+import { earRoot } from '../../../drill/ear'
 import { guideRun, type GuideNext, type GuideState } from '../../../play/guide'
 import { expectedRun, type Expected } from '../../../play/sequence'
 import type { PlayLabels } from '../../../srs/items'
@@ -65,7 +66,8 @@ export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
 
 /**
  * The mode to open Play in when something hands it a picked target (the circle page's "Play it"). Keys ignores the
- * target, so landing in Keys (or Staff) would hide the pick behind a drill round: go to Free instead. Others are kept.
+ * target, so landing in Keys (or Staff) would hide the pick behind a drill round: go to Free instead. Ear uses the pick's root as
+ * its key (R-E3), so it stays; others are kept.
  */
 export function modeForPickedTarget(mode: PlayMode): PlayMode {
   // Ear takes the picked target's root as its key (R-E3), so it stays.
@@ -435,7 +437,7 @@ const slipWord = (n: number): string => `${n} slip${n === 1 ? '' : 's'}`
  * The one line the picker collapses to once Chris plays: "D major · 1 oct · Guided RH", "A harmonic minor · 2 oct ·
  * Check Together", "C major chord, 1st inversion · Guided". Only a scale in Guided or Check names a hand (`hand`: the
  * one in force, see fitHand); a chord has no octaves; the chord's name and inversion are the Library's (chordPanel).
- * Ear: "Ear · Level 4 · Key of A" (`root`, the target's root). Keys and Staff ignore the target: "Keys · Level 2", "Staff · Level 3" (`drillLevel`, the level of the round on screen).
+ * Ear: "Ear · Level 4 · Key of A" (`root`, the target's root; the key named is the one drilled, earRoot). Keys and Staff ignore the target: "Keys · Level 2", "Staff · Level 3" (`drillLevel`, the level of the round on screen).
  */
 export function pickerSummary(
   target: PlayTarget,
@@ -446,7 +448,7 @@ export function pickerSummary(
   practice = false,
   root = 'C',
 ): string {
-  if (mode === 'ear') return `Ear · Level ${drillLevel} · Key of ${formatNote(root)}${practice ? ' · practice' : ''}`
+  if (mode === 'ear') return `Ear · Level ${drillLevel} · Key of ${formatNote(earRoot(drillLevel, root))}${practice ? ' · practice' : ''}`
   if (mode === 'keys' || mode === 'staff') return `${MODE_WORD[mode]} · Level ${drillLevel}${practice ? ' · practice' : ''}`
   if (target.kind === 'none') return 'Free play'
   const modeWord = MODE_WORD[mode]

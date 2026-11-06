@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildRound, drillLevel, gradeAnswer, isCorrect } from '../../src/drill/engine'
-import { EAR_DEF, EAR_LEVEL_HINTS, EAR_LEVEL_NAMES } from '../../src/drill/ear'
+import { EAR_DEF, EAR_LEVEL_HINTS, earRoot, EAR_LEVEL_NAMES } from '../../src/drill/ear'
 import { EAR_SLOW_MS } from '../../src/play/thresholds'
 import { DEFAULT_SETTINGS, EAR_IDS, earId, parseEarId, parseKeyId, parseStaffId } from '../../src/srs/items'
 import type { ItemState } from '../../src/srs/scheduler'
@@ -117,5 +117,15 @@ describe('drillLevel for ear', () => {
     expect(drillLevel(EAR_DEF, at(['ear:1', 'ear:5'], 3), TODAY, DEFAULT_SETTINGS)).toBe(2)
     expect(drillLevel(EAR_DEF, at(['ear:1', 'ear:5'], 1), TODAY, DEFAULT_SETTINGS)).toBe(1)
     expect(drillLevel(EAR_DEF, at(['ear:1', 'ear:5'], 1), TODAY, { ...DEFAULT_SETTINGS, lastEarLevel: 2 })).toBe(2)
+  })
+})
+
+describe('earRoot', () => {
+  it('is C below level 4 whatever the tonic, the tonic from level 4 on, C without one', () => {
+    expect(earRoot(1, 'A')).toBe('C')
+    expect(earRoot(3, 'A')).toBe('C')
+    expect(earRoot(4, 'A')).toBe('A')
+    expect(earRoot(6, 'F#')).toBe('F#')
+    expect(earRoot(4)).toBe('C')
   })
 })
