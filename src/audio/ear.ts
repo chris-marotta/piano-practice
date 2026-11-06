@@ -6,7 +6,18 @@ import { getSampler } from './piano'
 
 const LOOKAHEAD_S = 0.2
 const TICK_MS = 50
-const LEAD_S = 0.05
+/**
+ * How far ahead of the raw context clock a schedule starts: the 0.05 s lead plus the 0.1 s headroom Tone.now()'s
+ * lookAhead used to add, so the notes sound when they did before M1 (start = currentTime + 0.15 s).
+ */
+const LEAD_S = 0.15
+
+/**
+ * The raw audio context clock (currentTime, no Tone lookAhead): the clock the Sampler's attacks play on. Tone.now() is
+ * currentTime + 0.1 s, so converting with it put the answer clock ~100 ms before the note sounded (M1). Every time in
+ * this module, the schedule start, the pump's clock and the onset conversion, is on this clock.
+ */
+const audioNow = (): number => Tone.immediate()
 
 const voices = createEarVoices()
 let timer: ReturnType<typeof setInterval> | null = null
@@ -45,12 +56,12 @@ function schedule(events: EarEvent[]): number | null {
   if (!s || events.length === 0) return null
   try {
     stopEar()
-    const start = Tone.now() + LEAD_S
+    const start = audioNow() + LEAD_S
     const io: EarSamplerLike = {
       triggerAttack: (m, t) => s.triggerAttack(noteName(m), t),
       triggerRelease: (m, t) => s.triggerRelease(noteName(m), t),
     }
-    const p = createEarPump(io, () => Tone.now(), events, start, voices, LOOKAHEAD_S)
+    const p = createEarPump(io, audioNow, events, start, voices, LOOKAHEAD_S)
     pump = p
     if (!p.tick()) {
       timer = setInterval(() => {
@@ -77,7 +88,7 @@ export async function playEarPrompt(o: {
     const { events, onset } = promptEvents(o)
     const startAudio = schedule(events)
     if (startAudio === null) return null
-    return performance.now() + (startAudio + onset - Tone.now()) * 1000
+    return performance.now() + (startAudio + onset - audioNow()) * 1000
   } catch {
     return null
   }
