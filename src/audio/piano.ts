@@ -5,6 +5,7 @@ import { stopMetronome } from './metronome'
 import { scaleEvents, scalePlaybackNotes, type NoteEvent } from './schedule'
 import { releaseLive } from './live'
 import { audioReady } from './unlock'
+import { stopEar } from './ear'
 
 export { scaleEvents, scalePlaybackNotes }
 
@@ -126,6 +127,7 @@ export function playChord(notes: string[], mode: 'block' | 'broken'): void {
 export function stopAll(): void {
   clearPlayback()
   releaseLive()
+  stopEar()
   try {
     sampler?.releaseAll()
   } catch {
