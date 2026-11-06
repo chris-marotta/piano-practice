@@ -254,3 +254,16 @@ describe('withSettings: Exact octave', () => {
     expect(after.settings).toEqual({ ...before.settings, staffExactOctave: true })
   })
 })
+
+describe('resetPlacement and the ear drill', () => {
+  it('resets lastEarLevel to 1 and clears the ear boxes, keeping earExactOctave', () => {
+    const before = placed()
+    before.items['ear:5'] = { id: 'ear:5', introduced: true, box: 4, support: 0, levelStreak: 0, due: TODAY, history: [] }
+    before.settings = { ...before.settings, lastEarLevel: 4, earExactOctave: true }
+    const after = resetPlacement(before)
+    expect(after.settings.lastEarLevel).toBe(1)
+    expect(after.settings.earExactOctave).toBe(true)
+    expect(after.items['ear:5']).toBeUndefined()
+    expect(before.settings.lastEarLevel).toBe(4)
+  })
+})

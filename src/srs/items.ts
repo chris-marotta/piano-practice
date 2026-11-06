@@ -1,6 +1,8 @@
 import { RECALL_TYPES } from '../theory/recall'
 import type { RecallType } from '../theory/recall'
 import { PC_ASCII } from '../theory/keyNames'
+import { EAR_LEVEL_DEGREES, isEarDegree } from '../theory/ear'
+import type { EarDegree } from '../theory/ear'
 import { STAFF_LEVEL_NOTES } from '../theory/staff'
 import type { Clef } from '../theory/staff'
 import { MAJOR_ROOTS, MINOR_ROOTS } from '../theory/scales'
@@ -82,6 +84,19 @@ export function parseStaffId(id: string): { clef: Clef; note: string } | null {
   const note = parts[2] as string
   if ((clef !== 'treble' && clef !== 'bass') || !STAFF_NOTE.test(note)) return null
   return { clef, note }
+}
+
+/** Ear-training items, one per scale degree: `ear:b3`. Not a `parseId` kind; use `parseEarId`. */
+export const earId = (d: EarDegree): string => `ear:${d}`
+
+/** The ear drill's 12 item ids, in level order. */
+export const EAR_IDS: string[] = Object.values(EAR_LEVEL_DEGREES).flatMap((ds) => ds.map(earId))
+
+/** The degree of an ear id, or null for anything else (never throws). */
+export function parseEarId(id: string): EarDegree | null {
+  if (!id.startsWith('ear:')) return null
+  const d = id.slice(4)
+  return isEarDegree(d) ? d : null
 }
 
 const FORMS: ScaleForm[] = ['major', 'natural', 'harmonic', 'melodic']

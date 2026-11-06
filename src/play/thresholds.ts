@@ -23,6 +23,8 @@ export const WRONG_SHAPE_NOTE_MS = 4000
 export const DRILL_SLOW_MS = 5000
 /** Drill level 4 (Speed): a right answer slower than this grades Lost. */
 export const DRILL_FAST_MS = 3000
+/** Ear drill: a right answer slower than this grades Shaky instead of Nailed (ASSUMED). */
+export const EAR_SLOW_MS = 6000
 /** Staff drill: a right answer slower than this grades Shaky instead of Nailed (ASSUMED). */
 export const STAFF_SLOW_MS = 6000
 /** Staff drill level 6 (Speed): a right answer slower than this grades Lost (ASSUMED). */

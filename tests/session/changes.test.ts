@@ -100,3 +100,13 @@ describe('sessionChanges with staff ids', () => {
     expect(out.map((c) => c.text)).toEqual(['E major ↑ box 3 → 4', 'Key C ↑ box 1 → 2', 'Staff treble F♯4 ↑ box 1 → 2'])
   })
 })
+
+describe('sessionChanges with ear ids', () => {
+  it('names an ear item and lists it after staff notes', () => {
+    const mk = (id: string, box: ItemState['box']): ItemState => ({ id, introduced: true, box, support: 0, levelStreak: 0, due: TODAY, history: [] })
+    const staff = 'staff:treble:F#4'
+    const after = { 'ear:5': mk('ear:5', 2), 'ear:b3': mk('ear:b3', 2), [staff]: mk(staff, 2) }
+    const out = sessionChanges(['ear:5', 'ear:b3', staff], base, after, TODAY, DEFAULT_SETTINGS)
+    expect(out.map((c) => c.text)).toEqual(['Staff treble F♯4 ↑ box 1 → 2', 'Ear 5 ↑ box 1 → 2', 'Ear ♭3 ↑ box 1 → 2'])
+  })
+})

@@ -1,6 +1,7 @@
 // What moved during a session, for the Done screen. Pure.
-import { parseId, parseKeyId, parseStaffId, stateFor, type Settings } from '../srs/items'
+import { parseEarId, parseId, parseKeyId, parseStaffId, stateFor, type Settings } from '../srs/items'
 import type { ItemState } from '../srs/scheduler'
+import { EAR_DEGREES } from '../theory/ear'
 import { formatNote, formatScale } from '../theory/format'
 import { keyLabel } from '../theory/keyNames'
 import type { RecallType } from '../theory/recall'
@@ -28,6 +29,8 @@ function itemName(id: string): string {
   if (pc !== null) return `Key ${keyLabel(pc)}`
   const staff = parseStaffId(id)
   if (staff !== null) return `Staff ${staff.clef} ${formatNote(staff.note)}`
+  const ear = parseEarId(id)
+  if (ear !== null) return `Ear ${EAR_DEGREES.find((d) => d.degree === ear)?.label ?? ear}`
   const p = parseId(id)
   const scale = formatScale(p.ref)
   if (p.kind === 'scale') return scale
@@ -41,9 +44,9 @@ function change(id: string, name: string, kind: 'box' | 'support', from: number,
   return { id, name, direction, what, text: `${name} ${direction === 'up' ? '↑' : '↓'} ${what}` }
 }
 
-const KIND_ORDER = { scale: 0, chords: 1, recall: 2, key: 3, staff: 4 } as const
+const KIND_ORDER = { scale: 0, chords: 1, recall: 2, key: 3, staff: 4, ear: 5 } as const
 
-const kindOf = (id: string): keyof typeof KIND_ORDER => (parseKeyId(id) !== null ? 'key' : parseStaffId(id) !== null ? 'staff' : parseId(id).kind)
+const kindOf = (id: string): keyof typeof KIND_ORDER => (parseKeyId(id) !== null ? 'key' : parseStaffId(id) !== null ? 'staff' : parseEarId(id) !== null ? 'ear' : parseId(id).kind)
 
 /**
  * Box and support moves for the session's items: scales first, then chord sets, then recall

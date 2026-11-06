@@ -157,3 +157,11 @@ describe('rateItem with staff ids', () => {
     expect(Object.keys(next.items)).toEqual(['staff:treble:C4'])
   })
 })
+
+describe('rateItem with ear ids', () => {
+  it('moves the box and introduces no siblings, without parseId throwing', () => {
+    const next = rateItem(emptyState(), 'ear:5', 'nailed', TODAY)
+    expect(next.items['ear:5']?.box).toBe(2)
+    expect(Object.keys(next.items)).toEqual(['ear:5'])
+  })
+})
