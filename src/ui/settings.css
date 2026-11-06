@@ -143,6 +143,15 @@
   color: var(--muted);
 }
 
+/* Done's backup line: Paused/Failed is how Chris learns backup stopped (spec §11), so it stands out. */
+.backup-line--done {
+  align-items: center;
+}
+
+.backup-line--done .settings__note {
+  color: var(--warn);
+}
+
 .settings__error {
   padding: var(--s-2) var(--s-3);
   border-left: 4px solid var(--warn);

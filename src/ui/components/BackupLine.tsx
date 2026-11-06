@@ -16,7 +16,7 @@ export function BackupLine({ where }: { where: 'settings' | 'done' }) {
   const line = backupLine(status, Date.now())
   if (!line || (where === 'done' && !showOnDone(status))) return null
   return (
-    <div class="settings__actions">
+    <div class={where === 'done' ? 'settings__actions backup-line--done' : 'settings__actions'}>
       <p class="settings__note" role="status">
         {line.text}
       </p>
