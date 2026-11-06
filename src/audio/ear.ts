@@ -1,6 +1,7 @@
 import * as Tone from 'tone'
 import { walkEvents, compareEvents, homeEvents, promptEvents, createEarVoices, type EarEvent } from './earSchedule'
 import type { EarDegree } from '../theory/ear'
+import { createEarPump, type EarPump, type EarSamplerLike } from './earPump'
 import { getSampler } from './piano'
 
 const LOOKAHEAD_S = 0.2
@@ -9,6 +10,7 @@ const LEAD_S = 0.05
 
 const voices = createEarVoices()
 let timer: ReturnType<typeof setInterval> | null = null
+let pump: EarPump | null = null
 
 function clearTimer(): void {
   if (timer !== null) {
@@ -22,17 +24,16 @@ const noteName = (midi: number): string => Tone.Frequency(midi, 'midi').toNote()
 /**
  * Cancels ear audio's pending notes and releases only the notes it started.
  * Never releaseAll: a key Chris is holding with Keyboard sound on keeps sounding.
- * Idempotent; never throws.
+ * Known limit (R-C11): Tone's Sampler has no per-voice release, so releasing an ear note also cuts a held key
+ * of the same pitch. Idempotent; never throws.
  */
 export function stopEar(): void {
   clearTimer()
-  const owned = voices.clear()
-  if (owned.length === 0) return
+  const p = pump
+  pump = null
   try {
-    const s = getSampler()
-    if (!s) return
-    const now = Tone.now()
-    for (const m of owned) s.triggerRelease(noteName(m), now)
+    if (p) p.stop()
+    else voices.clear()
   } catch {
     // never throw into the UI
   }
@@ -45,35 +46,20 @@ function schedule(events: EarEvent[]): number | null {
   try {
     stopEar()
     const start = Tone.now() + LEAD_S
-    let i = 0
-    const ends: { midi: number; at: number }[] = []
-    const pump = () => {
-      try {
-        const now = Tone.now()
-        while (i < events.length && start + (events[i] as EarEvent).time < now + LOOKAHEAD_S) {
-          const e = events[i] as EarEvent
-          const at = start + e.time
-          s.triggerAttack(noteName(e.midi), at)
-          s.triggerRelease(noteName(e.midi), at + e.dur)
-          voices.start(e.midi)
-          ends.push({ midi: e.midi, at: at + e.dur })
-          i += 1
-        }
-        for (let k = ends.length - 1; k >= 0; k--) {
-          const en = ends[k] as { midi: number; at: number }
-          if (en.at <= now) {
-            voices.end(en.midi)
-            ends.splice(k, 1)
-          }
-        }
-      } catch {
-        i = events.length
-        ends.length = 0
-      }
-      if (i >= events.length && ends.length === 0) clearTimer()
+    const io: EarSamplerLike = {
+      triggerAttack: (m, t) => s.triggerAttack(noteName(m), t),
+      triggerRelease: (m, t) => s.triggerRelease(noteName(m), t),
     }
-    pump()
-    if (i < events.length || ends.length > 0) timer = setInterval(pump, TICK_MS)
+    const p = createEarPump(io, () => Tone.now(), events, start, voices, LOOKAHEAD_S)
+    pump = p
+    if (!p.tick()) {
+      timer = setInterval(() => {
+        if (p.tick()) {
+          clearTimer()
+          if (pump === p) pump = null
+        }
+      }, TICK_MS)
+    } else if (pump === p) pump = null
     return start
   } catch {
     return null
