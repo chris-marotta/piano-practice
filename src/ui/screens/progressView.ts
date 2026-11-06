@@ -1,13 +1,15 @@
 // Pure view model for the Progress screen (no Preact, no window): unit tested in node.
 import { KEYS_DEF } from '../../drill/keys'
+import { EAR_DEF } from '../../drill/ear'
 import { STAFF_DEF } from '../../drill/staff'
-import { keyId, staffId, stateFor } from '../../srs/items'
+import { earId, keyId, staffId, stateFor } from '../../srs/items'
 import type { Settings } from '../../srs/items'
 import type { ItemState } from '../../srs/scheduler'
 import type { SessionLog } from '../../store/storage'
 import { minutesTotals, practicedDays, streak } from '../../store/streak'
 import { formatNote } from '../../theory/format'
 import { keyLabel } from '../../theory/keyNames'
+import { EAR_DEGREES, EAR_LEVEL_DEGREES } from '../../theory/ear'
 import { chroma } from '../../theory/scales'
 import { STAFF_LEVEL_NOTES } from '../../theory/staff'
 import { formatDay, weekdayShort } from '../formatDate'
@@ -95,6 +97,33 @@ export function keysLevelText(level: number): string {
 /** The line under the Staff row: where the staff ladder stands. */
 export function staffLevelText(level: number): string {
   return `Level ${level} of ${STAFF_DEF.levelCount} · ${STAFF_DEF.levelNames[level]}`
+}
+
+/** The line under the Ear row: where the ear ladder stands. */
+export function earLevelText(level: number): string {
+  return `Level ${level} of ${EAR_DEF.levelCount} · ${EAR_DEF.levelNames[level]}`
+}
+
+/** The Ear row: the 12 scale degrees in 5 level groups (2, 2, 3, 3, 2; level 6 adds none), shaded by box. */
+export function earCells(
+  items: Record<string, ItemState>,
+  today: string,
+  settings: Settings,
+): { group: 1 | 2 | 3 | 4 | 5; cells: KeyCell[] }[] {
+  return ([1, 2, 3, 4, 5] as const).map((group) => ({
+    group,
+    cells: EAR_LEVEL_DEGREES[group].map((degree) => {
+      const s = stateFor(earId(degree), items, today, settings)
+      const label = EAR_DEGREES.find((d) => d.degree === degree)?.label ?? degree
+      const name = `Ear ${label}`
+      return {
+        pc: 0,
+        label,
+        box: s.introduced ? s.box : null,
+        description: s.introduced ? `${name}: box ${s.box} of 5` : `${name}: not started`,
+      }
+    }),
+  }))
 }
 
 const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)

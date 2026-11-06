@@ -10,7 +10,7 @@ import { isBlack, whiteKeys, type KeyMark, type ReserveRows } from '../../compon
 import { chordPanel, detection, pickerKeys, type PickerContext } from '../library/libraryView'
 
 export type { PlayLabels }
-export type PlayMode = 'free' | 'guided' | 'check' | 'keys' | 'staff'
+export type PlayMode = 'free' | 'guided' | 'check' | 'keys' | 'staff' | 'ear'
 export type PlayHand = 'rh' | 'lh' | 'together'
 
 export type PlayTarget =
@@ -68,6 +68,7 @@ export function effectiveMode(mode: PlayMode, target: PlayTarget): PlayMode {
  * target, so landing in Keys (or Staff) would hide the pick behind a drill round: go to Free instead. Others are kept.
  */
 export function modeForPickedTarget(mode: PlayMode): PlayMode {
+  // Ear takes the picked target's root as its key (R-E3), so it stays.
   return mode === 'keys' || mode === 'staff' ? 'free' : mode
 }
 
@@ -366,6 +367,12 @@ export const KEYS_ROUND_QUESTIONS = 8
 /** Staff mode: questions in one round. */
 export const STAFF_ROUND_QUESTIONS = 6
 
+/** Ear mode: questions in one round. */
+export const EAR_ROUND_QUESTIONS = 6
+
+/** The key Ear drills in: the target's root, C when none is picked (R-E3). */
+export const rootOf = (t: PlayTarget): string => (t.kind === 'scale' ? t.ref.root : t.kind === 'chord' ? t.root : 'C')
+
 /** Badge rows to keep free so the keys don't jump while a run goes on (none where no finger can show). */
 export function reserveRowsFor(mode: PlayMode, target: PlayTarget, hand: PlayHand): ReserveRows {
   if (mode !== 'guided') return false
@@ -418,7 +425,7 @@ export function targetTitle(target: PlayTarget): string {
 }
 
 const INVERSION_NAMES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion']
-const MODE_WORD: Record<PlayMode, string> = { free: 'Free', guided: 'Guided', check: 'Check', keys: 'Keys', staff: 'Staff' }
+const MODE_WORD: Record<PlayMode, string> = { free: 'Free', guided: 'Guided', check: 'Check', keys: 'Keys', staff: 'Staff', ear: 'Ear' }
 const HAND_SHORT: Record<PlayHand, string> = { rh: 'RH', lh: 'LH', together: 'Together' }
 const HAND_WORD = { rh: 'Right hand', lh: 'Left hand', together: 'Hands together' } as const
 const plain = (name: string): string => formatNote(name.replace(/-?\d+$/, ''))
@@ -428,7 +435,7 @@ const slipWord = (n: number): string => `${n} slip${n === 1 ? '' : 's'}`
  * The one line the picker collapses to once Chris plays: "D major · 1 oct · Guided RH", "A harmonic minor · 2 oct ·
  * Check Together", "C major chord, 1st inversion · Guided". Only a scale in Guided or Check names a hand (`hand`: the
  * one in force, see fitHand); a chord has no octaves; the chord's name and inversion are the Library's (chordPanel).
- * Keys and Staff ignore the target: "Keys · Level 2", "Staff · Level 3" (`drillLevel`, the level of the round on screen).
+ * Ear: "Ear · Level 4 · Key of A" (`root`, the target's root). Keys and Staff ignore the target: "Keys · Level 2", "Staff · Level 3" (`drillLevel`, the level of the round on screen).
  */
 export function pickerSummary(
   target: PlayTarget,
@@ -437,7 +444,9 @@ export function pickerSummary(
   hand: PlayHand,
   drillLevel = 1,
   practice = false,
+  root = 'C',
 ): string {
+  if (mode === 'ear') return `Ear · Level ${drillLevel} · Key of ${formatNote(root)}${practice ? ' · practice' : ''}`
   if (mode === 'keys' || mode === 'staff') return `${MODE_WORD[mode]} · Level ${drillLevel}${practice ? ' · practice' : ''}`
   if (target.kind === 'none') return 'Free play'
   const modeWord = MODE_WORD[mode]

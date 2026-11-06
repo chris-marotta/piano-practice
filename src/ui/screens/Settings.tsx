@@ -251,6 +251,15 @@ export function Settings() {
             />
           </Row>
 
+          <Row label="Ear exact octave" hint="Count a played note only in the octave the app played.">
+            <Segmented
+              options={ON_OFF}
+              value={onOff(settings.earExactOctave)}
+              onChange={(v) => set({ earExactOctave: v === 'on' })}
+              label="Ear exact octave"
+            />
+          </Row>
+
           <h2 class="settings__heading">Keyboard</h2>
           <Row label="MIDI keyboard">
             <div class="settings__midi">

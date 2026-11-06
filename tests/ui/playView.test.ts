@@ -13,6 +13,7 @@ import {
   followsNotes,
   pickerSummary,
   STAFF_ROUND_QUESTIONS,
+  EAR_ROUND_QUESTIONS,
   guideAvailable,
   degreeLabel,
   playMarks,
@@ -28,6 +29,7 @@ import {
 } from '../../src/ui/screens/play/playView'
 import { shouldGrade } from '../../src/drill/engine'
 import { STAFF_DEF } from '../../src/drill/staff'
+import { EAR_DEF } from '../../src/drill/ear'
 import type { ItemState } from '../../src/srs/scheduler'
 import { createGuide, type GuideNext, type GuideState } from '../../src/play/guide'
 import { isBlack, whiteKeys } from '../../src/ui/components/keyboardLayout'
@@ -787,5 +789,34 @@ describe('pickerSummary: a picked level above the unlocked one', () => {
   it('says practice', () => {
     expect(pickerSummary(NONE, 1, 'staff', 'rh', 5, true)).toBe('Staff · Level 5 · practice')
     expect(pickerSummary(NONE, 1, 'keys', 'rh', 2)).toBe('Keys · Level 2')
+  })
+})
+
+describe('Ear mode', () => {
+  it('is always available and leaves the target alone', () => {
+    expect(effectiveMode('ear', NONE)).toBe('ear')
+    expect(effectiveMode('ear', G_MAJOR)).toBe('ear')
+  })
+
+  it('a picked target keeps Ear (so Play it lands in Ear with that key); Keys still goes to Free', () => {
+    expect(modeForPickedTarget('ear')).toBe('ear')
+    expect(modeForPickedTarget('keys')).toBe('free')
+  })
+
+  it('the summary: "Ear · Level 4 · Key of A", with " · practice" when above the unlocked level', () => {
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 4, false, 'A')).toBe('Ear · Level 4 · Key of A')
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 4, true, 'A')).toBe('Ear · Level 4 · Key of A · practice')
+    expect(pickerSummary(NONE, 1, 'ear', 'rh', 2, false, 'Bb')).toBe('Ear · Level 2 · Key of B♭')
+  })
+
+  it('a round is 6 questions', () => {
+    expect(EAR_ROUND_QUESTIONS).toBe(6)
+  })
+
+  it('play grading: a right answer on a not-due item is not graded, a wrong one is', () => {
+    const q = EAR_DEF.buildQuestion('ear:5', 'name', () => 0)
+    const notDue: ItemState = { id: q.itemId, introduced: true, box: 3, support: 0, levelStreak: 0, due: '2026-11-10', history: [] }
+    expect(shouldGrade(q, notDue, '2026-11-05', 'play', true)).toBe(false)
+    expect(shouldGrade(q, notDue, '2026-11-05', 'play', false)).toBe(true)
   })
 })

@@ -22,25 +22,27 @@ interface Props {
   /** Questions per round. */
   count: number
   /** Which mode this is, for the summary line. */
-  mode: 'keys' | 'staff'
-  /** Staff's exact-octave setting; Keys has none. */
+  mode: 'keys' | 'staff' | 'ear'
+  /** Staff's and Ear's exact-octave setting; Keys has none. */
   exactOctave?: boolean
   /**
    * Show the summary in the round's head row (beside the kicker) instead of as a line above it: Staff, so a name
    * question fits 820 px. (The Play header has no room for it once a keyboard is connected: it wraps.)
    */
   summaryInRound?: boolean
+  /** Ear: the round's key (the Play target's root). */
+  tonic?: string
 }
 
 /** Pick a level on the ladder; your own unlocked level goes back to the schedule's round. */
-function pickLevel(mode: 'keys' | 'staff', level: number, reached: number): void {
+function pickLevel(mode: 'keys' | 'staff' | 'ear', level: number, reached: number): void {
   drillPick.value = { ...drillPick.peek(), [mode]: level === reached ? null : level }
 }
 
 /** One round, built on mount (useDrillRound), with the summary line above it. */
-function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInRound = false, onNext }: Props & { onNext: () => void }) {
-  const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey, drillPick.peek()[mode])
-  const summary = pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level, setup.practice)
+function DrillRoundOnce({ def, ui, count, mode, exactOctave = false, summaryInRound = false, tonic, onNext }: Props & { onNext: () => void }) {
+  const { setup, onAnswer } = useDrillRound(def, count, 'play', rateKey, drillPick.peek()[mode], tonic)
+  const summary = pickerSummary(playTarget.value, octavesSel.value, mode, 'rh', setup.level, setup.practice, tonic)
   return (
     <div class="play-keys">
       {!summaryInRound && <p class="play-keys__summary">{summary}</p>}

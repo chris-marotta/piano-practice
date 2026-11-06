@@ -1,5 +1,6 @@
 import { drillLevel } from '../../drill/engine'
 import { KEYS_DEF } from '../../drill/keys'
+import { EAR_DEF } from '../../drill/ear'
 import { STAFF_DEF } from '../../drill/staff'
 import { app, resumed, today } from '../state'
 import {
@@ -10,6 +11,8 @@ import {
   masteryColumns,
   masteryRows,
   progressStats,
+  earCells,
+  earLevelText,
   staffCells,
   staffLevelText,
 } from './progressView'
@@ -23,6 +26,7 @@ export function Progress() {
   const rows = masteryRows(items, settings, date)
   const keys = keyCells(items, date, settings)
   const staff = staffCells(items, date, settings)
+  const ear = earCells(items, date, settings)
   const stats = progressStats(log, date)
   const calendar = calendarWeeks(log, date)
 
@@ -104,6 +108,33 @@ export function Progress() {
                     aria-label={cell.description}
                     title={cell.description}
                   />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="keys-row staff-row">
+          <div class="keys-row__head">
+            <h2 class="keys-row__title">Ear</h2>
+            <p class="keys-row__level">{earLevelText(drillLevel(EAR_DEF, items, date, settings))}</p>
+          </div>
+          <div class="staff-row__groups" role="table" aria-label="Ear degree mastery">
+            {ear.map((g) => (
+              <div key={g.group} class="staff-row__group" role="row" style={{ '--n': String(g.cells.length) }}>
+                <span class="staff-row__cap" role="rowheader" aria-label={`Level ${g.group}, ${EAR_DEF.levelNames[g.group]}`}>
+                  {g.group}
+                </span>
+                {g.cells.map((cell, i) => (
+                  <div
+                    key={i}
+                    class={`mcell mcell--${cell.box ?? 0} kcell`}
+                    role="cell"
+                    aria-label={cell.description}
+                    title={cell.description}
+                  >
+                    <span aria-hidden="true">{cell.label}</span>
+                  </div>
                 ))}
               </div>
             ))}

@@ -5,13 +5,15 @@ import {
   keyCells,
   keysLevelText,
   staffCells,
+  earCells,
+  earLevelText,
   staffLevelText,
   formatMinutes,
   masteryColumns,
   masteryRows,
   progressStats,
 } from '../../src/ui/screens/progressView'
-import { DEFAULT_SETTINGS, enabledScales, keyId, staffId, placeItems, scaleId } from '../../src/srs/items'
+import { DEFAULT_SETTINGS, earId, enabledScales, keyId, staffId, placeItems, scaleId } from '../../src/srs/items'
 import { rateItem } from '../../src/session/record'
 import { emptyState, type AppState, type SessionLog } from '../../src/store/storage'
 import type { Placement, Settings } from '../../src/srs/items'
@@ -248,5 +250,31 @@ describe('staffLevelText', () => {
   it('reads the count and names from the staff definition', () => {
     expect(staffLevelText(3)).toBe('Level 3 of 6 · Bass staff')
     expect(staffLevelText(6)).toBe('Level 6 of 6 · Speed')
+  })
+})
+
+describe('earCells: the Ear row', () => {
+  it('is 12 cells in level groups of 2, 2, 3, 3, 2, none started', () => {
+    const groups = earCells({}, TODAY, DEFAULT_SETTINGS)
+    expect(groups.map((g) => g.group)).toEqual([1, 2, 3, 4, 5])
+    expect(groups.map((g) => g.cells.length)).toEqual([2, 2, 3, 3, 2])
+    expect(groups.every((g) => g.cells.every((c) => c.box === null))).toBe(true)
+  })
+
+  it('labels are the degree and a rated one shows its box in words', () => {
+    const groups = earCells({}, TODAY, DEFAULT_SETTINGS)
+    expect(groups[3]?.cells.map((c) => c.label)).toEqual(['♭3', '♭6', '♭7'])
+    expect(groups[3]?.cells[0]?.description).toBe('Ear ♭3: not started')
+    const rated = rateItem(emptyState(), earId('b3'), 'nailed', TODAY)
+    const cell = earCells(rated.items, TODAY, DEFAULT_SETTINGS)[3]?.cells[0]
+    expect(cell?.box).toBe(2)
+    expect(cell?.description).toBe('Ear ♭3: box 2 of 5')
+  })
+})
+
+describe('earLevelText', () => {
+  it('reads the count and names from the ear definition', () => {
+    expect(earLevelText(2)).toBe('Level 2 of 6 · Third and fourth')
+    expect(earLevelText(6)).toBe('Level 6 of 6 · Key once')
   })
 })
