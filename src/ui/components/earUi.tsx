@@ -6,10 +6,11 @@ import type { Question } from '../../drill/engine'
 import { isEarDegree } from '../../theory/ear'
 import type { DrillUi } from './drillUi'
 import type { AnswerState, PromptState } from './drillView'
+import { createEarStart } from './earStart'
 import { contextLine, earAnswerMarks, earBoard, earGiven, earPromptText, earWhyText } from './earDrillView'
 import { Keyboard } from './Keyboard'
 
-/** One octave (8 white keys): let the keys grow big on the iPad; the drill board's height cap binds first. */
+/** One octave (8 white keys): let the keys grow big on the laptop screen; the drill board's height cap binds first. */
 const EAR_KEY_PX = 96
 
 export const HEAR_AGAIN_LABEL = '▶ Hear it again'
@@ -179,19 +180,13 @@ function Board({ q, ans, onKey }: { q: Question; ans: AnswerState; onKey?: (midi
   )
 }
 
-/**
- * Plays the question and resolves to the note's onset, or null: no audio unlocked yet (a fresh tab shows "Tap to hear"
- * rather than scheduling notes into a suspended context), no sampler, or any failure. Never throws.
- */
-async function startQuestion(q: Question, { first, level }: { first: boolean; level: number }): Promise<number | null> {
-  try {
-    const ear = q.ear
-    if (!ear || !audioReady.value) return null
-    return await playEarPrompt({ tonic: ear.tonic, target: ear.target, withTonic: ear.withTonic, home: level === 6 && first })
-  } catch {
-    return null
-  }
-}
+// Waits for a piano load in flight; a start superseded by Next, Skip, a retry or unmount never plays (earStart.ts).
+const earStart = createEarStart({
+  audioReady: () => audioReady.value,
+  load: loadPiano,
+  play: playEarPrompt,
+  stop: stopEar,
+})
 
 /** The Ear drill's rendering: the sound prompt and its buttons, and the one-octave board (spec §4, §7.3). */
 export const EAR_UI: DrillUi = {
@@ -201,7 +196,7 @@ export const EAR_UI: DrillUi = {
   choicesInAsk: false,
   Board,
   whyText: earWhyText,
-  startQuestion,
+  startQuestion: earStart.start,
   onAnswered: (q) => {
     try {
       if (q.ear && isEarDegree(q.ear.degree)) playWalk(q.ear.tonic, q.ear.degree)
@@ -209,5 +204,5 @@ export const EAR_UI: DrillUi = {
       // never throws into the UI
     }
   },
-  onLeave: () => stopEar(),
+  onLeave: earStart.leave,
 }
