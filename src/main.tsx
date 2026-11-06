@@ -16,6 +16,7 @@ import './ui/progress.css'
 import './ui/settings.css'
 import { App } from './App'
 import { startLiveSound } from './audio/live'
+import { startBackup } from './backup/fileBackup'
 import { connectMidi } from './midi/access'
 import { app } from './ui/state'
 import { armUnlockOnTap } from './ui/unlockOnTap'
@@ -35,5 +36,7 @@ startLiveSound(() => app.value.settings.keyboardSound)
 // audio stays locked until the first tap, which the status chip asks for and armUnlockOnTap catches on any screen.
 if (app.value.settings.midiEnabled) void connectMidi()
 armUnlockOnTap()
+// Auto-backup (spec auto-backup §5): catches the file up on start, flushes when the tab is hidden.
+startBackup(app)
 
 render(<App />, document.getElementById('app')!)
