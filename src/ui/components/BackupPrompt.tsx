@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useState } from 'preact/hooks'
 import { backup } from '../../backup/fileBackup'
 import { FOREIGN_TEXT, REPLACE_TEXT, aheadText } from '../backupView'
 import { importProgress } from '../importProgress'
@@ -7,16 +7,15 @@ import { ConfirmDialog } from './ConfirmDialog'
 /** App-level dialog that resolves the backup guard's prompt (backup file ahead of, or not, this browser). */
 export function BackupPrompt() {
   const prompt = backup.prompt.value
-  const [confirmingReplace, setConfirmingReplace] = useState(false)
-
-  // A new or cleared prompt always starts on the first dialog.
-  useEffect(() => setConfirmingReplace(false), [prompt])
+  // The prompt object the Replace confirm is open for; any other prompt starts on the first dialog.
+  const [confirmingFor, setConfirmingFor] = useState<typeof prompt>(null)
 
   if (prompt === null) return null
 
   if (prompt.kind === 'foreign') {
     return (
       <ConfirmDialog
+        key="foreign"
         danger
         title="Replace this file?"
         confirmLabel="Replace it"
@@ -29,14 +28,15 @@ export function BackupPrompt() {
   }
 
   const file = prompt.file
-  if (confirmingReplace) {
+  if (confirmingFor === prompt) {
     return (
       <ConfirmDialog
+        key="replace"
         danger
         title="Replace the backup?"
         confirmLabel="Replace it"
         onConfirm={() => void backup.resolvePrompt('replace')}
-        onCancel={() => setConfirmingReplace(false)}
+        onCancel={() => setConfirmingFor(null)}
       >
         {REPLACE_TEXT}
       </ConfirmDialog>
@@ -44,9 +44,10 @@ export function BackupPrompt() {
   }
   return (
     <ConfirmDialog
+      key="ahead"
       title="This backup has more progress"
       confirmLabel="Import it"
-      secondary={{ label: 'Replace it', onClick: () => setConfirmingReplace(true) }}
+      secondary={{ label: 'Replace it', onClick: () => setConfirmingFor(prompt) }}
       onConfirm={async () => {
         await backup.resolvePrompt('import')
         importProgress(file)
