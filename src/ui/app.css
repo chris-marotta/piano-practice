@@ -46,6 +46,12 @@ p {
   padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
 }
 
+/* The fixed tab bar covers the bottom of the viewport: scrollIntoView and focus scrolling treat that strip as off
+   screen, so what they bring into view lands above the bar (I2). The padding above leaves the room to scroll into. */
+html:has(.shell--tabs) {
+  scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+}
+
 .shell__main {
   flex: 1;
   width: 100%;

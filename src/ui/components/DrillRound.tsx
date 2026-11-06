@@ -132,6 +132,8 @@ export function DrillRound({
   const onAnswerRef = useRef(onAnswer)
   onAnswerRef.current = onAnswer
   const nextBtn = useRef<HTMLButtonElement>(null)
+  const afterRef = useRef<HTMLDivElement>(null)
+  const skipBtn = useRef<HTMLButtonElement>(null)
 
   const give = (given: Given, at = performance.now()) => {
     const i = indexRef.current
@@ -268,10 +270,18 @@ export function DrillRound({
     return () => clearTimeout(t)
   }, [limit, index, ans.answered, prompt])
 
-  // After an answer, Next takes the focus so Enter / Space moves on.
+  // After an answer, Next takes the focus so Enter / Space moves on, and the why line and Next scroll clear of the
+  // tab bar (I2: Play's first question at 1280 x 760). 'nearest' leaves the page still when they already show.
   useEffect(() => {
-    if (ans.answered) nextBtn.current?.focus()
+    if (!ans.answered) return
+    nextBtn.current?.focus({ preventScroll: true })
+    afterRef.current?.scrollIntoView({ block: 'nearest' })
   }, [ans.answered])
+
+  // No sound played and Skip is offered (the session's not-ready state): bring Skip into view too.
+  useEffect(() => {
+    if (prompt === 'silent' && skipBtn.current) afterRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [prompt])
 
   const q = round[index]
   if (!q) return null
@@ -352,9 +362,9 @@ export function DrillRound({
       </div>
       {!choicesInAsk && choices}
       {/* Always there, so the why line arrives without moving the keyboard. */}
-      <div class="drill__after">
+      <div class="drill__after" ref={afterRef}>
         {!ans.answered && prompt === 'silent' && onSkip && (
-          <button type="button" class="btn btn--lg drill__skip" onClick={onSkip}>
+          <button ref={skipBtn} type="button" class="btn btn--lg drill__skip" onClick={onSkip}>
             {SKIP_LABEL}
           </button>
         )}

@@ -350,6 +350,8 @@
   align-items: stretch;
   gap: var(--s-3);
   min-height: var(--tap-lg);
+  /* Scrolled into view after an answer (I2): keep the card's bottom padding in view too, not Next flush on the bar. */
+  scroll-margin-bottom: var(--s-4);
 }
 
 .drill__why {
