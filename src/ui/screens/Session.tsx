@@ -1,10 +1,12 @@
 import { useEffect } from 'preact/hooks'
 import { stopAll } from '../../audio/piano'
+import { EAR_DEF } from '../../drill/ear'
 import { KEYS_DEF } from '../../drill/keys'
 import { STAFF_DEF } from '../../drill/staff'
 import { midiStatus } from '../../midi/access'
 import { logCompletedSession, rateItem, sessionDate, sessionMinutes } from '../../session/record'
 import type { Rating } from '../../srs/scheduler'
+import { EAR_UI } from '../components/earUi'
 import { KEYS_UI } from '../components/keysUi'
 import { MidiChip } from '../components/MidiChip'
 import { STAFF_UI } from '../components/staffUi'
@@ -93,6 +95,19 @@ export function Session() {
         ui={STAFF_UI}
         step={step}
         exactOctave={settings.staffExactOctave}
+        onRate={(id, r) => rateInStep(i, id, r)}
+        onDone={() => advance(i)}
+      />
+    )
+  else if (step.kind === 'ear')
+    body = (
+      <DrillStep
+        key={i}
+        def={EAR_DEF}
+        ui={EAR_UI}
+        step={step}
+        exactOctave={settings.earExactOctave}
+        tonic={step.root}
         onRate={(id, r) => rateInStep(i, id, r)}
         onDone={() => advance(i)}
       />

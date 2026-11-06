@@ -6,7 +6,7 @@ import type { DrillUi } from '../../components/drillUi'
 import { NEXT_LABEL } from '../../components/drillView'
 import { useDrillRound } from '../../components/useDrillRound'
 
-type DrillStepData = Extract<Step, { kind: 'drill' | 'staff' }>
+type DrillStepData = Extract<Step, { kind: 'drill' | 'staff' | 'ear' }>
 
 interface Props {
   def: DrillDef
@@ -16,16 +16,18 @@ interface Props {
   onRate: (itemId: string, r: Rating) => void
   /** After the last question's Next: move on. */
   onDone: () => void
-  /** Staff's exact-octave setting; Keys has none. */
+  /** Staff's or Ear's exact-octave setting; Keys has none. */
   exactOctave?: boolean
+  /** Ear: the round's key (the session's first scale root). */
+  tonic?: string
 }
 
 /**
  * The session's drill round (Keys: name-that-key, first in the session, spec §6.1). Each key is graded on its first answer in the
  * round only, once a day (useDrillRound), and never on a practice repeat.
  */
-export function DrillStep({ def, ui, step, onRate, onDone, exactOctave = false }: Props) {
-  const { setup, onAnswer } = useDrillRound(def, step.count, 'session', onRate)
+export function DrillStep({ def, ui, step, onRate, onDone, exactOctave = false, tonic }: Props) {
+  const { setup, onAnswer } = useDrillRound(def, step.count, 'session', onRate, null, tonic)
   return (
     <div class="step step--drill">
       <DrillRound

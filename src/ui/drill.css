@@ -279,12 +279,62 @@
   opacity: 0.55;
 }
 
-/* A second, smaller line under a choice's label (Ear: the degree's half-step name). */
+/* A second, smaller line under a choice's label (Ear: the degree's note, "5" over "G"). */
 .drill-choice__sub {
   display: block;
   font-size: var(--fs-small);
   font-weight: 400;
   color: var(--muted);
+}
+
+/* On an answer's tinted fill --muted drops under 4.5:1, so the note takes the label's colour there. */
+.drill-choice--right .drill-choice__sub {
+  color: var(--text);
+}
+
+.drill-choice--wrong .drill-choice__sub {
+  color: var(--text);
+}
+
+/* ---- Ear: the sound prompt (spec §4.1) ---- */
+
+.ear-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+}
+
+.ear-ask__sound {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.ear-ask__hear {
+  min-width: 240px;
+}
+
+.ear-ask__hear[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.ear-ask__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.ear-ask__context {
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+.ear-ask__notready {
+  font-size: var(--fs-body);
+  color: var(--text);
 }
 
 /* ---- after an answer: why + Next ---- */

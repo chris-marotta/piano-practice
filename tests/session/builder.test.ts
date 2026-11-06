@@ -62,10 +62,10 @@ const Am: ScaleRef = { root: 'A', form: 'natural' }
 describe('SESSION_SIZES', () => {
   it('matches the spec table', () => {
     expect(SESSION_SIZES).toEqual({
-      5: { keys: 4, staff: 3, cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
-      10: { keys: 8, staff: 6, cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
-      15: { keys: 8, staff: 6, cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
-      20: { keys: 8, staff: 6, cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
+      5: { keys: 4, staff: 3, ear: 2, cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
+      10: { keys: 8, staff: 6, ear: 4, cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
+      15: { keys: 8, staff: 6, ear: 4, cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
+      20: { keys: 8, staff: 6, ear: 4, cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
     })
   })
 })
@@ -179,13 +179,14 @@ describe('buildSession: distinct roots (rule 2)', () => {
 
 describe('buildSession: step order (rule 7)', () => {
   for (const min of [15, 20] as const) {
-    it(`${min} min: the drill, the staff round, the deck, then scale/chords pairs; each chords ref equals the preceding scale's ref`, () => {
+    it(`${min} min: the drill, the staff round, the ear round, the deck, then scale/chords pairs; each chords ref equals the preceding scale's ref`, () => {
       const steps = buildSession(allSolid(), withMinutes(min), TODAY)
       expect(steps[0]?.kind).toBe('drill')
       expect(steps[1]?.kind).toBe('staff')
-      expect(steps[2]?.kind).toBe('deck')
-      expect(steps.slice(3).some((s) => s.kind === 'deck' || s.kind === 'drill' || s.kind === 'staff')).toBe(false)
-      expect(steps[3]?.kind).toBe('scale')
+      expect(steps[2]?.kind).toBe('ear')
+      expect(steps[3]?.kind).toBe('deck')
+      expect(steps.slice(4).some((s) => s.kind === 'deck' || s.kind === 'drill' || s.kind === 'staff' || s.kind === 'ear')).toBe(false)
+      expect(steps[4]?.kind).toBe('scale')
       steps.forEach((s, i) => {
         if (s.kind !== 'chords') return
         const prev = steps[i - 1]
@@ -238,8 +239,8 @@ describe('buildSession: chord sets (rule 5)', () => {
     const steps = buildSession(items, withMinutes(15), TODAY)
     expect(scaleRefs(steps)).toEqual([C, G, D])
     expect(ofKind(steps, 'chords').map((s) => s.ref)).toEqual([G, D])
-    expect(steps.slice(0, 3).map((s) => s.kind)).toEqual(['drill', 'staff', 'deck'])
-    expect(steps.slice(3).map((s) => s.kind + ':' + ('ref' in s ? s.ref.root : ''))).toEqual([
+    expect(steps.slice(0, 4).map((s) => s.kind)).toEqual(['drill', 'staff', 'ear', 'deck'])
+    expect(steps.slice(4).map((s) => s.kind + ':' + ('ref' in s ? s.ref.root : ''))).toEqual([
       'scale:C',
       'scale:G',
       'chords:G',
@@ -524,12 +525,12 @@ describe('buildSession: settings change after placement (Review Focus 4)', () =>
 })
 
 describe('buildSession: the warm-up deck (phase 3 §5.1)', () => {
-  it('6 recall picks → exactly one deck step, right after the staff round, holding the same 6 ids in the old order', () => {
+  it('6 recall picks → exactly one deck step, right after the ear round, holding the same 6 ids in the old order', () => {
     const steps = buildSession(allSolid(), withMinutes(10), TODAY)
     const decks = ofKind(steps, 'deck')
     expect(decks).toHaveLength(1)
-    expect(steps[2]).toBe(decks[0])
-    expect(steps[3]?.kind).toBe('scale')
+    expect(steps[3]).toBe(decks[0])
+    expect(steps[4]?.kind).toBe('scale')
     // The order the phase-2 builder produced as six recall steps.
     expect(decks[0]?.cards.map((c) => c.itemId)).toEqual([
       'recall:keysig:C:major',
@@ -550,7 +551,7 @@ describe('buildSession: the warm-up deck (phase 3 §5.1)', () => {
     const steps = buildSession(items, withMinutes(10), TODAY)
     expect(steps.length).toBeGreaterThan(0)
     expect(ofKind(steps, 'deck')).toEqual([])
-    expect(steps.slice(0, 3).map((s) => s.kind)).toEqual(['drill', 'staff', 'scale'])
+    expect(steps.slice(0, 4).map((s) => s.kind)).toEqual(['drill', 'staff', 'ear', 'scale'])
   })
 })
 
@@ -609,6 +610,7 @@ describe('estimateSeconds', () => {
       expect(estimateSeconds(steps)).toBe(
         size.keys * 7 +
           size.staff * 8 +
+          size.ear * 10 +
           deckCards(steps).length * 15 +
           size.scales * 180 +
           ofKind(steps, 'chords').length * 90 +
@@ -618,12 +620,12 @@ describe('estimateSeconds', () => {
     }
   })
 
-  it('default session = 8×7 + 6×15 + 2×180 + 1×90', () => {
-    expect(estimateSeconds(buildSession(allSolid(), DEFAULT_SETTINGS, TODAY))).toBe(8 * 7 + 6 * 8 + 6 * 15 + 2 * 180 + 1 * 90)
+  it('default session = 8×7 + 6×8 + 4×10 + 6×15 + 2×180 + 1×90', () => {
+    expect(estimateSeconds(buildSession(allSolid(), DEFAULT_SETTINGS, TODAY))).toBe(8 * 7 + 6 * 8 + 4 * 10 + 6 * 15 + 2 * 180 + 1 * 90)
   })
 
   it('20 min session adds free play seconds', () => {
-    expect(estimateSeconds(buildSession(allSolid(), withMinutes(20), TODAY))).toBe(8 * 7 + 6 * 8 + 10 * 15 + 4 * 180 + 2 * 90 + 120)
+    expect(estimateSeconds(buildSession(allSolid(), withMinutes(20), TODAY))).toBe(8 * 7 + 6 * 8 + 4 * 10 + 10 * 15 + 4 * 180 + 2 * 90 + 120)
   })
 
   it('a drill of 8 adds 56 s', () => {
@@ -636,5 +638,47 @@ describe('estimateSeconds', () => {
 
   it('empty → 0', () => {
     expect(estimateSeconds([])).toBe(0)
+  })
+})
+
+describe('buildSession: the ear round (phase 5 §5.1)', () => {
+  it('10 min: drill, staff, ear (4, the first scale root), then the deck', () => {
+    const steps = buildSession(allSolid(), withMinutes(10), TODAY)
+    const first = ofKind(steps, 'scale')[0]
+    expect(steps.slice(0, 3)).toEqual([
+      { kind: 'drill', count: 8 },
+      { kind: 'staff', count: 6 },
+      { kind: 'ear', count: 4, root: first?.ref.root },
+    ])
+    expect(first?.ref.root).toBe('C')
+    expect(steps[3]?.kind).toBe('deck')
+    expect(ofKind(steps, 'ear')).toHaveLength(1)
+  })
+
+  it('5 min: ear 2; 15 and 20 min: ear 4', () => {
+    expect(ofKind(buildSession(allSolid(), withMinutes(5), TODAY), 'ear')).toEqual([{ kind: 'ear', count: 2, root: 'C' }])
+    for (const min of [15, 20] as const) {
+      expect(ofKind(buildSession(allSolid(), withMinutes(min), TODAY), 'ear').map((s) => s.count)).toEqual([4])
+    }
+    expect([5, 10, 15, 20].map((m) => SESSION_SIZES[m as 5 | 10 | 15 | 20].ear)).toEqual([2, 4, 4, 4])
+  })
+
+  it('the root follows the first scale step (G when C was rated today)', () => {
+    let state: AppState = { ...emptyState(), items: allSolid() }
+    state = rateItem(state, scaleId(C), 'nailed', TODAY)
+    const steps = buildSession(state.items, withMinutes(10), TODAY)
+    const first = ofKind(steps, 'scale')[0]
+    expect(ofKind(steps, 'ear')[0]?.root).toBe(first?.ref.root)
+    expect(first?.ref.root).not.toBe('C')
+  })
+
+  it('estimateSeconds adds 40 for ear 4', () => {
+    expect(estimateSeconds([{ kind: 'ear', count: 4, root: 'C' }])).toBe(40)
+  })
+
+  it('every scale rated today → [] (an ear round alone never makes a session)', () => {
+    let state: AppState = { ...emptyState(), items: allSolid() }
+    for (const ref of enabledScales(DEFAULT_SETTINGS)) state = rateItem(state, scaleId(ref), 'nailed', TODAY)
+    for (const min of [5, 10, 15, 20] as const) expect(buildSession(state.items, withMinutes(min), TODAY)).toEqual([])
   })
 })

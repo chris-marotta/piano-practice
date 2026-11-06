@@ -43,14 +43,14 @@ describe('todaySummary', () => {
     expect(s.done).toBe(false)
   })
 
-  it('default 10-minute session after an all-Shaky placement: 2 scales, 6 cards, 1 chord set, 11 minutes', () => {
+  it('default 10-minute session after an all-Shaky placement: 2 scales, 6 cards, 1 chord set, 12 minutes', () => {
     const s = todaySummary(placeAll('shaky'), DEFAULT_SETTINGS, TODAY, [])
     expect(s.scales.map((x) => x.label)).toEqual(['C major', 'G major'])
     expect(s.recallCards).toBe(6)
     expect(s.chordSets).toBe(1)
     expect(s.freeplayMinutes).toBe(0)
-    // 8 × 7 (drill) + 6 × 8 (staff) + 6 × 15 + 2 × 180 + 1 × 90 = 644 s
-    expect(s.minutes).toBe(11)
+    // 8 × 7 (drill) + 6 × 8 (staff) + 4 × 10 (ear) + 6 × 15 + 2 × 180 + 1 × 90 = 684 s
+    expect(s.minutes).toBe(12)
   })
 
   it('marks which scales have their chord set and which are new', () => {

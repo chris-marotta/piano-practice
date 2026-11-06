@@ -3,6 +3,7 @@ import { ROOT_DOT, keyLooks, rootDotLookFor, type KeyLook, type KeyMark, type Ke
 import { contrastRatio, mixSrgb, parseHex } from '../../src/ui/contrast'
 // The real stylesheets, so the test checks what ships rather than a copy of the numbers.
 import appCss from '../../src/ui/app.css?raw'
+import drillCss from '../../src/ui/drill.css?raw'
 import progressCss from '../../src/ui/progress.css?raw'
 import tokensCss from '../../src/ui/tokens.css?raw'
 
@@ -312,5 +313,17 @@ describe('staff colours (shipped CSS)', () => {
     expect(rule('.staff-head--right', appCss).fill).toBe('var(--good)')
     expect(rule('.staff-head--wrong', appCss).fill).toBe('var(--bad)')
     for (const t of ['accent', 'good', 'bad']) expect(contrastRatio(resolve(`var(--${t})`), bg)).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('ear choice sub-line (shipped CSS)', () => {
+  const sub = (selector: string): RGB => colour(rule(selector, drillCss).color as string)
+  const bg = (selector: string): RGB => colour(rule(selector, drillCss).background as string)
+  it('the note under a degree (.drill-choice__sub) is at least 4.5:1 on the choice button', () => {
+    expect(contrastRatio(sub('.drill-choice__sub'), bg('.drill-choice'))).toBeGreaterThanOrEqual(4.5)
+  })
+  it('and on the right and wrong answer fills', () => {
+    expect(contrastRatio(sub('.drill-choice--right .drill-choice__sub'), bg('.drill-choice--right'))).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(sub('.drill-choice--wrong .drill-choice__sub'), bg('.drill-choice--wrong'))).toBeGreaterThanOrEqual(4.5)
   })
 })

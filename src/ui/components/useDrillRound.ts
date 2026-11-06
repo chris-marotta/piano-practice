@@ -24,7 +24,8 @@ export interface DrillSetup {
  * alternating); mount it afresh (a `key`) for each round. The level reached is remembered in `settings[def.levelSetting]`
  * (it only ever rises). `onAnswer` is DrillRound's: it grades each key's first answer only (gradeFirstAnswer) and hands the
  * rating to `onRate`. `pick` (Play's level picker) drills that level instead, locked or not; above the unlocked level
- * it is practice only (practiceOnly): nothing is graded and the level reached isn't raised.
+ * it is practice only (practiceOnly): nothing is graded and the level reached isn't raised. `tonic` (Ear) is the round's key,
+ handed to buildRound (used from EAR_KEY_LEVEL on).
  */
 export function useDrillRound(
   def: DrillDef,
@@ -32,6 +33,7 @@ export function useDrillRound(
   where: 'session' | 'play',
   onRate: (itemId: string, rating: Rating) => void,
   pick: number | null = null,
+  tonic?: string,
 ): { setup: DrillSetup; onAnswer: (q: Question, correct: boolean, ms: number) => void } {
   const [setup] = useState<DrillSetup>(() => {
     const { items, settings } = app.peek()
@@ -42,6 +44,7 @@ export function useDrillRound(
       midi: midiStatus.peek().kind === 'connected',
       rng: Math.random,
       ...(pick === null ? {} : { level: pick }),
+      ...(tonic === undefined ? {} : { tonic }),
     })
     return {
       questions,

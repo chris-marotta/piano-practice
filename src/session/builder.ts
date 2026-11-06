@@ -12,26 +12,33 @@ export type Step =
   | { kind: 'drill'; count: number }
   /** Read-the-staff: `count` questions, built when the step mounts. Follows the Keys round. */
   | { kind: 'staff'; count: number }
+  /** Find-the-note by ear: `count` questions, built when the step mounts. `root` is the first scale step's root (the key from level 4). */
+  | { kind: 'ear'; count: number; root: string }
   /** The warm-up: every recall card picked today, in pick order, as one flip deck. Each card is rated on its own id. */
   | { kind: 'deck'; cards: { itemId: string; card: RecallCard }[] }
   | { kind: 'scale'; itemId: string; ref: ScaleRef; support: 0 | 1 | 2 | 3; tempo: number }
   | { kind: 'chords'; itemId: string; ref: ScaleRef; chords: DiatonicChord[]; includeInversions: boolean }
   | { kind: 'freeplay'; ref: ScaleRef; seconds: number }
 
-/** `keys`: Keys drill questions (phase 3 §6.1, ASSUMED); `staff`: Staff drill questions (phase 4 §5.1, ASSUMED). */
+/**
+ * `keys`: Keys drill questions (phase 3 §6.1, ASSUMED); `staff`: Staff drill questions (phase 4 §5.1, ASSUMED);
+ * `ear`: Ear drill questions (phase 5 §5.1, ASSUMED).
+ */
 export const SESSION_SIZES: Record<
   5 | 10 | 15 | 20,
-  { keys: number; staff: number; cards: number; scales: number; chordSets: number; freeplaySeconds: number }
+  { keys: number; staff: number; ear: number; cards: number; scales: number; chordSets: number; freeplaySeconds: number }
 > = {
-  5: { keys: 4, staff: 3, cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
-  10: { keys: 8, staff: 6, cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
-  15: { keys: 8, staff: 6, cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
-  20: { keys: 8, staff: 6, cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
+  5: { keys: 4, staff: 3, ear: 2, cards: 4, scales: 1, chordSets: 1, freeplaySeconds: 0 },
+  10: { keys: 8, staff: 6, ear: 4, cards: 6, scales: 2, chordSets: 1, freeplaySeconds: 0 },
+  15: { keys: 8, staff: 6, ear: 4, cards: 8, scales: 3, chordSets: 2, freeplaySeconds: 0 },
+  20: { keys: 8, staff: 6, ear: 4, cards: 10, scales: 4, chordSets: 2, freeplaySeconds: 120 },
 }
 
 // ASSUMED estimates (spec §4.5; the drill's from phase 3 §6.1).
 const DRILL_QUESTION_SECONDS = 7
 const STAFF_QUESTION_SECONDS = 8
+/** The prompt plays itself (about 2.3 s) and the walk home follows (phase 5 §5.1, ASSUMED). */
+export const EAR_QUESTION_SECONDS = 10
 const RECALL_SECONDS = 15
 const SCALE_SECONDS = 180
 const CHORDS_SECONDS = 90
@@ -56,7 +63,7 @@ const refKey = (ref: ScaleRef): string => `${ref.root}:${ref.form}`
  * today is excluded from every pool, and ties break by catalog order.
  *
  * Returns [] exactly when every enabled scale has been rated today (a scale not
- * rated today is always pickable). Recall cards alone never make a session, nor does the drill.
+ * rated today is always pickable). Recall cards alone never make a session, nor does any drill round (Keys, Staff, Ear).
  */
 export function buildSession(items: Record<string, ItemState>, settings: Settings, today: string): Step[] {
   const size = SESSION_SIZES[settings.sessionMinutes]
@@ -134,11 +141,13 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
     ...recallPool.filter(notYetDue).sort(bySoonest),
   ].slice(0, size.cards)
 
-  // 7. Order: the Keys drill → the Staff drill → the deck (today's recall cards, when there are any) → each scale followed by its chord set
-  //    → free play. Only reached with at least one scale, so neither drill makes a session on its own.
+  // 7. Order: the Keys drill → the Staff drill → the Ear round (in the first scale's key) → the deck (today's recall cards, when there are any) → each scale followed by its chord set
+  //    → free play. Only reached with at least one scale, so no drill makes a session on its own.
+  const first = chosen[0] as Candidate
   const steps: Step[] = [
     { kind: 'drill', count: size.keys },
     { kind: 'staff', count: size.staff },
+    { kind: 'ear', count: size.ear, root: first.ref.root },
   ]
   if (recallPicks.length > 0) {
     steps.push({ kind: 'deck', cards: recallPicks.map((c) => ({ itemId: c.id, card: recallCard(c.recallType, c.ref) })) })
@@ -162,8 +171,7 @@ export function buildSession(items: Record<string, ItemState>, settings: Setting
       })
     }
   }
-  const first = chosen[0]
-  if (size.freeplaySeconds > 0 && first) steps.push({ kind: 'freeplay', ref: first.ref, seconds: size.freeplaySeconds })
+  if (size.freeplaySeconds > 0) steps.push({ kind: 'freeplay', ref: first.ref, seconds: size.freeplaySeconds })
 
   return steps
 }
@@ -173,6 +181,7 @@ export function estimateSeconds(steps: Step[]): number {
   for (const s of steps) {
     if (s.kind === 'drill') total += DRILL_QUESTION_SECONDS * s.count
     else if (s.kind === 'staff') total += STAFF_QUESTION_SECONDS * s.count
+    else if (s.kind === 'ear') total += EAR_QUESTION_SECONDS * s.count
     else if (s.kind === 'deck') total += RECALL_SECONDS * s.cards.length
     else if (s.kind === 'scale') total += SCALE_SECONDS
     else if (s.kind === 'chords') total += CHORDS_SECONDS
