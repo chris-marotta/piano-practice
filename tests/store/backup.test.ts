@@ -67,6 +67,12 @@ describe('wouldLoseProgress', () => {
       wouldLoseProgress(stateWith({ placedAt: '2026-11-01' }), stateWith({ placedAt: '2026-11-05' })),
     ).toBe(false)
   })
+  it('mixed: file ahead on log, current ahead on items → true both ways', () => {
+    const file = stateWith({ log: 3, items: [['a', 1]] })
+    const current = stateWith({ log: 2, items: [['a', 1], ['b', 1]] })
+    expect(wouldLoseProgress(file, current)).toBe(true)
+    expect(wouldLoseProgress(current, file)).toBe(true)
+  })
 })
 
 describe('checkBackupFile', () => {

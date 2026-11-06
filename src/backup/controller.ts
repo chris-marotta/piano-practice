@@ -2,7 +2,7 @@
 // No window/navigator/document. The file handle, its store and the Save dialog are injected,
 // so this runs (and is tested) in node; src/backup/fileBackup.ts wires it to Chrome.
 import { effect, signal, type ReadonlySignal } from '@preact/signals'
-import { BACKUP_DEBOUNCE_MS, checkBackupFile } from '../store/backup'
+import { BACKUP_DEBOUNCE_MS, checkBackupFile, wouldLoseProgress } from '../store/backup'
 import { exportState, type AppState } from '../store/storage'
 
 export type BackupStatus =
@@ -12,7 +12,8 @@ export type BackupStatus =
   | { kind: 'paused'; name: string }
   | { kind: 'failed'; name: string }
 
-export type BackupPrompt = { kind: 'ahead'; file: AppState } | { kind: 'foreign' }
+// mixed: this browser also has progress the file lacks, so importing the file would lose it.
+export type BackupPrompt = { kind: 'ahead'; file: AppState; mixed: boolean } | { kind: 'foreign' }
 
 export interface BackupHandle {
   readonly name: string
@@ -148,7 +149,10 @@ export function createBackup(deps: BackupDeps): BackupController {
       status.value = { kind: 'on', name: h.name, savedAt: null }
       await requestWrite()
     } else {
-      prompt.value = check
+      prompt.value =
+        check.kind === 'ahead'
+          ? { kind: 'ahead', file: check.file, mixed: wouldLoseProgress(app.peek(), check.file) }
+          : check
       status.value = { kind: 'paused', name: h.name }
     }
   }

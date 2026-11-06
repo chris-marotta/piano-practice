@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BackupStatus } from '../../src/backup/controller'
 import { emptyState, type AppState } from '../../src/store/storage'
-import { FOREIGN_TEXT, REPLACE_TEXT, aheadText, backupLine, formatSavedAt, showOnDone } from '../../src/ui/backupView'
+import { FOREIGN_TEXT, IMPORT_TEXT, REPLACE_TEXT, aheadText, backupLine, formatSavedAt, showOnDone } from '../../src/ui/backupView'
 
 const at = (d: number, h: number, m: number): number => new Date(2026, 10, d, h, m).getTime()
 const NOW = at(6, 14, 2)
@@ -78,5 +78,10 @@ describe('prompt copy', () => {
       "This replaces the backup with this browser's progress. The backup's extra progress will be lost.",
     )
     expect(FOREIGN_TEXT).toBe("This file isn't a Piano Practice backup. Replace it?")
+  })
+  it('IMPORT_TEXT equals the ruled copy', () => {
+    expect(IMPORT_TEXT).toBe(
+      "This replaces this browser's progress with the backup's. This browser's extra progress will be lost.",
+    )
   })
 })

@@ -247,8 +247,26 @@ describe('init', () => {
     expect(backup.status.value).toEqual({ kind: 'paused', name: h.name })
     const parsed = parseImport(fileText)
     if (!parsed.ok) throw new Error('fixture should parse')
-    expect(backup.prompt.value).toEqual({ kind: 'ahead', file: parsed.state })
+    expect(backup.prompt.value).toEqual({ kind: 'ahead', file: parsed.state, mixed: false })
     expect(h.createWritableCalls).toBe(0)
+  })
+
+  it('I1: file ahead and current a strict subset → ahead prompt with mixed: false', async () => {
+    const h = fakeHandle({ text: exportState(stateWith({ log: 3, items: [['a', 2], ['b', 1]] })) })
+    const { backup, app } = setup(h, undefined, stateWith({ log: 1, items: [['a', 1]] }))
+    await backup.init(app)
+    const p = backup.prompt.value
+    if (p?.kind !== 'ahead') throw new Error('expected an ahead prompt')
+    expect(p.mixed).toBe(false)
+  })
+
+  it('I1: file ahead but current has an item the file lacks → ahead prompt with mixed: true', async () => {
+    const h = fakeHandle({ text: exportState(stateWith({ log: 3, items: [['a', 2]] })) })
+    const { backup, app } = setup(h, undefined, stateWith({ log: 1, items: [['a', 1], ['c', 1]] }))
+    await backup.init(app)
+    const p = backup.prompt.value
+    if (p?.kind !== 'ahead') throw new Error('expected an ahead prompt')
+    expect(p.mixed).toBe(true)
   })
 
   it('init, granted, foreign file → paused, prompt {kind:"foreign"}, no write', async () => {

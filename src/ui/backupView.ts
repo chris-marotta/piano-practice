@@ -55,4 +55,6 @@ export function aheadText(file: AppState): string {
 
 export const REPLACE_TEXT =
   "This replaces the backup with this browser's progress. The backup's extra progress will be lost."
+export const IMPORT_TEXT =
+  "This replaces this browser's progress with the backup's. This browser's extra progress will be lost."
 export const FOREIGN_TEXT = "This file isn't a Piano Practice backup. Replace it?"
