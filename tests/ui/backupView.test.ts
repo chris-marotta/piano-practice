@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { BackupStatus } from '../../src/backup/controller'
-import { backupLine, formatSavedAt, showOnDone } from '../../src/ui/backupView'
+import { emptyState, type AppState } from '../../src/store/storage'
+import { FOREIGN_TEXT, REPLACE_TEXT, aheadText, backupLine, formatSavedAt, showOnDone } from '../../src/ui/backupView'
 
 const at = (d: number, h: number, m: number): number => new Date(2026, 10, d, h, m).getTime()
 const NOW = at(6, 14, 2)
@@ -48,4 +49,34 @@ describe('showOnDone', () => {
   ]
   it('true only for paused and failed', () =>
     expect(all.filter(showOnDone).map((s) => s.kind)).toEqual(['paused', 'failed']))
+})
+
+describe('aheadText', () => {
+  const stateWith = (placedAt: string | null, items: number, sessions: number): AppState => ({
+    ...emptyState(),
+    placedAt,
+    items: Object.fromEntries(
+      Array.from({ length: items }, (_, i) => [`k${i}`, {} as AppState['items'][string]]),
+    ),
+    log: Array.from({ length: sessions }, () => ({ date: '2026-10-19', minutes: 10, completed: true })),
+  })
+  it('placed, plural items and sessions', () =>
+    expect(aheadText(stateWith('2026-10-22', 48, 19))).toBe(
+      "This backup has progress this browser doesn't (placed Thursday 22 October 2026 · 48 items · 19 sessions).",
+    ))
+  it('singular item and session', () =>
+    expect(aheadText(stateWith('2026-10-22', 1, 1))).toContain(' · 1 item · 1 session).'))
+  it('not placed', () =>
+    expect(aheadText(stateWith(null, 0, 3))).toBe(
+      "This backup has progress this browser doesn't (not placed · 0 items · 3 sessions).",
+    ))
+})
+
+describe('prompt copy', () => {
+  it('REPLACE_TEXT and FOREIGN_TEXT equal the spec copy', () => {
+    expect(REPLACE_TEXT).toBe(
+      "This replaces the backup with this browser's progress. The backup's extra progress will be lost.",
+    )
+    expect(FOREIGN_TEXT).toBe("This file isn't a Piano Practice backup. Replace it?")
+  })
 })

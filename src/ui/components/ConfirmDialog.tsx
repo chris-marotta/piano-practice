@@ -10,6 +10,8 @@ interface Props {
   danger?: boolean
   onConfirm: () => void
   onCancel: () => void
+  /** An extra plain button between Cancel and the confirm button. */
+  secondary?: { label: string; onClick: () => void }
   /**
    * Where focus goes back to on close. Pass the button that opened the dialog: Safari doesn't focus
    * buttons on click, so document.activeElement (the fallback) is often just <body>.
@@ -30,6 +32,7 @@ export function ConfirmDialog({
   danger = false,
   onConfirm,
   onCancel,
+  secondary,
   returnFocus,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -75,6 +78,11 @@ export function ConfirmDialog({
         <button ref={cancelRef} type="button" class="btn" onClick={onCancel}>
           {cancelLabel}
         </button>
+        {secondary && (
+          <button type="button" class="btn" onClick={secondary.onClick}>
+            {secondary.label}
+          </button>
+        )}
         <button type="button" class={`btn ${danger ? 'btn--danger' : 'btn--primary'}`} onClick={onConfirm}>
           {confirmLabel}
         </button>

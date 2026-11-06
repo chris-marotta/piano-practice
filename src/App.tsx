@@ -1,3 +1,4 @@
+import { BackupPrompt } from './ui/components/BackupPrompt'
 import { Banner } from './ui/components/Banner'
 import { TabBar } from './ui/components/TabBar'
 import { UnlockPrompt } from './ui/components/UnlockPrompt'
@@ -39,6 +40,7 @@ export function App() {
         {devKeyboard ? <DevKeyboard /> : <Screen route={r} />}
       </main>
       {showTabs && <TabBar />}
+      <BackupPrompt />
     </div>
   )
 }

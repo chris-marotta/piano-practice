@@ -7,6 +7,7 @@ import { BackupLine } from '../components/BackupLine'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MidiChip } from '../components/MidiChip'
 import { Segmented } from '../components/Segmented'
+import { importProgress } from '../importProgress'
 import { app, currentSession, navigate, today, update } from '../state'
 import {
   DRONE_DB_MAX,
@@ -23,7 +24,6 @@ import {
   isShareAbort,
   importSummary,
   resetPlacement,
-  routeAfterImport,
   withMinorForm,
   withSettings,
   type SettingsPatch,
@@ -173,9 +173,7 @@ export function Settings() {
 
   const applyImport = (state: AppState) => {
     setPending(null)
-    currentSession.value = null
-    update(() => state)
-    navigate(routeAfterImport(state))
+    importProgress(state)
   }
 
   const disconnect = () => {

@@ -1,5 +1,7 @@
 // Pure copy for the auto-backup status line (no Preact, no window).
 import type { BackupStatus } from '../backup/controller'
+import type { AppState } from '../store/storage'
+import { importSummary } from './screens/settingsView'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -42,3 +44,15 @@ export function backupLine(status: BackupStatus, now: number): { text: string; a
 export function showOnDone(status: BackupStatus): boolean {
   return status.kind === 'paused' || status.kind === 'failed'
 }
+
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** The guard prompt's body: what the backup file holds that this browser doesn't. */
+export function aheadText(file: AppState): string {
+  const { placed, items, sessions } = importSummary(file)
+  return `This backup has progress this browser doesn't (${placed === null ? 'not placed' : `placed ${placed}`} · ${plural(items, 'item')} · ${plural(sessions, 'session')}).`
+}
+
+export const REPLACE_TEXT =
+  "This replaces the backup with this browser's progress. The backup's extra progress will be lost."
+export const FOREIGN_TEXT = "This file isn't a Piano Practice backup. Replace it?"
